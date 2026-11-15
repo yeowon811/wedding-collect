@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/app/app.dart';
+import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
+import 'package:wedding_collect/data/repositories/review_repository.dart';
 import 'package:wedding_collect/features/chat/local_data_agent.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
 
@@ -57,10 +59,21 @@ void main() {
     // 예식장 상세 (근처 업체·관련 정책)
     await tester.tap(find.byType(VenueCard).first);
     await tester.pumpAndSettle();
-    expect(find.text('예약 페이지 열기'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('예약 페이지 열기'), 300,
+        scrollable: find.byType(Scrollable).first);
     await tester.scrollUntilVisible(find.text('근처 실제 연계 업체'), 300,
         scrollable: find.byType(Scrollable).first);
     await back(tester);
+    await tester.pumpAndSettle();
+
+    // 예식장 조건 필터: 무료 대관 → 정원·요금 배지
+    await tester.tap(find.widgetWithText(FilterChip, '무료 대관'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('대관료 무료'), findsWidgets);
+    await tester.tap(find.widgetWithText(FilterChip, '무료 대관'));
+    await tester.tap(find.textContaining('명 수용'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('명 수용'));
     await tester.pumpAndSettle();
 
     // 업체: 드레스 2곳 비교
@@ -84,7 +97,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('[시연]').first);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('상담 신청 · 일정 선택'));
+    await tester.scrollUntilVisible(find.text('상담 신청 · 일정 선택'), 300,
+        scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('상담 신청 · 일정 선택'));
     await tester.pumpAndSettle();
@@ -97,7 +111,31 @@ void main() {
     expect(find.text('상담 신청 완료'), findsOneWidget);
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('이 업체로 계약 완료 표시'));
+    // 후기: 요약·목록이 보이고, 상담한 업체라 후기를 쓸 수 있다
+    await tester.scrollUntilVisible(find.text('많이 언급된 키워드'), -300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(find.text('후기 쓰기'), -300,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('후기 쓰기'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('4점'));
+    await tester.enterText(find.byType(TextField).last, '상담이 친절하고 설명이 자세했어요.');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('등록하기'));
+    await tester.pumpAndSettle();
+    expect(find.text('내 후기'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('전체 보기'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('전체 보기'));
+    await tester.pumpAndSettle();
+    expect(find.text('평점 높은순').evaluate().isEmpty, isTrue); // 기본은 최신순
+    await tester.tap(find.widgetWithText(ChoiceChip, '전체'));
+    await back(tester);
+
+    await tester.scrollUntilVisible(find.text('이 업체로 계약 완료 표시'), 300,
+        scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('이 업체로 계약 완료 표시'));
     await tester.pumpAndSettle();
@@ -128,7 +166,26 @@ void main() {
 
   testWidgets('데이터 건수', (tester) async {
     await _preload(tester);
-    expect((await Repos.venue.loadAll()).length, 240);
+    final venues = await Repos.venue.loadAll();
+    expect(venues.length, 240);
+
+    // 공유누리 수집 데이터 (validate_venues.py 보고서 수치와 같아야 함)
+    expect(venues.where((v) => v.isCollected).length, 117);
+    expect(venues.where((v) => v.capacity != null).length, 84);
+    expect(venues.where((v) => v.rentalFee != null).length, 114);
+    expect(venues.where((v) => v.isFree).length, 43);
+    expect(venues.where((v) => v.images.isNotEmpty).length, 113);
+    // 정원 '1명'·'문의' 같은 값은 숫자로 쓰지 않고, 확인 필요 안내가 붙는다
+    for (final v in venues.where((v) => v.capacityText != null && v.capacity == null)) {
+      expect(v.dataNotes, isNotEmpty, reason: v.id);
+    }
+    expect(venues.every((v) => v.capacity == null || v.capacity! > 1), isTrue);
+    expect(venues.where((v) => !v.isCollected).every((v) => v.capacity == null && v.images.isEmpty), isTrue);
+    final h001 = venues.firstWhere((v) => v.id == 'H001');
+    expect(h001.capacity, 100);
+    expect(h001.rentalFee, 100000);
+    expect(h001.feeLabel, '기본요금 10만원');
+    expect(h001.images.length, 1);
     expect((await Repos.policy.loadAll()).length, 177);
     expect((await Repos.vendor.realVendors()).length, 103);
     final demo = await Repos.vendor.demoVendors();
@@ -136,6 +193,20 @@ void main() {
     expect(demo.every((v) => v.name.startsWith('[시연]')), isTrue);
     expect(demo.map((v) => v.category).toSet().length, VendorCategory.planItems.length);
     expect((await Repos.vendor.nearbyFor('H001')).isNotEmpty, isTrue);
+
+    // 후기: 별점 분포의 평균·개수가 업체 평점·후기 수와 같다 (561곳 모두)
+    AppState.instance.myReviews.clear(); // 앞 테스트에서 쓴 내 후기 제외
+    for (final v in demo) {
+      final s = ReviewRepository.summaryFor(v);
+      expect(s.count, v.reviewCount, reason: v.id);
+      expect(s.average, v.rating, reason: v.id);
+      final list = ReviewRepository.reviewsFor(v);
+      expect(list.length, v.reviewCount < 30 ? v.reviewCount : 30);
+      expect(list.every((r) => r.text.isNotEmpty && r.rating >= 1 && r.rating <= 5), isTrue);
+    }
+    // 같은 업체는 항상 같은 후기
+    expect(ReviewRepository.reviewsFor(demo.first).first.text,
+        ReviewRepository.reviewsFor(demo.first).first.text);
   });
 
   testWidgets('AI 상담이 질문 유형별로 답한다', (tester) async {
@@ -143,6 +214,7 @@ void main() {
     final agent = LocalDataAgent();
     final venue = await agent.reply('서울 공공예식장 알려줘');
     expect(venue.text, contains('서울 공공예식장은'));
+    expect(venue.text, contains('무료 대관'));
     expect(venue.cards, isNotEmpty);
 
     final policy = await agent.reply('29세 받을 수 있는 정책 있어?');

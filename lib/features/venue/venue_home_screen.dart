@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_controller.dart';
+import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
 import '../../data/repositories/venue_repository.dart';
 import 'venue_detail_screen.dart';
@@ -24,10 +25,20 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   String _query = '';
   String? _sido; // null = 전체
   final Set<BookingType> _types = {};
+  bool _fitGuests = false; // 내 하객 수 이상 수용
+  bool _freeOnly = false; // 무료 대관
+  bool _photoOnly = false; // 사진 있는 곳
+
+  bool get _anyFilter => _sido != null || _types.isNotEmpty || _fitGuests || _freeOnly || _photoOnly;
 
   List<Venue> _apply(List<Venue> all) {
     final q = _query.trim();
-    return all.where((v) {
+    final guests = AppState.instance.plan.guests;
+    final list = all.where((v) {
+      // 값을 모르는 곳은 빼지 않고 아래로 보낸다 (확실히 안 맞는 곳만 제외)
+      if (_fitGuests && v.fits(guests) == false) return false;
+      if (_freeOnly && v.rentalFee != null && v.rentalFee! > 0) return false;
+      if (_photoOnly && v.images.isEmpty) return false;
       if (_sido != null && v.sido != _sido) return false;
       if (_types.isNotEmpty && !_types.contains(v.bookingType)) return false;
       if (q.isNotEmpty &&
@@ -38,6 +49,12 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
       }
       return true;
     }).toList();
+    if (_fitGuests || _freeOnly) {
+      int unknown(Venue v) =>
+          ((_fitGuests && v.capacity == null) ? 1 : 0) + ((_freeOnly && v.rentalFee == null) ? 1 : 0);
+      list.sort((a, b) => unknown(a).compareTo(unknown(b)));
+    }
+    return list;
   }
 
   @override
@@ -61,6 +78,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
                 SliverToBoxAdapter(child: _typeChips()),
+                SliverToBoxAdapter(child: _conditionChips()),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
                   const SliverFillRemaining(
@@ -200,6 +218,32 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     );
   }
 
+  Widget _conditionChips() {
+    final guests = AppState.instance.plan.guests;
+    Widget chip(String label, IconData icon, bool on, ValueChanged<bool> set) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: FilterChip(
+            avatar: Icon(icon, size: 16),
+            label: Text(label),
+            selected: on,
+            showCheckmark: false,
+            onSelected: (v) => setState(() => set(v)),
+          ),
+        );
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        children: [
+          chip('하객 $guests명 수용', Icons.groups_outlined, _fitGuests, (v) => _fitGuests = v),
+          chip('무료 대관', Icons.money_off, _freeOnly, (v) => _freeOnly = v),
+          chip('사진 있음', Icons.photo_outlined, _photoOnly, (v) => _photoOnly = v),
+        ],
+      ),
+    );
+  }
+
   Widget _resultBar(int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -210,11 +254,12 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const Spacer(),
-          if (_sido != null || _types.isNotEmpty)
+          if (_anyFilter)
             TextButton(
               onPressed: () => setState(() {
                 _sido = null;
                 _types.clear();
+                _fitGuests = _freeOnly = _photoOnly = false;
               }),
               child: const Text('필터 초기화'),
             ),

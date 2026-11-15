@@ -4,6 +4,7 @@ import '../../core/utils/format.dart';
 import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
+import '../../data/models/venue.dart';
 import '../../data/models/wedding_plan.dart';
 import '../../data/repositories/repositories.dart';
 import '../policy/policy_detail_screen.dart';
@@ -70,8 +71,14 @@ class LocalDataAgent implements ChatAgent {
 
   Future<ChatMessage> _venues(String sido) async {
     final all = await Repos.venue.loadAll();
+    final guests = _state.plan.guests;
+    // 하객 수를 수용하는 곳 → 무료 → 예약 가능 순. 정원을 모르는 곳은 그 뒤, 확실히 작은 곳은 맨 뒤
+    int score(Venue v) =>
+        (v.fits(guests) == true ? 0 : (v.fits(guests) == null ? 4 : 8)) +
+        (v.isFree ? 0 : 2) +
+        (v.isLimited ? 1 : 0);
     final list = all.where((v) => sidoMatches(v.sido, sido)).toList()
-      ..sort((a, b) => (a.isLimited ? 1 : 0) - (b.isLimited ? 1 : 0));
+      ..sort((a, b) => score(a).compareTo(score(b)));
     if (list.isEmpty) {
       return ChatMessage(
         fromUser: false,
@@ -86,19 +93,22 @@ class LocalDataAgent implements ChatAgent {
     return ChatMessage(
       fromUser: false,
       text: '$sido 공공예식장은 ${list.length}곳이에요.\n'
-          '신청 방법: ${types.entries.map((e) => '${e.key} ${e.value}곳').join(', ')}\n\n'
-          '수용 인원·대관료는 아직 데이터가 없어 "기관 확인 필요"예요. 예약 가능한 곳부터 보여드릴게요.',
+          '신청 방법: ${types.entries.map((e) => '${e.key} ${e.value}곳').join(', ')}\n'
+          '하객 $guests명 수용 확인 ${list.where((v) => v.fits(guests) == true).length}곳 · '
+          '무료 대관 ${list.where((v) => v.isFree).length}곳 · '
+          '정원 미확인 ${list.where((v) => v.capacity == null).length}곳\n\n'
+          '하객 수를 수용하고 대관료가 무료인 곳부터 보여드릴게요. 정원·요금을 모르는 곳은 기관에 확인이 필요해요.',
       cards: [
         for (final v in list.take(3))
           ChatCard(
             title: v.name,
-            subtitle: '${v.region} · ${v.bookingType.label}',
+            subtitle: '${v.region} · ${v.capacityLabel} · ${v.feeLabel}',
             icon: Icons.location_city,
             badge: v.isLimited ? '기간 제한' : '예약 가능',
             open: () => VenueDetailScreen(venue: v),
           ),
       ],
-      sources: ['전국 공공예식장 현황 · 출처: ${list.first.source} 등'],
+      sources: const ['전국 공공예식장 현황 · 정원·요금·사진: 공유누리(eshare.go.kr) 수집'],
     );
   }
 

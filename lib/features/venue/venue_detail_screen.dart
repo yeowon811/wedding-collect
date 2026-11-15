@@ -12,7 +12,9 @@ import '../policy/policy_detail_screen.dart';
 import '../policy/policy_matcher.dart';
 import '../vendor/real_vendor_detail_screen.dart';
 import '../vendor/widgets/vendor_cards.dart';
+import '../../data/app_state.dart';
 import 'widgets/booking_type_style.dart';
+import 'widgets/venue_image.dart';
 
 /// 이 예식장 지역에서 받을 수 있는 예식 관련 정책 (공공예식장 ↔ 정책 연결)
 class _RelatedPolicies extends StatelessWidget {
@@ -126,6 +128,10 @@ class VenueDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (v.images.isNotEmpty) ...[
+            _Gallery(images: v.images),
+            const SizedBox(height: 16),
+          ],
           Text(v.region, style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
           Text(
@@ -151,12 +157,14 @@ class VenueDetailScreen extends StatelessWidget {
           const SizedBox(height: 20),
           _section('기본 정보', [
             _row(Icons.location_on_outlined, '주소', v.address),
-            _row(Icons.groups_outlined, '수용 인원',
-                v.capacity == null ? '기관 확인 필요' : '${v.capacity}명'),
+            _row(Icons.groups_outlined, '정원', _capacityText(v)),
             _row(Icons.payments_outlined, '대관료',
-                v.rentalFee == null ? '기관 확인 필요' : '${v.rentalFee}원'),
+                v.rentalFee == null ? '기관 확인 필요${v.feeText != null ? ' (${v.feeText})' : ''}' : v.feeLabel),
+            if (v.feeDetail != null) _detailBox(v.feeDetail!),
             _row(Icons.info_outline, '운영 상태', v.statusText),
           ]),
+          _usageSection(v),
+          _dataNotice(v),
           _section('신청 방법', [
             _row(Icons.event_available_outlined, '예약 방식', v.bookingMethod),
             Padding(
@@ -192,9 +200,81 @@ class VenueDetailScreen extends StatelessWidget {
           _NearbyVendors(venue: v),
           const SizedBox(height: 16),
           Text(
-            '출처: ${v.source} · 수용 인원과 대관료는 담당 기관에 최종 확인하세요.',
+            '출처: ${v.source}${v.isCollected ? ' · 정원·요금·운영시간·사진: 공유누리(eshare.go.kr)' : ''} · '
+            '정원과 대관료는 담당 기관에 최종 확인하세요.',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
+        ],
+      ),
+    );
+  }
+
+  String _capacityText(Venue v) {
+    if (v.capacity == null) {
+      return '기관 확인 필요${v.capacityText != null ? ' (등록값: ${v.capacityText})' : ''}';
+    }
+    final guests = AppState.instance.plan.guests;
+    return '${v.capacity}명 · 내 하객 $guests명 ${v.capacity! >= guests ? '수용 가능' : '초과'}';
+  }
+
+  Widget _detailBox(String text) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(left: 28, bottom: 4),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.placeholder.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(text, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.textSecondary)),
+      );
+
+  /// 공유누리에서 수집한 이용 정보 (값이 있는 항목만)
+  Widget _usageSection(Venue v) {
+    final hours = [
+      if (v.hoursWeekday != null) '평일 ${v.hoursWeekday}',
+      if (v.hoursSaturday != null) '토요일 ${v.hoursSaturday}',
+      if (v.hoursHoliday != null) '일·공휴일 ${v.hoursHoliday}',
+    ];
+    final rows = [
+      if (hours.isNotEmpty) _row(Icons.schedule, '운영시간', hours.join('\n')),
+      if (v.operatingPeriod != null) _row(Icons.date_range, '이용 기간', v.operatingPeriod!),
+      if (v.applyPeriod != null) _row(Icons.edit_calendar_outlined, '접수', v.applyPeriod!),
+      if (v.approval != null) _row(Icons.fact_check_outlined, '심사', v.approval!),
+      if (v.prepTime != null) _row(Icons.timer_outlined, '준비 시간', v.prepTime!),
+      if (v.target != null) _row(Icons.person_outline, '이용 대상', v.target!),
+      if (v.indoorOutdoor != null) _row(Icons.park_outlined, '실내·외', v.indoorOutdoor!),
+      if (v.parking != null) _row(Icons.local_parking, '주차', v.parking!),
+      if (v.area != null) _row(Icons.square_foot, '면적', v.area!),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return _section('이용 정보', rows);
+  }
+
+  /// 데이터가 없거나 확인이 필요한 경우 안내
+  Widget _dataNotice(Venue v) {
+    final notes = v.isCollected
+        ? v.dataNotes
+        : ['정원·요금·운영시간·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.'];
+    if (notes.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.info_outline, size: 18, color: AppColors.warning),
+            SizedBox(width: 6),
+            Text('데이터 확인 필요', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.warning)),
+          ]),
+          const SizedBox(height: 4),
+          for (final n in notes) Text('•  $n', style: const TextStyle(fontSize: 13, height: 1.5)),
         ],
       ),
     );
@@ -230,6 +310,50 @@ class VenueDetailScreen extends StatelessWidget {
           ),
           Expanded(child: Text(value)),
         ],
+      ),
+    );
+  }
+}
+
+/// 사진 넘겨보기
+class _Gallery extends StatefulWidget {
+  const _Gallery({required this.images});
+
+  final List<String> images;
+
+  @override
+  State<_Gallery> createState() => _GalleryState();
+}
+
+class _GalleryState extends State<_Gallery> {
+  int _page = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio(
+        aspectRatio: 16 / 10,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            PageView.builder(
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => VenueImage(url: widget.images[i]),
+            ),
+            Positioned(
+              right: 10,
+              bottom: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
+                child: Text('${_page + 1}/${widget.images.length} · 사진: 공유누리',
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

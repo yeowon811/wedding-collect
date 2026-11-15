@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'models/review.dart';
 import 'models/vendor.dart';
 import 'models/wedding_plan.dart';
 
@@ -19,6 +20,16 @@ class AppState extends ChangeNotifier {
   final Map<VendorCategory, (DemoVendor, int)> contracts = {}; // 업체, 계약 금액(만원)
   final Set<String> doneTasks = {};
   final List<DemoVendor> compare = [];
+  final List<Review> myReviews = [];
+
+  /// 후기는 상담을 신청했거나 계약한 업체에만 쓸 수 있다
+  bool canReview(DemoVendor v) =>
+      consultations.any((c) => c.vendor.id == v.id) || contracts[v.category]?.$1.id == v.id;
+
+  void addReview(Review r) {
+    myReviews.add(r);
+    notifyListeners();
+  }
 
   void updatePlan(WeddingPlan p) {
     plan = p;

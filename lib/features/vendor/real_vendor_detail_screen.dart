@@ -34,6 +34,26 @@ class RealVendorDetailScreen extends StatelessWidget {
           _row(Icons.call_outlined, v.phone),
           _row(Icons.design_services_outlined, v.services),
           _row(Icons.payments_outlined, '가격: 공개 정보 없음 · 업체에 직접 문의'),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.placeholder.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('후기', style: TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(height: 4),
+                Text(
+                  '실제 업체의 후기는 아직 수집하지 않았어요. 실제 업체에는 임의로 만든 후기를 보여주지 않아요.\n'
+                  '정식 서비스에서는 상담·계약을 인증한 이용자만 후기를 남길 수 있게 할 예정이에요.',
+                  style: TextStyle(height: 1.5),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
           if (v.url.isNotEmpty)
             FilledButton.icon(

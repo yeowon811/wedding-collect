@@ -6,7 +6,11 @@ import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
 import '../../data/models/wedding_plan.dart';
+import '../../data/repositories/review_repository.dart';
 import 'consultation_sheet.dart';
+import 'review_list_screen.dart';
+import 'widgets/review_widgets.dart';
+import 'write_review_sheet.dart';
 
 /// 시연용 업체 상세: 가격·구성, 예산 비교, 상담 신청, 계약 완료 표시
 class DemoVendorDetailScreen extends StatelessWidget {
@@ -28,6 +32,8 @@ class DemoVendorDetailScreen extends StatelessWidget {
           final budget = state.plan.budgetFor(v.category);
           final mine = state.consultations.where((c) => c.vendor.id == v.id).toList();
           final contracted = state.contracts[v.category]?.$1.id == v.id;
+          final summary = ReviewRepository.summaryFor(v);
+          final reviews = ReviewRepository.reviewsFor(v);
 
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -41,8 +47,16 @@ class DemoVendorDetailScreen extends StatelessWidget {
               const SizedBox(height: 10),
               Text(v.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text('★ ${v.rating} · 후기 ${v.reviewCount}개 · ${v.styles.join(' · ')}',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              Row(children: [
+                StarRow(rating: summary.average),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text('${summary.average} · 후기 ${summary.count}개 · ${v.styles.join(' · ')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              ]),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -69,6 +83,31 @@ class DemoVendorDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              Row(children: [
+                const Expanded(
+                  child: Text('후기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+                if (state.canReview(v))
+                  TextButton.icon(
+                    onPressed: () => showWriteReviewSheet(context, v),
+                    icon: const Icon(Icons.rate_review_outlined, size: 18),
+                    label: const Text('후기 쓰기'),
+                  ),
+              ]),
+              const SizedBox(height: 8),
+              RatingSummaryView(summary: summary),
+              const SizedBox(height: 8),
+              for (final r in reviews.take(3)) ReviewTile(review: r),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ReviewListScreen(vendor: v)),
+                ),
+                child: Text('후기 ${summary.count}개 전체 보기 ›'),
+              ),
+              if (!state.canReview(v))
+                Text('상담을 신청하거나 계약하면 후기를 남길 수 있어요.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const SizedBox(height: 20),
               const Text('포함 구성', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
@@ -118,7 +157,7 @@ class DemoVendorDetailScreen extends StatelessWidget {
                 label: Text(contracted ? '계약 완료 취소' : '이 업체로 계약 완료 표시'),
               ),
               const SizedBox(height: 16),
-              Text('시연용으로 만든 가상 업체예요. 실제 예약은 이뤄지지 않아요.',
+              Text('시연용으로 만든 가상 업체·후기예요. 실제 예약은 이뤄지지 않아요.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
           );

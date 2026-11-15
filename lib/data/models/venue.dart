@@ -39,6 +39,23 @@ class Venue {
     required this.source,
     this.capacity,
     this.rentalFee,
+    this.eshareStatus,
+    this.capacityText,
+    this.feeText,
+    this.feeDetail,
+    this.hoursWeekday,
+    this.hoursSaturday,
+    this.hoursHoliday,
+    this.applyPeriod,
+    this.operatingPeriod,
+    this.approval,
+    this.prepTime,
+    this.target,
+    this.indoorOutdoor,
+    this.parking,
+    this.area,
+    this.images = const [],
+    this.dataNotes = const [],
   });
 
   final String id;
@@ -59,9 +76,48 @@ class Venue {
   final String bookingSteps;
   final String source;
 
-  /// 아직 수집 전이면 null → 화면에서 "기관 확인 필요"
-  final int? capacity;
-  final int? rentalFee;
+  /// 수집 전이거나 등록 오류로 보이면 null → 화면에서 "기관 확인 필요"
+  final int? capacity; // 명
+  final int? rentalFee; // 원 (무료 = 0)
+
+  // ── 공유누리(eshare) 수집 정보 (없으면 null) ──
+  final String? eshareStatus; // 수집완료 / 수집완료(이미지URL 미확인) / 페이지 없음
+  final String? capacityText; // 원본 정원 값
+  final String? feeText; // 예: 기본요금 100,000원
+  final String? feeDetail; // 요금 상세 설명 (기준 시간·가산금 등)
+  final String? hoursWeekday;
+  final String? hoursSaturday;
+  final String? hoursHoliday;
+  final String? applyPeriod; // 접수 기간
+  final String? operatingPeriod; // 이용 기간
+  final String? approval; // 심사 여부
+  final String? prepTime; // 준비 시간
+  final String? target; // 이용 대상
+  final String? indoorOutdoor; // 실내 / 실외
+  final String? parking;
+  final String? area; // 규모·면적
+  final List<String> images; // 공유누리 사진 주소
+  final List<String> dataNotes; // 데이터 주의 사항 ("확인 필요" 안내)
+
+  bool get isCollected => eshareStatus != null;
+  bool get isFree => rentalFee == 0;
+
+  /// 하객 [guests]명을 수용할 수 있는지. 정원을 모르면 null
+  bool? fits(int guests) => capacity == null ? null : capacity! >= guests;
+
+  String get capacityLabel => capacity != null ? '정원 $capacity명' : '정원 확인 필요';
+
+  String get feeLabel {
+    if (rentalFee == null) return '대관료 확인 필요';
+    if (rentalFee == 0) return '대관료 무료';
+    return '기본요금 ${_won(rentalFee!)}';
+  }
+
+  static String _won(int won) {
+    if (won >= 10000 && won % 10000 == 0) return '${won ~/ 10000}만원';
+    if (won >= 10000) return '${(won / 10000).toStringAsFixed(1)}만원';
+    return '${won.toString()}원';
+  }
 
   String get region => sigungu.isEmpty ? sido : '$sido $sigungu';
 
@@ -85,5 +141,22 @@ class Venue {
         source: j['source'] as String,
         capacity: (j['capacity'] as num?)?.toInt(),
         rentalFee: (j['rentalFee'] as num?)?.toInt(),
+        eshareStatus: j['eshareStatus'] as String?,
+        capacityText: j['capacityText'] as String?,
+        feeText: j['feeText'] as String?,
+        feeDetail: j['feeDetail'] as String?,
+        hoursWeekday: j['hoursWeekday'] as String?,
+        hoursSaturday: j['hoursSaturday'] as String?,
+        hoursHoliday: j['hoursHoliday'] as String?,
+        applyPeriod: j['applyPeriod'] as String?,
+        operatingPeriod: j['operatingPeriod'] as String?,
+        approval: j['approval'] as String?,
+        prepTime: j['prepTime'] as String?,
+        target: j['target'] as String?,
+        indoorOutdoor: j['indoorOutdoor'] as String?,
+        parking: j['parking'] as String?,
+        area: j['area'] as String?,
+        images: ((j['images'] as List?) ?? const []).cast<String>(),
+        dataNotes: ((j['dataNotes'] as List?) ?? const []).cast<String>(),
       );
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
+import '../../data/repositories/review_repository.dart';
 
 /// 같은 항목의 시연용 업체 2~3곳을 표로 비교
 class CompareScreen extends StatelessWidget {
@@ -17,7 +18,8 @@ class CompareScreen extends StatelessWidget {
 
     // 비교 기준별 최고값 표시용
     final cheapest = list.map((v) => v.estimate(guests: guests)).reduce((a, b) => a < b ? a : b);
-    final bestRating = list.map((v) => v.rating).reduce((a, b) => a > b ? a : b);
+    final bestRating =
+        list.map((v) => ReviewRepository.summaryFor(v).average).reduce((a, b) => a > b ? a : b);
 
     final rows = <(String, Widget Function(DemoVendor))>[
       ('가격대', (v) => Text(v.priceText)),
@@ -43,11 +45,18 @@ class CompareScreen extends StatelessWidget {
       ),
       (
         '평점',
-        (v) => Text('★ ${v.rating} (${v.reviewCount})',
-            style: TextStyle(
-              fontWeight: v.rating == bestRating ? FontWeight.w700 : null,
-              color: v.rating == bestRating ? AppColors.success : null,
-            ))
+        (v) {
+          final s = ReviewRepository.summaryFor(v);
+          return Text('★ ${s.average} (${s.count})',
+              style: TextStyle(
+                fontWeight: s.average == bestRating ? FontWeight.w700 : null,
+                color: s.average == bestRating ? AppColors.success : null,
+              ));
+        }
+      ),
+      (
+        '후기 키워드',
+        (v) => Text(ReviewRepository.summaryFor(v).topTags.take(2).map((t) => t.$1).join('\n'))
       ),
       ('스타일', (v) => Text(v.styles.join('\n'))),
       ('포함 구성', (v) => Text(v.packageItems.map((e) => '• $e').join('\n'))),

@@ -66,7 +66,12 @@
   - `lib/data/`: 모델(venue.dart)과 저장소(venue_repository.dart, JSON 읽기)
   - `lib/features/<기능>/`: 기능별 화면. 지금은 `venue`(목록·검색·지역/예약유형 필터·상세)만 구현, 나머지 4개는 "만들 예정" 안내 화면
   - `lib/template/hotel_booking/`: 원본 템플릿 참고용 (앱에서 사용 안 함)
-- 데이터 변환: `python -I tools/convert_venues.py "../전국 공공예식장 및 연계업체 현황 (2).xlsx"` → `assets/data/venues.json` (예약방식 36가지 → ONLINE 131 / FORM 81 / CENTER 15 / PHONE_VISIT 13)
+- 데이터 변환: `python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx"` → `assets/data/venues.json` (예약방식 36가지 → ONLINE 131 / FORM 81 / CENTER 15 / PHONE_VISIT 13)
+  - **2026-11-16: `공공예식장_eshare수집.xlsx`가 새 기준 파일.** (2) 파일의 13개 열 + 공유누리 수집 28개 열(정원·요금·요금 상세·운영시간·접수·심사·준비시간·이용대상·실내외·주차·면적·사진 5장). 다른 3개 시트는 (2)와 동일
+  - 수집 117곳 / 미수집 123곳. 정원 숫자 84곳(‘1명’ 25건은 eshare 등록 오류로 보고 null, ‘문의’·‘시간별 상이’ 7건도 null), 요금 114곳(무료 43), 사진 113곳(202장, 공유누리 주소 직접 사용)
+  - 검증: `python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx" [--check-images]` → `docs/data-validation/venues_report.md`, 추가 수집 목록 `docs/data-validation/venues_to_collect.csv`(157곳)
+  - **사용자가 미수집 데이터를 나중에 다시 제공할 예정** → 같은 형식 엑셀로 받으면 위 두 명령만 다시 실행
+  - 웹에서는 공유누리 이미지에 CORS 헤더가 없어 `WebHtmlElementStrategy.fallback` 사용. 사진 이용 조건(공공누리 유형)은 소개서 출처 표에 적기 전에 확인 필요
 - `tools/xlsx_reader.py`: openpyxl 없이 xlsx를 읽는 표준 라이브러리 도우미
 - 정책: `python -I tools/convert_policies.py "../youth_wedding_support_2026.xlsx"` → `assets/data/policies.json`
   - 지역·나이·혼인 N년·예비부부 가능·소득·무주택을 **정규식으로 1차 추출** (`extractedBy: rule`, `reviewed: false`). 다음 단계로 AI 추출 + 사람 검수 예정
@@ -79,6 +84,7 @@
   - 업체: 지역 칩 → 항목 칩, "가격 비교(시연용)" / "실제 연계 업체" 전환. 시연용은 예산 비교, 비교 담기(같은 항목 최대 3곳)→비교표, 상담 신청(날짜·시간 선택, 월요일 휴무·일부 마감은 고정 패턴), 계약 완료 표시
   - 체크리스트: 결혼 정보(예식일·지역·총예산·하객 수, D-day), 예산(계약 합계), 11개 항목 상태, 내 상담 일정, 예식일 기준 할 일 20개(계약 완료 시 자동 체크)
   - AI 상담: `ChatAgent` 인터페이스 + `LocalDataAgent`(앱 데이터·규칙 기반, 의도: 일정/정책/업체 항목/예식장/예산). **생성형 AI(Claude 등) 연결은 아직 안 함** → API 키 보호 방식(중계 서버 여부) 정한 뒤 같은 인터페이스로 구현
+- 후기 (2026-11-15 추가): **시연용 업체에만** 있음. `lib/data/repositories/review_repository.dart`가 업체 ID 고정 시드로 생성 (별점 분포는 업체 평점·후기 수와 정확히 일치, 최근 30개 표시). 업체 상세에 요약(평균·분포·키워드)+최근 3개, 전체 보기(정렬·별점 필터), 상담/계약한 업체만 후기 쓰기. **실제 업체에는 가짜 후기를 만들지 않음** (안내 문구만 표시)
 - 공유 상태: `lib/data/app_state.dart` (메모리에만 저장, 앱 끄면 초기화)
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - 디자인 시안: `lib/core/theme/app_palette.dart`에 A 웜 로즈(기본) / B 세이지 / C 모노·골드 / 템플릿 민트. 화면 상단 팔레트 버튼으로 전환(`theme_controller.dart`, 시연·비교용). 확정 후 하나만 남기기

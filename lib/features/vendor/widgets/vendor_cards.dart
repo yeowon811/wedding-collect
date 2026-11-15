@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/info_badge.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/vendor.dart';
+import '../../../data/repositories/review_repository.dart';
 
 /// 시연용 업체 카드: 가격대, 평점, 패키지, 비교 담기
 class DemoVendorCard extends StatelessWidget {
@@ -19,6 +20,8 @@ class DemoVendorCard extends StatelessWidget {
     final budget = state.plan.budgetFor(v.category);
     final estimate = v.estimate(guests: state.plan.guests);
     final inBudget = budget == 0 || estimate <= budget;
+    final summary = ReviewRepository.summaryFor(v);
+    final latest = ReviewRepository.reviewsFor(v).firstOrNull;
 
     return _CardShell(
       onTap: onTap,
@@ -43,14 +46,27 @@ class DemoVendorCard extends StatelessWidget {
           Row(
             children: [
               const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF2B33D)),
-              Text(' ${v.rating}', style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text(' (${v.reviewCount})',
+              Text(' ${summary.average}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(' (후기 ${summary.count})',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const SizedBox(width: 10),
-              Text(v.styles.join(' · '),
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              Expanded(
+                child: Text(v.styles.join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ),
             ],
           ),
+          if (latest != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '“${latest.text}”',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,

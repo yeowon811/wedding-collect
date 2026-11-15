@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/info_badge.dart';
+import '../../../data/app_state.dart';
 import '../../../data/models/venue.dart';
 import 'booking_type_style.dart';
+import 'venue_image.dart';
 
-/// 예식장 목록 카드 (hotel_booking의 hotel_list_view 구조를 바탕으로, 사진 대신 지역 머리띠 사용)
+/// 예식장 목록 카드 (hotel_booking의 hotel_list_view 구조). 공유누리 사진이 있으면 위에 보여준다.
 class VenueCard extends StatelessWidget {
   const VenueCard({super.key, required this.venue, required this.onTap});
 
@@ -39,7 +41,34 @@ class VenueCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _RegionHeader(venue: venue),
+                if (venue.images.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: AspectRatio(
+                      aspectRatio: 2.4,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          VenueImage(url: venue.images.first),
+                          if (venue.images.length > 1)
+                            Positioned(
+                              right: 10,
+                              bottom: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text('사진 ${venue.images.length}장',
+                                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                _RegionHeader(venue: venue, roundTop: venue.images.isEmpty),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                   child: Column(
@@ -80,12 +109,13 @@ class VenueCard extends StatelessWidget {
                             icon: venue.bookingType.icon,
                             color: venue.bookingType.color,
                           ),
+                          _capacityBadge(venue),
                           InfoBadge(
-                            label: venue.capacity == null
-                                ? '수용 인원·대관료 확인 필요'
-                                : '${venue.capacity}명 수용',
-                            icon: Icons.help_outline,
-                            color: AppColors.unknown,
+                            label: venue.feeLabel,
+                            icon: venue.rentalFee == null ? Icons.help_outline : Icons.payments_outlined,
+                            color: venue.rentalFee == null
+                                ? AppColors.unknown
+                                : (venue.isFree ? AppColors.success : AppColors.textSecondary),
                           ),
                         ],
                       ),
@@ -101,10 +131,22 @@ class VenueCard extends StatelessWidget {
   }
 }
 
+/// 정원 배지: 내 하객 수 기준으로 색을 바꾼다
+Widget _capacityBadge(Venue v) {
+  final guests = AppState.instance.plan.guests;
+  final fits = v.fits(guests);
+  return InfoBadge(
+    label: fits == null ? '정원 확인 필요' : '정원 ${v.capacity}명',
+    icon: fits == null ? Icons.help_outline : (fits ? Icons.groups : Icons.group_off_outlined),
+    color: fits == null ? AppColors.unknown : (fits ? AppColors.success : AppColors.warning),
+  );
+}
+
 class _RegionHeader extends StatelessWidget {
-  const _RegionHeader({required this.venue});
+  const _RegionHeader({required this.venue, this.roundTop = true});
 
   final Venue venue;
+  final bool roundTop;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +154,7 @@ class _RegionHeader extends StatelessWidget {
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: roundTop ? const BorderRadius.vertical(top: Radius.circular(16)) : null,
         gradient: LinearGradient(
           colors: [AppColors.headerStart, AppColors.headerEnd],
         ),
