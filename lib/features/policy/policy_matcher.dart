@@ -1,26 +1,38 @@
 import '../../data/models/policy.dart';
+import '../../data/models/user_profile.dart';
 
-/// 사용자 상황 (기기 안에서만 쓰고 외부로 보내지 않는다)
-enum MarriageStage {
-  engaged('예비부부'),
-  married('신혼부부');
+export '../../data/models/user_profile.dart' show MarriageStage;
 
-  const MarriageStage(this.label);
-  final String label;
-}
-
+/// 정책 판정용 조건 (기기 안에서만 쓰고 외부로 보내지 않는다)
 class PolicyProfile {
   const PolicyProfile({
     this.sido,
     this.age = 31,
+    this.ageMax,
     this.stage = MarriageStage.engaged,
     this.marriedYears = 1,
+    this.homeless,
   });
 
+  /// 내 정보(또는 대화에서 알게 된 정보)로 만든다. 모르는 값은 기본값을 쓴다.
+  factory PolicyProfile.fromUser(UserProfile u) => PolicyProfile(
+        sido: u.sido,
+        age: u.age ?? 31,
+        ageMax: u.ageMax,
+        stage: u.stage ?? MarriageStage.engaged,
+        marriedYears: u.marriedYears ?? 1,
+        homeless: u.homeless,
+      );
+
   final String? sido; // null = 지역 미선택 (전국 정책만)
-  final int age;
+  final int age; // 정확한 나이 또는 범위의 최소
+  final int? ageMax; // 범위로만 알 때 최대 (예: 20대 → 29)
   final MarriageStage stage;
   final int marriedYears; // 신혼부부일 때 혼인 N년차
+  final bool? homeless; // 무주택 여부 (null = 모름)
+
+  bool get isAgeRange => ageMax != null && ageMax != age;
+  int get ageHigh => ageMax ?? age;
 
   PolicyProfile copyWith({
     String? sido,
@@ -32,8 +44,10 @@ class PolicyProfile {
       PolicyProfile(
         sido: clearSido ? null : (sido ?? this.sido),
         age: age ?? this.age,
+        ageMax: age != null ? null : ageMax, // 나이를 직접 고르면 정확한 나이로 본다
         stage: stage ?? this.stage,
         marriedYears: marriedYears ?? this.marriedYears,
+        homeless: homeless,
       );
 }
 
@@ -70,11 +84,18 @@ class PolicyMatcher {
         continue;
       }
 
-      // 나이
+      // 나이: 내 나이(범위)와 정책 나이 조건이 전혀 안 겹칠 때만 제외
       if (policy.ageMax != null && p.age > policy.ageMax!) continue;
-      if (policy.ageMin != null && p.age < policy.ageMin!) continue;
-      if (policy.ageMax != null) {
-        reasons.add('만 ${policy.ageMin ?? ''}~${policy.ageMax}세 조건 충족');
+      if (policy.ageMin != null && p.ageHigh < policy.ageMin!) continue;
+      if (policy.ageMax != null || policy.ageMin != null) {
+        final range = '만 ${policy.ageMin ?? ''}~${policy.ageMax ?? ''}세';
+        final fully = (policy.ageMin == null || p.age >= policy.ageMin!) &&
+            (policy.ageMax == null || p.ageHigh <= policy.ageMax!);
+        if (fully) {
+          reasons.add('$range 조건 충족');
+        } else {
+          checks.add('$range 조건 (정확한 나이 확인)');
+        }
       }
 
       // 혼인 상태
@@ -90,8 +111,16 @@ class PolicyMatcher {
         }
       }
 
+      // 무주택
+      if (policy.requiresHomeless) {
+        if (p.homeless == false) continue;
+        if (p.homeless == true) {
+          reasons.add('무주택 조건 충족');
+        } else {
+          checks.add('무주택 여부');
+        }
+      }
       if (policy.hasIncomeLimit) checks.add('소득 기준');
-      if (policy.requiresHomeless) checks.add('무주택 여부');
 
       result.add(PolicyMatch(
         policy,

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'models/review.dart';
+import 'models/user_profile.dart';
 import 'models/vendor.dart';
 import 'models/wedding_plan.dart';
 
@@ -14,6 +15,38 @@ class AppState extends ChangeNotifier {
   WeddingPlan plan = WeddingPlan(
     weddingDate: DateTime.now().add(const Duration(days: 240)),
   );
+
+  /// 상담 전에 입력한 내 정보. [profileDone]이 false면 AI 상담 탭에서 먼저 입력 화면을 보여준다.
+  UserProfile profile = const UserProfile();
+  bool profileDone = false; // 내 정보 입력을 마쳤는지
+  bool profileSkipped = false; // 입력을 건너뛰고 바로 질문하기로 했는지
+
+  /// 내 정보를 저장하고, 다른 탭(체크리스트·업체 예산)에서 쓰는 결혼 정보에도 반영한다.
+  void saveProfile(UserProfile p, {bool done = true}) {
+    profile = p;
+    profileDone = done;
+    profileSkipped = false;
+    plan = plan.copyWith(
+      sido: p.sido,
+      guests: p.guests,
+      budget: p.budget,
+      weddingDate: p.weddingDate,
+    );
+    notifyListeners();
+  }
+
+  void skipProfile() {
+    profileSkipped = true;
+    notifyListeners();
+  }
+
+  /// 테스트·시연 초기화용
+  void resetProfile() {
+    profile = const UserProfile();
+    profileDone = false;
+    profileSkipped = false;
+    notifyListeners();
+  }
 
   final List<Consultation> consultations = [];
   final Map<VendorCategory, ItemStatus> itemStatus = {};

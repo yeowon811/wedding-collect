@@ -5,7 +5,11 @@ import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/repositories/review_repository.dart';
-import 'package:wedding_collect/features/chat/local_data_agent.dart';
+import 'package:wedding_collect/data/models/policy.dart';
+import 'package:wedding_collect/data/models/user_profile.dart';
+import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
+import 'package:wedding_collect/features/chat/agent/understanding.dart';
+import 'package:wedding_collect/features/chat/chat_agent.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
 
 /// 모든 탭을 열어 보고 주요 흐름이 오류 없이 그려지는지 확인한다.
@@ -232,26 +236,100 @@ void main() {
         ReviewRepository.reviewsFor(demo.first).first.text);
   });
 
-  testWidgets('AI 상담이 질문 유형별로 답한다', (tester) async {
+  test('질문 이해: 나이대·분야·결혼 단계를 읽는다', () {
+    final nlu = RuleUnderstander();
+    final u = nlu.parse('20대 청년이 신혼생활에 받을 수 있는 정책이 뭐가있어?');
+    expect(u.intent, ConsultIntent.policy);
+    expect(u.facts.age, 20);
+    expect(u.facts.ageMax, 29);
+    expect(u.topic, PolicyCategory.housing);
+    expect(u.facts.sido, isNull);
+    expect(u.facts.stage, isNull); // "신혼생활"만으로는 혼인신고 여부를 알 수 없음
+
+    final v = nlu.parse('하객 100명 정도인데 서울 공공예식장 추천해줘');
+    expect(v.intent, ConsultIntent.venue);
+    expect(v.facts.guests, 100);
+    expect(v.facts.sido, '서울');
+
+    final d = nlu.parse('예산 3천만원인데 드레스 추천해줘');
+    expect(d.intent, ConsultIntent.vendor);
+    expect(d.facts.budget, 3000);
+
+    expect(nlu.parse('27', expecting: Slot.age).facts.age, 27);
+    expect(nlu.parse('결혼 2년차예요').facts.marriedYears, 2);
+    expect(nlu.parse('결혼 2년차예요').facts.stage, MarriageStage.married);
+  });
+
+  testWidgets('내 정보가 없으면 필요한 정보를 하나씩 되묻고 이어서 답한다', (tester) async {
     await _preload(tester);
-    final agent = LocalDataAgent();
-    final venue = await agent.reply('서울 공공예식장 알려줘');
-    expect(venue.text, contains('서울 공공예식장은'));
-    expect(venue.text, contains('무료 대관'));
-    expect(venue.cards, isNotEmpty);
+    AppState.instance.resetProfile();
+    final agent = ConsultAgent();
 
-    final policy = await agent.reply('29세 받을 수 있는 정책 있어?');
-    expect(policy.text, contains('만 29세'));
+    await tester.runAsync(() async {
+      // 지역·결혼 단계를 모르므로 먼저 지역을 묻는다 (나이는 "20대"로 앎)
+      var m = await agent.reply('20대 청년이 신혼생활에 받을 수 있는 정책이 뭐가있어?');
+      expect(m.isQuestion, isTrue);
+      expect(agent.asking, Slot.sido);
+      expect(m.text, contains('어느 지역'));
+      expect(m.quickReplies.map((r) => r.label), contains('서울'));
+      expect(m.basis, contains('만 20~29세'));
 
-    final dress = await agent.reply('예산 안에서 드레스 추천해줘');
-    expect(dress.text, contains('드레스 추천 예산'));
-    expect(dress.cards, isNotEmpty);
+      // 버튼으로 답 → 혼인신고 여부를 묻는다
+      m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '서울'));
+      expect(agent.asking, Slot.stage);
 
-    final parent = await agent.reply('혼주 메이크업 알려줘');
-    expect(parent.text, contains('혼주 메이크업'));
+      // 글로 답해도 된다
+      m = await agent.reply('네 혼인신고 했어요');
+      expect(agent.asking, Slot.marriedYears);
+      m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '1년 이내'));
+      expect(agent.asking, Slot.homeless);
 
-    expect((await agent.reply('예산 어떻게 나눠?')).text, contains('추천 배분'));
-    expect((await agent.reply('뭐부터 해야 해?')).text, contains('먼저 할 일'));
-    expect((await agent.reply('대전 공공예식장')).text, contains('없어요'));
+      // 모르면 건너뛰기 → 답변
+      m = await agent.reply('잘 모르겠어요');
+      expect(m.isQuestion, isFalse);
+      expect(agent.asking, isNull);
+      expect(m.basis, contains('서울'));
+      expect(m.basis, contains('만 20~29세'));
+      expect(m.text, contains('주거·대출'));
+      expect(m.cards, isNotEmpty);
+      expect(m.text, contains('정확한 만 나이')); // 범위로만 알면 안내
+      expect(m.quickReplies.any((r) => r.action == 'save_profile'), isTrue);
+
+      // 대화에서 알게 된 정보는 기억한다 → 다음 질문에서는 지역을 다시 묻지 않는다
+      m = await agent.reply('하객 150명인데 공공예식장 추천해줘');
+      expect(m.isQuestion, isFalse);
+      expect(m.basis, contains('하객 150명'));
+
+      // 되묻는 중에 다른 질문을 하면 새 질문으로 처리
+      final other = ConsultAgent();
+      await other.reply('공공예식장 추천해줘');
+      expect(other.asking, Slot.sido);
+      m = await other.reply('예산 어떻게 나누면 돼?');
+      expect(other.asking, Slot.budget);
+    });
+  });
+
+  testWidgets('내 정보를 입력하면 시작하자마자 추천하고 되묻지 않는다', (tester) async {
+    await _preload(tester);
+    AppState.instance.saveProfile(const UserProfile(
+      sido: '서울', age: 29, stage: MarriageStage.engaged, guests: 120, budget: 3000, homeless: true));
+    final agent = ConsultAgent();
+    await tester.runAsync(() async {
+      final first = await agent.start();
+      expect(first.text, contains('공공예식장'));
+      expect(first.text, contains('받을 수 있는 정책'));
+      expect(first.cards, isNotEmpty);
+
+      final p = await agent.reply('받을 수 있는 정책 있어?');
+      expect(p.isQuestion, isFalse);
+      expect(p.basis, contains('만 29세'));
+
+      final dress = await agent.reply('드레스 추천해줘');
+      expect(dress.text, contains('드레스 추천 예산은 360만원'));
+
+      expect((await agent.reply('대전 공공예식장 알려줘')).text, contains('없어요'));
+      expect((await agent.reply('혼주 메이크업 추천')).text, contains('혼주 메이크업'));
+    });
+    AppState.instance.resetProfile();
   });
 }

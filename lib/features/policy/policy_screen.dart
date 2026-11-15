@@ -27,7 +27,10 @@ class _PolicyScreenState extends State<PolicyScreen> {
 
   late final Future<List<Policy>> _future = widget.repository.loadAll();
   // 처음에는 체크리스트 탭 결혼 정보의 지역을 따른다
-  PolicyProfile _profile = _savedProfile ?? PolicyProfile(sido: AppState.instance.plan.sido);
+  PolicyProfile _profile = _savedProfile ??
+      (AppState.instance.profileDone
+          ? PolicyProfile.fromUser(AppState.instance.profile)
+          : PolicyProfile(sido: AppState.instance.plan.sido));
   PolicyCategory? _category = _savedCategory;
 
   void _update(PolicyProfile p) => setState(() => _profile = _savedProfile = p);
