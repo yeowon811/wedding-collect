@@ -1,158 +1,99 @@
-﻿예식장ID,지역,이름,수집상태,필요한 항목,사유,예약링크,문의
-H004,강원 양양군,양양군 일출웨딩홀 예식장,수집완료,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=BG21I3952796,033-670-2859
-H006,강원 인제군,설악산 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B301&prdId=HB301XXX06561&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H018,경기 고양시,일산호수공원(메타세쿼이아길·야외무대·달맞이섬),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.goyang.go.kr/park/park04/park04_4.jsp,031-8075-4354 / 031-8075-4347
-H020,경기 부천시,부천 소향관,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://share.gg.go.kr/facilityListO/view?instiCode=3860423&facilityId=F0002,032-625-6042
-H021,경기 부천시,부천시청 잔디광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://share.gg.go.kr/facility/view?instiCode=1050022&facilityId=F0022,032-625-2237
-H022,경기 부천시,부천한옥체험마을,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,http://www.bucheonculture.or.kr/bbs/board.php?bo_table=wedding,032-651-3739
-H023,경기 부천시,송내청소년센터 행복놀이터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,http://www.sndyouth.or.kr/80,032-656-8085
-H025,경기 성남시,성남시청 너른못 잔디광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://share.gg.go.kr/facilityListW/view?instiCode=1040003&facilityId=F0178,031-729-2184
-H027,경기 수원시,수원박물관 옥외시설(야외전시장),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://share.gg.go.kr/facilityListO/view?instiCode=1010082&facilityId=F0001,031-228-4164
-H030,경기 여주시,여주 감고당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.yjcf.or.kr/cms/content/view/279,031-881-9665
-H031,경기 용인시,용인시 시민예식장(용인시청 컨벤션홀),수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://resve.yongin.go.kr/resve/manage/BD_selectResveManage.do?q_lclas=CL_03&q_rsn=1732,031-6193-2664
-H032,경기 의왕시,의왕시청 대회의실,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://share.gg.go.kr/facilityListO/view?instiCode=1250001&facilityId=F0009,의왕시청(대표 031-345-2114 / 총무과 문의)
-H033,경기 파주시,해스밀래 웨딩 (파주장단콩웰빙마루),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/mmdRVOqorZerdcYtXrhGKw,031-943-2662(ARS 3번) / 파주시 031-940-4422
-H040,경남 창원시,진해 해양솔라파크 대회의실(공공예식장),수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HK05J5724684,055-225-2625
-H044,경남 통영시,한려해상생태탐방원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B024&orgnztGbn=H,055-640-7700 / 033-769-9719
-H048,경북 경주시,코라디움(홍보관) 강당,수집완료,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.korad.or.kr/korad/module/facilityRequest/main.do?menu_idx=371,054-778-7123 / 054-750-4114
-H050,경북 구미시,경상북도환경연수원 야외공연장(안단테홀),수집완료,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q3414970,공유누리 상세페이지 내 문의
-H051,경북 봉화군,국립백두대간수목원 웨딩가든·진입광장,수집완료,정원,정원 값이 숫자가 아님('문의'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=928479,054-679-0859
-H053,경북 성주군,가야산 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B133&prdId=HB133XXX06574&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H054,경북 영주시,소백산 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B123&prdId=HB123XXX06579&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H057,대구 달서구,계명문화대학교 쉐턱관 벽오실·잔디광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
-H058,대구 달서구,달서구 이곡장미공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
-H059,대구 달서구,달서아트센터 야외공연장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
-H065,대구 동구,팔공산국립공원 갓바위 자생식물원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B251&orgnztGbn=H,053-989-8300 / 033-769-9719
-H070,부산 동구,부산 동구 이바구복합문화체육센터,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GD21K5113507,051-440-4355
-H078,서울 강남구,SETEC 컨벤션홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
-H079,서울 강남구,서울물재생시설공단 (마루공원),수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
-H080,서울 강남구,서울주택도시개발공사(대강당홀),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩두잇 위드 이유스타일
-H081,서울 강남구,압구정 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩을파티하라(02-517-1591)
-H082,서울 강동구,강동아트센터 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
-H083,서울 강동구,한강공원 광나루 장미원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩
-H084,서울 강북구,북서울 꿈의숲(창녕위궁재사),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H085,서울 강북구,솔밭근린공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩두잇 위드 이유스타일
-H086,서울 강서구,마곡광장(썬큰마당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 이소에르
-H087,서울 강서구,서울물재생공원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
-H088,서울 강서구,서울식물원 사색의 정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H089,서울 강서구,서울식물원 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 이소에르(07-1437-4222)
-H090,서울 강서구,어울림플라자 공연장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://seouleoullim.or.kr/site/reserve/info,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H091,서울 관악구,관악문화예절원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.gwanakcyw.or.kr:6015/?c=user&mcd=gkd0002,관악문화예절원 홈페이지 확인 (더아결 지원제외)
-H092,서울 관악구,서울시민대학 다시가는 캠퍼스,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H093,서울 광진구,광진구청 대강당홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
-H094,서울 광진구,뚝섬 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H095,서울 광진구,어린이대공원 포시즌가든,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H096,서울 구로구,푸른수목원 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩
-H097,서울 금천구,금천구 녹색광장 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩(02-761-1551)
-H098,서울 노원구,노원구 화랑대 철도공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H099,서울 노원구,"북서울미술관(썬큰가든, 별광장)",미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H100,서울 노원구,불암산 힐링타운 철쭉동산,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 그린웨딩
-H101,서울 도봉구,도봉구청 선인봉홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H102,서울 도봉구,북한산생태탐방원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B971&orgnztGbn=H,02-901-0774
-H103,서울 도봉구,초안산 가드닝센터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩두잇 위드 이유스타일
-H104,서울 도봉구,초안산 하늘꽃정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H105,서울 동대문구,서울시립대 자작마루,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H106,서울 동대문구,서울한방진흥센터(야외마당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H107,서울 동작구,보라매시민안전체험관(다목적홀),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 그린웨딩
-H108,서울 동작구,서울여성플라자 피움서울(舊.국제회의장),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H109,서울 마포구,망원 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 루디아 프로젝트(02-2672-7774)
-H110,서울 마포구,문화비축기지,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H111,서울 마포구,서교생활문화센터 서교스퀘어,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 미그린웨딩이벤트(02-511-2175)
-H112,서울 마포구,서울수상레포츠센터 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H113,서울 마포구,월드컵공원 평화의 공원(새록결혼식),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H114,서울 마포구,월드컵공원 평화잔디광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H115,서울 서대문구,서대문 안산 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩두잇 위드 이유스타일
-H116,서울 서대문구,청년예술청 SAPY,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩(02-761-1551)
-H117,서울 서초구,국립중앙도서관 국제회의장(공공예식장),수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q1842193,02-590-0648
-H118,서울 서초구,매헌시민의숲,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 루디아 프로젝트(02-2672-7774)
-H119,서울 서초구,서울교육대학교 그랜드홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩(02-761-1551)
-H121,서울 서초구,서울문화예술교육센터(서초),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H122,서울 서초구,서울시 인재개발원(인재홀),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H124,서울 성동구,서울새활용플라자,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 그린웨딩
-H125,서울 성동구,서울숲 설렘정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 미그린웨딩이벤트(02-511-2175)
-H126,서울 성동구,서울숲 포플러정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H128,서울 송파구,서울백제어린이박물관 앞마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
-H129,서울 송파구,잠실 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H131,서울 송파구,한성백제박물관 한성백제홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H132,서울 영등포구,선유도공원(원형무대),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H133,서울 영등포구,여의도 루프탑 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 보노체(02-2253-7979)
-H134,서울 영등포구,여의도 한강공원 물빛무대,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H135,서울 영등포구,영중종합사회복지관-5층 체육관,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.yeongjung.or.kr,02-2679-2024 / 1899-2154 (서울상담센터) / 전담업체 웨딩을파티하라(02-517-1591)
-H136,서울 영등포구,한국전력공사 남서울본부 강당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.alioplus.go.kr/facilities/facltByWeddingDetail.do?facltSeq=7196,02-787-8338
-H138,서울 용산구,"남산 한남 웨딩가든(前 더힐스 남산 웨딩홀, 한남 정원 웨딩홀)",미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H139,서울 용산구,용산가족공원(연못광장),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H141,서울 은평구,서울문화예술교육센터(은평),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩두잇 위드 이유스타일
-H142,서울 은평구,은평역사한옥박물관(은평마당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
-H143,서울 종로구,국립고궁박물관 야외 은행나무쉼터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.gogung.go.kr/gogung/pgm/weddingApply/list.do?menuNo=800244,02-3701-7500
-H144,서울 종로구,국립민속박물관 오촌댁(전통혼례),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.eshare.go.kr/,02-3704-3025 (민속기획과)
-H145,서울 종로구,백인제가옥(안채마당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 미그린웨딩이벤트(02-511-2175)
-H146,서울 종로구,서울공예박물관 공예마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩을파티하라(02-517-1591)
-H147,서울 종로구,"서울역사박물관(중정,로비)",미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H148,서울 종로구,세종문화회관(예인마당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
-H149,서울 종로구,운현궁 노락당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.unhyeongung.or.kr/sub/traditional_wedding/place_application.php,02-766-9090
-H150,서울 중구,남산 장충 웨딩가든(하우스 커피 앤 디저트 카페),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩(02-761-1551)
-H151,서울 중구,남산 호현 웨딩가든(前 남산호현당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩을파티하라(02-517-1591)
-H152,서울 중구,남산골한옥마을 (관훈동 민씨 가옥),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.kguide.kr/nhm01/,남산골한옥마을 예약페이지 문의
-H153,서울 중구,문학의 집 서울(산림문학관),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터)
-H154,서울 중구,서울도시건축전시관,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
-H155,서울 중구,서울시립미술관 서소문본관 앞마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 베라체 by 베라웨딩(02-761-1551)
-H156,서울 중구,카페마루 웨딩홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 가온 바이 보다(GAON by BODA)
-H157,세종,국립세종수목원 이음정원,수집완료,"정원, 요금",정원 값이 숫자가 아님('문의') / 요금 값을 숫자로 읽을 수 없음('유료(요금안내문의)'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=924145,044-251-0001
-H158,세종,국립세종수목원 축제마당,수집완료,"정원, 요금",정원 값이 숫자가 아님('문의') / 요금 값을 숫자로 읽을 수 없음('유료(요금안내문의)'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=922410,044-251-0001
-H159,세종,새롬종합복지센터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H160,세종,세종 홍판서댁,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H161,세종,세종중앙공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H162,세종,세종호수공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H163,세종,이응다리(금강보행교),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H164,세종,조치원1927아트센터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H165,세종,조치원문화정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H166,세종,초려역사공원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
-H168,울산 남구,울산대공원 메타세쿼이아길,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H169,울산 남구,울산대공원 지관서가 세미나실,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H170,울산 남구,울산대공원 지관서가 앞마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H171,울산 남구,울산박물관 2층 강당,페이지 없음,"정원, 요금, 사진",공유누리 상세 페이지가 없음(삭제·비공개 추정) → 운영상태 재확인 필요 / 상세 링크 접속 시 공유누리 메인으로 이동(자원 삭제·비공개 추정). 운영상태 재확인 필요,https://yes.ulsan.go.kr/item/step1?itemId=T0000960,052-229-4712
-H172,울산 남구,울산태화호(선상 웨딩),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H173,울산 동구,대왕암공원 잔디마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H174,울산 동구,대왕암공원 축구장 일원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H175,울산 중구,울산정원지원센터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H176,울산 중구,태화강국가정원 숲속정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H177,울산 중구,태화강국가정원 은행나무정원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
-H178,울산 중구,한국동서발전 본사 별관 웨딩홀(대강당),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.ewp.co.kr/kor/subpage/content.html?pc=5WURDHIUBDYHOSHPWMKSRY30ZYJO51N,070-5000-1276 / 070-5000-1000
-H179,인천 강화군,강화 소창체험관,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H180,인천 남동구,늘솔길 숲 이야기(늘솔길근린공원),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H181,인천 남동구,인천대공원 문화마당,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.incheon.go.kr/res/RE020101/rentView?resveGroupSn=32&resveProgrmSeCode=R&progrmSn=560&curPage=1,032-440-5816 (공원) / 032-541-2860 (맺어드림)
-H182,인천 남동구,인천시청 대회의실,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H183,인천 남동구,인천시청 애뜰광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.incheon.go.kr/IC021503,032-440-2507 (총무과) / 032-541-2860 (맺어드림)
-H185,인천 연수구,글로벌파크 야외무대,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H186,인천 연수구,솔찬공원 잔디광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H187,인천 연수구,아트센터인천 이벤트홀,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H188,인천 옹진군,옹진군 가족센터,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H189,인천 제물포구,상상플랫폼 개항광장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H191,인천 제물포구,월미문화관,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H192,인천 제물포구,이음 1977,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H193,인천 제물포구,이음 1978,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H194,인천 제물포구,인천시민애(愛)집,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H195,인천 제물포구,하버파크호텔(인천관광공사),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
-H197,광주·전남 구례군,지리산 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B014001&prdId=HB01400106558&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H198,광주·전남 무안군,전남여성가족재단 공연장,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.jwomen.or.kr/reservation/step/?site=women&mn=754,061-260-7315 / 061-260-7300
-H199,광주·전남 북구,무등산 생태탐방원,수집완료(이미지URL 미확인),"정원, 사진",정원 '1명'은 등록 오류로 보임 / 사진 1장 중 0장만 주소 확인 / 사진 1장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B231&prdId=HB231XXX06731&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H204,광주·전남 완도군,다도해해상국립공원 탐방안내소,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B091&prdId=HB091XXX00001&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H205,광주·전남 해남군,해남군민광장,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FK08J2644749,061-530-5725
-H206,광주·전남 해남군,해남문화예술회관 다목적실,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FK07K1955646,061-530-5725
-H207,전북 고창군,고창읍성,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ21P3851069,063-560-2944
-H208,전북 고창군,무장읍성,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ21P3156473,063-560-2944
-H211,전북 무주군,덕유산국립공원 잔디광장,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B051&prdId=HB051XXX07031&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H214,전북 무주군,힐링정원센터[무심원] 야외예식장,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ15J2616997,063-320-2054
-H215,전북 부안군,변산반도 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B183&prdId=HB183XXX00003&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H216,전북 부안군,부안군 공공예식장 - 줄포만 노을빛정원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ27N2905094,063-580-4213
-H219,전북 장수군,장수누리파크 웨딩정원,수집완료(이미지URL 미확인),"정원, 사진",정원 '1명'은 등록 오류로 보임 / 사진 3장 중 0장만 주소 확인 / 사진 3장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ30N5037539,063-350-2042
-H231,전북 정읍시,내장산 생태탐방원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B331&prdId=HB331XXX06565&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H232,전북 정읍시,내장산국립공원 단풍생태공원,수집완료,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B042&prdId=HB042XXX00003&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
-H233,충남 공주시,계룡산생태탐방원,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B163&orgnztGbn=H,042-530-3303
-H234,충남 천안시,관세국경인재개발원 야외정원(공공예식장),수집완료(이미지URL 미확인),사진,사진 2장 중 0장만 주소 확인 / 사진 2장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움,https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q2320595,041-410-8523
-H240,충북 음성군,한국소비자원 1층 대강당(예식장),수집완료,정원,정원 값이 숫자가 아님('문의'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GG11K810942,043-880-5994
-H243,충북 청주시,충청북도청 대회의실,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.cbhope1539.net/rent/step1.do?key=2004215755341&rentSpceSn=1,043-266-1539
-H244,충북 청주시,충청북도청 문화광장 8·15,미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.cbhope1539.net/rent/step1.do?key=2004215755341&rentSpceSn=1,043-266-1539
-H245,충북 충주시,충주 유기농체험교육센터 공공예식장,수집완료,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GK10N3506861,043-830-9330
-H246,충북 충주시,충주시청 3층 대회의실(공공예식장),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.chungju.go.kr/rev/reserve/318?category_3=%EA%B3%B5%EA%B3%B5%EC%8B%9C%EC%84%A4&action=list_multi&rent_place_srl=148&rent_center_srl=33,043-850-5162 (자치행정과)
-H247,충북 충주시,충주시청 잔디광장(공공예식장),미수집,"정원, 요금, 운영시간, 사진",공유누리 수집 대상 아님(외부 예약처) 또는 미수집,https://www.chungju.go.kr/rev/reserve/318?category_3=%EA%B3%B5%EA%B3%B5%EC%8B%9C%EC%84%A4&action=list_multi&rent_place_srl=148&rent_center_srl=33,043-850-5162 (자치행정과)
+﻿예식장ID,지역,이름,수집출처,필요한 항목,사유,예약링크,문의
+H004,강원 양양군,양양군 일출웨딩홀 예식장,공유누리,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=BG21I3952796,033-670-2859
+H006,강원 인제군,설악산 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B301&prdId=HB301XXX06561&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H018,경기 고양시,일산호수공원(메타세쿼이아길·야외무대·달맞이섬),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.goyang.go.kr/park/park04/park04_4.jsp,031-8075-4354 / 031-8075-4347
+H020,경기 부천시,부천 소향관,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://share.gg.go.kr/facilityListO/view?instiCode=3860423&facilityId=F0002,032-625-6042
+H021,경기 부천시,부천시청 잔디광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://share.gg.go.kr/facility/view?instiCode=1050022&facilityId=F0022,032-625-2237
+H022,경기 부천시,부천한옥체험마을,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),http://www.bucheonculture.or.kr/bbs/board.php?bo_table=wedding,032-651-3739
+H023,경기 부천시,송내청소년센터 행복놀이터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),http://www.sndyouth.or.kr/80,032-656-8085
+H025,경기 성남시,성남시청 너른못 잔디광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://share.gg.go.kr/facilityListW/view?instiCode=1040003&facilityId=F0178,031-729-2184
+H027,경기 수원시,수원박물관 옥외시설(야외전시장),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://share.gg.go.kr/facilityListO/view?instiCode=1010082&facilityId=F0001,031-228-4164
+H030,경기 여주시,여주 감고당,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.yjcf.or.kr/cms/content/view/279,031-881-9665
+H031,경기 용인시,용인시 시민예식장(용인시청 컨벤션홀),공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://resve.yongin.go.kr/resve/manage/BD_selectResveManage.do?q_lclas=CL_03&q_rsn=1732,031-6193-2664
+H032,경기 의왕시,의왕시청 대회의실,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://share.gg.go.kr/facilityListO/view?instiCode=1250001&facilityId=F0009,의왕시청(대표 031-345-2114 / 총무과 문의)
+H033,경기 파주시,해스밀래 웨딩 (파주장단콩웰빙마루),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/mmdRVOqorZerdcYtXrhGKw,031-943-2662(ARS 3번) / 파주시 031-940-4422
+H040,경남 창원시,진해 해양솔라파크 대회의실(공공예식장),공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HK05J5724684,055-225-2625
+H044,경남 통영시,한려해상생태탐방원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B024&orgnztGbn=H,055-640-7700 / 033-769-9719
+H048,경북 경주시,코라디움(홍보관) 강당,공유누리,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.korad.or.kr/korad/module/facilityRequest/main.do?menu_idx=371,054-778-7123 / 054-750-4114
+H050,경북 구미시,경상북도환경연수원 야외공연장(안단테홀),공유누리,정원,정원 값이 숫자가 아님('시간별 상이'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q3414970,공유누리 상세페이지 내 문의
+H051,경북 봉화군,국립백두대간수목원 웨딩가든·진입광장,공유누리,정원,정원 값이 숫자가 아님('문의'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=928479,054-679-0859
+H053,경북 성주군,가야산 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B133&prdId=HB133XXX06574&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H054,경북 영주시,소백산 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B123&prdId=HB123XXX06579&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H057,대구 달서구,계명문화대학교 쉐턱관 벽오실·잔디광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
+H058,대구 달서구,달서구 이곡장미공원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
+H059,대구 달서구,달서아트센터 야외공연장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.dalseo.daegu.kr/index.do?menu_id=20000558,053-667-3546
+H065,대구 동구,팔공산국립공원 갓바위 자생식물원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B251&orgnztGbn=H,053-989-8300 / 033-769-9719
+H070,부산 동구,부산 동구 이바구복합문화체육센터,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GD21K5113507,051-440-4355
+H079,서울 강남구,서울물재생시설공단 (마루공원),공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
+H087,서울 강서구,서울물재생공원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
+H091,서울 관악구,관악문화예절원,서울마이웨딩(더아결),"정원, 요금","수용인원 '0명'은 숫자로 쓸 수 없음 / 별도운영 예식장: 공간안내 세부항목 없음, 해당 기관 홈페이지 문의",https://www.gwanakcyw.or.kr:6015/?c=user&mcd=gkd0002,관악문화예절원 홈페이지 확인 (더아결 지원제외)
+H102,서울 도봉구,북한산생태탐방원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B971&orgnztGbn=H,02-901-0774
+H117,서울 서초구,국립중앙도서관 국제회의장(공공예식장),공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q1842193,02-590-0648
+H128,서울 송파구,서울백제어린이박물관 앞마당,서울마이웨딩(더아결),실제 사진(현재 AI 생성 이미지만 있음),사진 1장 중 1장이 AI 생성 이미지(파일명 기준),https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 좋은날(02-515-9924)
+H131,서울 송파구,한성백제박물관 한성백제홀,서울마이웨딩(더아결),실제 사진(현재 AI 생성 이미지만 있음),사진 1장 중 1장이 AI 생성 이미지(파일명 기준),https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 들꽃웨딩(02-2644-5902)
+H136,서울 영등포구,한국전력공사 남서울본부 강당,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.alioplus.go.kr/facilities/facltByWeddingDetail.do?facltSeq=7196,02-787-8338
+H143,서울 종로구,국립고궁박물관 야외 은행나무쉼터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.gogung.go.kr/gogung/pgm/weddingApply/list.do?menuNo=800244,02-3701-7500
+H144,서울 종로구,국립민속박물관 오촌댁(전통혼례),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.eshare.go.kr/,02-3704-3025 (민속기획과)
+H146,서울 종로구,서울공예박물관 공예마당,서울마이웨딩(더아결),실제 사진(현재 AI 생성 이미지만 있음),사진 3장 중 3장이 AI 생성 이미지(파일명 기준),https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,1899-2154 (서울상담센터) / 전담업체 웨딩을파티하라(02-517-1591)
+H149,서울 종로구,운현궁 노락당,서울마이웨딩(더아결),"정원, 요금, 실제 사진(현재 AI 생성 이미지만 있음)","별도운영 예식장: 공간안내 세부항목 없음, 해당 기관 홈페이지 문의 / 사진 1장 중 1장이 AI 생성 이미지(파일명 기준)",https://www.unhyeongung.or.kr/sub/traditional_wedding/place_application.php,02-766-9090
+H152,서울 중구,남산골한옥마을 (관훈동 민씨 가옥),서울마이웨딩(더아결),"정원, 요금","별도운영 예식장: 공간안내 세부항목 없음, 해당 기관 홈페이지 문의",https://www.kguide.kr/nhm01/,남산골한옥마을 예약페이지 문의
+H154,서울 중구,서울도시건축전시관,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://docs.google.com/forms/d/e/1FAIpQLSdKkp2T2CUzFS5rKXFCqwVfyICKCTBeOZc-wBQFO0AYDZoWHA/viewform?usp=dialog,02-2133-6546 (더아결 상담센터 1899-2154)
+H157,세종,국립세종수목원 이음정원,공유누리,정원,정원 값이 숫자가 아님('문의') / 요금 값을 숫자로 읽을 수 없음('유료(요금안내문의)'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=924145,044-251-0001
+H158,세종,국립세종수목원 축제마당,공유누리,정원,정원 값이 숫자가 아님('문의') / 요금 값을 숫자로 읽을 수 없음('유료(요금안내문의)'),https://www.alioplus.go.kr/facilities/facltDetail.do?facltSeq=922410,044-251-0001
+H159,세종,새롬종합복지센터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H160,세종,세종 홍판서댁,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H161,세종,세종중앙공원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H162,세종,세종호수공원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H163,세종,이응다리(금강보행교),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H164,세종,조치원1927아트센터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H165,세종,조치원문화정원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H166,세종,초려역사공원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/MHnO96UEyFkXquAvgJGW4Q,070-4239-2677
+H168,울산 남구,울산대공원 메타세쿼이아길,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H169,울산 남구,울산대공원 지관서가 세미나실,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H170,울산 남구,울산대공원 지관서가 앞마당,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H171,울산 남구,울산박물관 2층 강당,공유누리,"정원, 요금, 사진",공유누리 상세 페이지가 없음(삭제·비공개 추정) → 운영상태 재확인 필요 / 상세 링크 접속 시 공유누리 메인으로 이동(자원 삭제·비공개 추정). 운영상태 재확인 필요,https://yes.ulsan.go.kr/item/step1?itemId=T0000960,052-229-4712
+H172,울산 남구,울산태화호(선상 웨딩),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H173,울산 동구,대왕암공원 잔디마당,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H174,울산 동구,대왕암공원 축구장 일원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H175,울산 중구,울산정원지원센터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H176,울산 중구,태화강국가정원 숲속정원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H177,울산 중구,태화강국가정원 은행나무정원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://form.naver.com/response/rAXadaWEeIwGEv4E4JxMTA,울산시청(052-120)
+H178,울산 중구,한국동서발전 본사 별관 웨딩홀(대강당),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.ewp.co.kr/kor/subpage/content.html?pc=5WURDHIUBDYHOSHPWMKSRY30ZYJO51N,070-5000-1276 / 070-5000-1000
+H179,인천 강화군,강화 소창체험관,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H180,인천 남동구,늘솔길 숲 이야기(늘솔길근린공원),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H181,인천 남동구,인천대공원 문화마당,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.incheon.go.kr/res/RE020101/rentView?resveGroupSn=32&resveProgrmSeCode=R&progrmSn=560&curPage=1,032-440-5816 (공원) / 032-541-2860 (맺어드림)
+H182,인천 남동구,인천시청 대회의실,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H183,인천 남동구,인천시청 애뜰광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.incheon.go.kr/IC021503,032-440-2507 (총무과) / 032-541-2860 (맺어드림)
+H185,인천 연수구,글로벌파크 야외무대,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H186,인천 연수구,솔찬공원 잔디광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H187,인천 연수구,아트센터인천 이벤트홀,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H188,인천 옹진군,옹진군 가족센터,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H189,인천 제물포구,상상플랫폼 개항광장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H191,인천 제물포구,월미문화관,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H192,인천 제물포구,이음 1977,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H193,인천 제물포구,이음 1978,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H194,인천 제물포구,인천시민애(愛)집,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H195,인천 제물포구,하버파크호텔(인천관광공사),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://gy-hfsc.familynet.or.kr/center/lay1/bbs/S295T311C313/A/1/list.do,032-541-2860(내선501) / 032-440-2808
+H197,광주·전남 구례군,지리산 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B014001&prdId=HB01400106558&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H198,광주·전남 무안군,전남여성가족재단 공연장,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.jwomen.or.kr/reservation/step/?site=women&mn=754,061-260-7315 / 061-260-7300
+H199,광주·전남 북구,무등산 생태탐방원,공유누리,"정원, 사진",정원 '1명'은 등록 오류로 보임 / 사진 1장 중 0장만 주소 확인 / 사진 1장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B231&prdId=HB231XXX06731&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H204,광주·전남 완도군,다도해해상국립공원 탐방안내소,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B091&prdId=HB091XXX00001&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H205,광주·전남 해남군,해남군민광장,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FK08J2644749,061-530-5725
+H206,광주·전남 해남군,해남문화예술회관 다목적실,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FK07K1955646,061-530-5725
+H207,전북 고창군,고창읍성,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ21P3851069,063-560-2944
+H208,전북 고창군,무장읍성,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ21P3156473,063-560-2944
+H211,전북 무주군,덕유산국립공원 잔디광장,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B051&prdId=HB051XXX07031&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H214,전북 무주군,힐링정원센터[무심원] 야외예식장,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ15J2616997,063-320-2054
+H215,전북 부안군,변산반도 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B183&prdId=HB183XXX00003&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H216,전북 부안군,부안군 공공예식장 - 줄포만 노을빛정원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ27N2905094,063-580-4213
+H219,전북 장수군,장수누리파크 웨딩정원,공유누리,"정원, 사진",정원 '1명'은 등록 오류로 보임 / 사진 3장 중 0장만 주소 확인 / 사진 3장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=HJ30N5037539,063-350-2042
+H231,전북 정읍시,내장산 생태탐방원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B331&prdId=HB331XXX06565&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H232,전북 정읍시,내장산국립공원 단풍생태공원,공유누리,정원,정원 '1명'은 등록 오류로 보임 / eshare 등록값이 기관 템플릿 수준(정원 1명·예시 문구 등). 실제 조건은 외부 예약처에서 확인 필요,https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B042&prdId=HB042XXX00003&orgnztGbn=H,공유누리 상세페이지 내 문의 / 033-769-9719
+H233,충남 공주시,계룡산생태탐방원,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://reservation.knps.or.kr/contents/H/serviceGuide.do?parkId=B163&orgnztGbn=H,042-530-3303
+H234,충남 천안시,관세국경인재개발원 야외정원(공공예식장),공유누리,사진,사진 2장 중 0장만 주소 확인 / 사진 2장 확인했으나 주소 미추출 → 다운로드 스크립트가 채움,https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=FF24Q2320595,041-410-8523
+H240,충북 음성군,한국소비자원 1층 대강당(예식장),공유누리,정원,정원 값이 숫자가 아님('문의'),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GG11K810942,043-880-5994
+H243,충북 청주시,충청북도청 대회의실,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.cbhope1539.net/rent/step1.do?key=2004215755341&rentSpceSn=1,043-266-1539
+H244,충북 청주시,충청북도청 문화광장 8·15,미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.cbhope1539.net/rent/step1.do?key=2004215755341&rentSpceSn=1,043-266-1539
+H245,충북 충주시,충주 유기농체험교육센터 공공예식장,공유누리,정원,정원 '1명'은 등록 오류로 보임 / 정원 '1명'은 등록 오류 가능성(실제 수용인원 아님),https://www.eshare.go.kr/UserPortal/Upv/UprResrcFacl/index.do?rsrc_no=GK10N3506861,043-830-9330
+H246,충북 충주시,충주시청 3층 대회의실(공공예식장),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.chungju.go.kr/rev/reserve/318?category_3=%EA%B3%B5%EA%B3%B5%EC%8B%9C%EC%84%A4&action=list_multi&rent_place_srl=148&rent_center_srl=33,043-850-5162 (자치행정과)
+H247,충북 충주시,충주시청 잔디광장(공공예식장),미수집,"정원, 요금, 운영·예식 가능일, 사진",공유누리·더아결 모두 미수집 (지자체 자체 예약처),https://www.chungju.go.kr/rev/reserve/318?category_3=%EA%B3%B5%EA%B3%B5%EC%8B%9C%EC%84%A4&action=list_multi&rent_place_srl=148&rent_center_srl=33,043-850-5162 (자치행정과)

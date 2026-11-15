@@ -70,6 +70,11 @@
   - **2026-11-16: `공공예식장_eshare수집.xlsx`가 새 기준 파일.** (2) 파일의 13개 열 + 공유누리 수집 28개 열(정원·요금·요금 상세·운영시간·접수·심사·준비시간·이용대상·실내외·주차·면적·사진 5장). 다른 3개 시트는 (2)와 동일
   - 수집 117곳 / 미수집 123곳. 정원 숫자 84곳(‘1명’ 25건은 eshare 등록 오류로 보고 null, ‘문의’·‘시간별 상이’ 7건도 null), 요금 114곳(무료 43), 사진 113곳(202장, 공유누리 주소 직접 사용)
   - 검증: `python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx" [--check-images]` → `docs/data-validation/venues_report.md`, 추가 수집 목록 `docs/data-validation/venues_to_collect.csv`(157곳)
+  - **2026-11-16: `공공예식장_더아결수집.xlsx` 추가.** 대상 123곳 = 공유누리 미수집 123곳과 정확히 같음(겹침 없음). 수집 65곳(서울마이웨딩), 58곳은 여전히 미수집(인천·울산·세종 등 지자체 자체 예약처)
+    - 열: 수용인원(범위 '100명~200명' → capacityMin/capacity), 대관료('무료…'로 시작하면 0, 그 외 원문), 피로연, 예식가능/불가일(26·27년), 주차, 협력전문웨딩업체(실제 업체 이름과 연결 164/268건), 기타 안내, 전체 이미지 URL(최대 32장)
+    - **AI 생성 이미지 20장(18곳)**: 파일명 'AI'·'OPENAI_IMAGE'로 판별(수집 파일 표시와 일치). 앱에서 'AI 생성 이미지' 배지, 카드 대표 사진은 실제 사진 우선
+    - 변환: `python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx"`, 검증: `validate_venues.py ... --supplement "../공공예식장_더아결수집.xlsx"`
+    - JSON 필드 `eshareStatus` → `collectSource`(공유누리/서울마이웨딩(더아결)) + `collectStatus`로 바꿈
   - **사용자가 미수집 데이터를 나중에 다시 제공할 예정** → 같은 형식 엑셀로 받으면 위 두 명령만 다시 실행
   - 웹에서는 공유누리 이미지에 CORS 헤더가 없어 `WebHtmlElementStrategy.fallback` 사용. 사진 이용 조건(공공누리 유형)은 소개서 출처 표에 적기 전에 확인 필요
 - `tools/xlsx_reader.py`: openpyxl 없이 xlsx를 읽는 표준 라이브러리 도우미

@@ -39,7 +39,9 @@ class Venue {
     required this.source,
     this.capacity,
     this.rentalFee,
-    this.eshareStatus,
+    this.collectSource,
+    this.collectStatus,
+    this.capacityMin,
     this.capacityText,
     this.feeText,
     this.feeDetail,
@@ -54,7 +56,14 @@ class Venue {
     this.indoorOutdoor,
     this.parking,
     this.area,
+    this.reception,
+    this.availableDates2026,
+    this.unavailableDates2026,
+    this.availableDates2027,
+    this.partnerVendors = const [],
+    this.extraInfo,
     this.images = const [],
+    this.aiImages = const {},
     this.dataNotes = const [],
   });
 
@@ -77,11 +86,13 @@ class Venue {
   final String source;
 
   /// 수집 전이거나 등록 오류로 보이면 null → 화면에서 "기관 확인 필요"
-  final int? capacity; // 명
+  final int? capacity; // 명 (범위로 적힌 경우 최대값)
+  final int? capacityMin; // 범위로 적힌 경우 최소값 (예: 100명~200명 → 100)
   final int? rentalFee; // 원 (무료 = 0)
 
-  // ── 공유누리(eshare) 수집 정보 (없으면 null) ──
-  final String? eshareStatus; // 수집완료 / 수집완료(이미지URL 미확인) / 페이지 없음
+  // ── 추가 수집 정보 (공유누리 또는 서울마이웨딩(더아결)). 없으면 null ──
+  final String? collectSource; // 공유누리 / 서울마이웨딩(더아결)
+  final String? collectStatus; // 수집완료 / 수집완료(별도운영) / 페이지 없음 …
   final String? capacityText; // 원본 정원 값
   final String? feeText; // 예: 기본요금 100,000원
   final String? feeDetail; // 요금 상세 설명 (기준 시간·가산금 등)
@@ -96,19 +107,35 @@ class Venue {
   final String? indoorOutdoor; // 실내 / 실외
   final String? parking;
   final String? area; // 규모·면적
-  final List<String> images; // 공유누리 사진 주소
+  final String? reception; // 피로연 (케이터링·도시락·불가 등)
+  final String? availableDates2026; // 예식 가능일
+  final String? unavailableDates2026; // 예식 불가일
+  final String? availableDates2027;
+  final List<String> partnerVendors; // 협력 전문 웨딩업체 이름
+  final String? extraInfo; // 기타 안내
+  final List<String> images; // 사진 주소
+  final Set<String> aiImages; // images 중 AI 생성 이미지
   final List<String> dataNotes; // 데이터 주의 사항 ("확인 필요" 안내)
 
-  bool get isCollected => eshareStatus != null;
+  bool get isCollected => collectStatus != null;
   bool get isFree => rentalFee == 0;
+  bool isAiImage(String url) => aiImages.contains(url);
+
+  /// 목록 카드 대표 사진: 실제 사진을 먼저, 없으면 AI 생성 이미지
+  String? get coverImage =>
+      images.where((u) => !aiImages.contains(u)).firstOrNull ?? images.firstOrNull;
 
   /// 하객 [guests]명을 수용할 수 있는지. 정원을 모르면 null
   bool? fits(int guests) => capacity == null ? null : capacity! >= guests;
 
-  String get capacityLabel => capacity != null ? '정원 $capacity명' : '정원 확인 필요';
+  String get capacityLabel {
+    if (capacity == null) return '정원 확인 필요';
+    if (capacityMin != null) return '$capacityMin~$capacity명';
+    return '정원 $capacity명';
+  }
 
   String get feeLabel {
-    if (rentalFee == null) return '대관료 확인 필요';
+    if (rentalFee == null) return feeText != null ? '대관료 유료 · 상세 참고' : '대관료 확인 필요';
     if (rentalFee == 0) return '대관료 무료';
     return '기본요금 ${_won(rentalFee!)}';
   }
@@ -141,7 +168,9 @@ class Venue {
         source: j['source'] as String,
         capacity: (j['capacity'] as num?)?.toInt(),
         rentalFee: (j['rentalFee'] as num?)?.toInt(),
-        eshareStatus: j['eshareStatus'] as String?,
+        collectSource: j['collectSource'] as String?,
+        collectStatus: j['collectStatus'] as String?,
+        capacityMin: (j['capacityMin'] as num?)?.toInt(),
         capacityText: j['capacityText'] as String?,
         feeText: j['feeText'] as String?,
         feeDetail: j['feeDetail'] as String?,
@@ -156,7 +185,14 @@ class Venue {
         indoorOutdoor: j['indoorOutdoor'] as String?,
         parking: j['parking'] as String?,
         area: j['area'] as String?,
+        reception: j['reception'] as String?,
+        availableDates2026: j['availableDates2026'] as String?,
+        unavailableDates2026: j['unavailableDates2026'] as String?,
+        availableDates2027: j['availableDates2027'] as String?,
+        partnerVendors: ((j['partnerVendors'] as List?) ?? const []).cast<String>(),
+        extraInfo: j['extraInfo'] as String?,
         images: ((j['images'] as List?) ?? const []).cast<String>(),
+        aiImages: ((j['aiImages'] as List?) ?? const []).cast<String>().toSet(),
         dataNotes: ((j['dataNotes'] as List?) ?? const []).cast<String>(),
       );
 }

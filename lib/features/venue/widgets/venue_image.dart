@@ -64,3 +64,27 @@ class VenueImagePlaceholder extends StatelessWidget {
     );
   }
 }
+
+/// AI 생성 이미지 표시 (실제 사진이 아님을 알림)
+class AiImageBadge extends StatelessWidget {
+  const AiImageBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xCC5B3FA8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome, size: 12, color: Colors.white),
+          SizedBox(width: 4),
+          Text('AI 생성 이미지', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}

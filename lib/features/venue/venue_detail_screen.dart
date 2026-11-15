@@ -129,7 +129,7 @@ class VenueDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           if (v.images.isNotEmpty) ...[
-            _Gallery(images: v.images),
+            _Gallery(venue: v),
             const SizedBox(height: 16),
           ],
           Text(v.region, style: TextStyle(color: AppColors.textSecondary)),
@@ -161,9 +161,14 @@ class VenueDetailScreen extends StatelessWidget {
             _row(Icons.payments_outlined, '대관료',
                 v.rentalFee == null ? '기관 확인 필요${v.feeText != null ? ' (${v.feeText})' : ''}' : v.feeLabel),
             if (v.feeDetail != null) _detailBox(v.feeDetail!),
+            // "무료(냉난방 시 추가)"처럼 조건이 붙은 원문은 그대로 보여준다
+            if (v.feeDetail == null && v.feeText != null && v.feeText != '무료' && v.rentalFee != null)
+              _detailBox(v.feeText!),
             _row(Icons.info_outline, '운영 상태', v.statusText),
           ]),
           _usageSection(v),
+          _weddingSection(v),
+          _PartnerVendors(venue: v),
           _dataNotice(v),
           _section('신청 방법', [
             _row(Icons.event_available_outlined, '예약 방식', v.bookingMethod),
@@ -200,7 +205,7 @@ class VenueDetailScreen extends StatelessWidget {
           _NearbyVendors(venue: v),
           const SizedBox(height: 16),
           Text(
-            '출처: ${v.source}${v.isCollected ? ' · 정원·요금·운영시간·사진: 공유누리(eshare.go.kr)' : ''} · '
+            '출처: ${v.source}${v.isCollected ? ' · 정원·요금·사진 등: ${v.collectSource}' : ''} · '
             '정원과 대관료는 담당 기관에 최종 확인하세요.',
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
@@ -214,7 +219,21 @@ class VenueDetailScreen extends StatelessWidget {
       return '기관 확인 필요${v.capacityText != null ? ' (등록값: ${v.capacityText})' : ''}';
     }
     final guests = AppState.instance.plan.guests;
-    return '${v.capacity}명 · 내 하객 $guests명 ${v.capacity! >= guests ? '수용 가능' : '초과'}';
+    final range = v.capacityMin != null ? '${v.capacityMin}~${v.capacity}명' : '${v.capacity}명';
+    return '$range · 내 하객 $guests명 ${v.capacity! >= guests ? '수용 가능' : '초과'}';
+  }
+
+  /// 예식 가능일·피로연·기타 안내 (더아결 수집 항목)
+  Widget _weddingSection(Venue v) {
+    final rows = [
+      if (v.availableDates2026 != null) _row(Icons.event_available, '26년 예식일', v.availableDates2026!),
+      if (v.unavailableDates2026 != null) _row(Icons.event_busy, '26년 불가일', v.unavailableDates2026!),
+      if (v.availableDates2027 != null) _row(Icons.event_note, '27년 예식일', v.availableDates2027!),
+      if (v.reception != null) _row(Icons.restaurant, '피로연', v.reception!),
+      if (v.extraInfo != null) _row(Icons.campaign_outlined, '기타 안내', v.extraInfo!),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return _section('예식 안내', rows);
   }
 
   Widget _detailBox(String text) => Container(
@@ -253,8 +272,11 @@ class VenueDetailScreen extends StatelessWidget {
   /// 데이터가 없거나 확인이 필요한 경우 안내
   Widget _dataNotice(Venue v) {
     final notes = v.isCollected
-        ? v.dataNotes
-        : ['정원·요금·운영시간·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.'];
+        ? [
+            ...v.dataNotes,
+            if (v.aiImages.isNotEmpty) '사진 ${v.images.length}장 중 ${v.aiImages.length}장은 AI 생성 이미지예요 (실제 모습과 다를 수 있음).',
+          ]
+        : ['정원·요금·예식 가능일·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.'];
     if (notes.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
@@ -315,11 +337,59 @@ class VenueDetailScreen extends StatelessWidget {
   }
 }
 
-/// 사진 넘겨보기
-class _Gallery extends StatefulWidget {
-  const _Gallery({required this.images});
+/// 서울마이웨딩(더아결)에 등록된 협력 전문 웨딩업체. 실제 업체 목록에 있으면 상세로 연결한다.
+class _PartnerVendors extends StatelessWidget {
+  const _PartnerVendors({required this.venue});
 
-  final List<String> images;
+  final Venue venue;
+
+  @override
+  Widget build(BuildContext context) {
+    if (venue.partnerVendors.isEmpty) return const SizedBox.shrink();
+    return FutureBuilder<List<RealVendor>>(
+      future: Repos.vendor.realVendors(),
+      builder: (context, snap) {
+        final byName = {for (final v in snap.data ?? const <RealVendor>[]) v.name: v};
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('협력 전문 웨딩업체',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('서울마이웨딩에 이 예식장과 함께 등록된 업체예요',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final name in venue.partnerVendors)
+                    if (byName[name] != null)
+                      ActionChip(
+                        avatar: Icon(byName[name]!.category.icon, size: 16),
+                        label: Text(name),
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => RealVendorDetailScreen(vendor: byName[name]!),
+                        )),
+                      )
+                    else
+                      Chip(label: Text(name)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 사진 넘겨보기 (AI 생성 이미지는 표시)
+class _Gallery extends StatefulWidget {
+  const _Gallery({required this.venue});
+
+  final Venue venue;
 
   @override
   State<_Gallery> createState() => _GalleryState();
@@ -327,6 +397,8 @@ class _Gallery extends StatefulWidget {
 
 class _GalleryState extends State<_Gallery> {
   int _page = 0;
+
+  List<String> get images => widget.venue.images;
 
   @override
   Widget build(BuildContext context) {
@@ -338,17 +410,19 @@ class _GalleryState extends State<_Gallery> {
           fit: StackFit.expand,
           children: [
             PageView.builder(
-              itemCount: widget.images.length,
+              itemCount: images.length,
               onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (_, i) => VenueImage(url: widget.images[i]),
+              itemBuilder: (_, i) => VenueImage(url: images[i]),
             ),
+            if (widget.venue.isAiImage(images[_page]))
+              const Positioned(left: 10, top: 10, child: AiImageBadge()),
             Positioned(
               right: 10,
               bottom: 10,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                child: Text('${_page + 1}/${widget.images.length} · 사진: 공유누리',
+                child: Text('${_page + 1}/${images.length} · 사진: ${widget.venue.collectSource ?? '기관'}',
                     style: const TextStyle(color: Colors.white, fontSize: 12)),
               ),
             ),

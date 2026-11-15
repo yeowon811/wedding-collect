@@ -49,7 +49,9 @@ class VenueCard extends StatelessWidget {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          VenueImage(url: venue.images.first),
+                          VenueImage(url: venue.coverImage!),
+                          if (venue.isAiImage(venue.coverImage!))
+                            const Positioned(left: 10, top: 10, child: AiImageBadge()),
                           if (venue.images.length > 1)
                             Positioned(
                               right: 10,
@@ -136,7 +138,7 @@ Widget _capacityBadge(Venue v) {
   final guests = AppState.instance.plan.guests;
   final fits = v.fits(guests);
   return InfoBadge(
-    label: fits == null ? '정원 확인 필요' : '정원 ${v.capacity}명',
+    label: v.capacityLabel,
     icon: fits == null ? Icons.help_outline : (fits ? Icons.groups : Icons.group_off_outlined),
     color: fits == null ? AppColors.unknown : (fits ? AppColors.success : AppColors.warning),
   );

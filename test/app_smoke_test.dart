@@ -170,11 +170,14 @@ void main() {
     expect(venues.length, 240);
 
     // 공유누리 수집 데이터 (validate_venues.py 보고서 수치와 같아야 함)
-    expect(venues.where((v) => v.isCollected).length, 117);
-    expect(venues.where((v) => v.capacity != null).length, 84);
-    expect(venues.where((v) => v.rentalFee != null).length, 114);
-    expect(venues.where((v) => v.isFree).length, 43);
-    expect(venues.where((v) => v.images.isNotEmpty).length, 113);
+    expect(venues.where((v) => v.isCollected).length, 182);
+    expect(venues.where((v) => v.collectSource == '공유누리').length, 117);
+    expect(venues.where((v) => v.collectSource == '서울마이웨딩(더아결)').length, 65);
+    expect(venues.where((v) => v.capacity != null).length, 146);
+    expect(venues.where((v) => v.rentalFee != null).length, 169);
+    expect(venues.where((v) => v.isFree).length, 98);
+    expect(venues.where((v) => v.images.isNotEmpty).length, 178);
+    expect(venues.fold<int>(0, (n, v) => n + v.aiImages.length), 20);
     // 정원 '1명'·'문의' 같은 값은 숫자로 쓰지 않고, 확인 필요 안내가 붙는다
     for (final v in venues.where((v) => v.capacityText != null && v.capacity == null)) {
       expect(v.dataNotes, isNotEmpty, reason: v.id);
@@ -186,6 +189,19 @@ void main() {
     expect(h001.rentalFee, 100000);
     expect(h001.feeLabel, '기본요금 10만원');
     expect(h001.images.length, 1);
+
+    // 더아결: 정원 범위, AI 생성 이미지 표시, 협력업체
+    final h078 = venues.firstWhere((v) => v.id == 'H078');
+    expect(h078.capacityMin, 100);
+    expect(h078.capacity, 200);
+    expect(h078.capacityLabel, '100~200명');
+    expect(h078.isFree, isTrue);
+    expect(h078.aiImages.length, 1);
+    expect(h078.isAiImage(h078.coverImage!), isFalse); // 대표 사진은 실제 사진
+    expect(h078.partnerVendors, isNotEmpty);
+    for (final v in venues) {
+      expect(v.aiImages.every(v.images.contains), isTrue, reason: v.id);
+    }
     expect((await Repos.policy.loadAll()).length, 177);
     expect((await Repos.vendor.realVendors()).length, 103);
     final demo = await Repos.vendor.demoVendors();
