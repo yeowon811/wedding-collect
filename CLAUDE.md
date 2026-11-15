@@ -28,6 +28,9 @@
 - 수용 인원·대관료: 사용자가 나중에 수집해서 제공 예정 (11/21쯤까지). 그때까지 DB에서 비워 둘 수 있게 설계
 - 디자인: Flutter 기본 Material 느낌을 피하고 직접 정한 디자인을 적용할 예정. **사용자가 버튼 등 컴포넌트 기준을 정리하는 중**이라, 받은 뒤 시안 3가지(웜 로즈 / 세이지 그린 / 모노톤·골드)를 만들어 고르기로 함
   - 참고 후보: `flutter/samples`, `rydmike/flex_color_scheme`, `nank1ro/flutter-shadcn-ui`, `forus-labs/forui`, Pretendard 폰트
+  - **UI 뼈대 확정 (2026-11-15): `mitesh77/Best-Flutter-UI-Templates`의 `hotel_booking` 템플릿.** 목록(hotel_home_screen, hotel_list_view), 필터(filters_screen, range/slider), 날짜 선택(calendar_popup_view, custom_calendar) 구조를 예식장·업체 찾기에 활용
+    - 라이선스: MIT + "판매·수익 목적 금지" 문구 → 출처 표에 기재. 템플릿 이미지(assets)는 쓰지 않음
+    - 구조만 가져오고 색상·글꼴·버튼은 우리 테마(`hotel_app_theme.dart` 대신 공용 테마)로 교체
 
 ## 데이터 (사용자가 직접 수집, 저장소에는 없음)
 원래 위치: `C:\Users\User\OneDrive\문서\카카오톡 받은 파일\`. 다른 컴퓨터에서는 따로 복사해야 함.
@@ -48,6 +51,38 @@
 - `policy`: 원문 + 구조화 항목 + reviewed / `policy_venue_link`: 예식장 관련 정책 연결
 - `user_profile`: 기기에만 저장 / `checklist_item`: 예식일 기준 체크리스트
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
+
+## 개발 환경 (현재 PC, 2026-11-15 확인)
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\LG\flutter`, Android SDK 36 + Android Studio, 에뮬레이터 `Medium_Phone_API_37.0`, Chrome. `flutter doctor` 이상 없음
+- NDK 28.2.13676358 설치함 (APK 빌드에 필요)
+- **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
+- Figma MCP는 나중에 시간 나면 연결해 보기로 함 (지금은 사용 안 함)
+
+## 코드 구조 (2026-11-15 시작)
+- Flutter 프로젝트를 저장소 루트에 생성 (`wedding_collect`, 플랫폼 android·web)
+- 기능별 폴더 구조:
+  - `lib/app/`: 앱 시작(app.dart), 하단 탭 5개 틀(main_shell.dart: 예식장 / 정책 / 업체 / 체크리스트 / AI 상담)
+  - `lib/core/`: 공용 테마(`theme/app_colors.dart`에 색 모음 → 시안 정해지면 여기만 교체), 공용 위젯(배지, 준비 중 화면), 도우미
+  - `lib/data/`: 모델(venue.dart)과 저장소(venue_repository.dart, JSON 읽기)
+  - `lib/features/<기능>/`: 기능별 화면. 지금은 `venue`(목록·검색·지역/예약유형 필터·상세)만 구현, 나머지 4개는 "만들 예정" 안내 화면
+  - `lib/template/hotel_booking/`: 원본 템플릿 참고용 (앱에서 사용 안 함)
+- 데이터 변환: `python -I tools/convert_venues.py "../전국 공공예식장 및 연계업체 현황 (2).xlsx"` → `assets/data/venues.json` (예약방식 36가지 → ONLINE 131 / FORM 81 / CENTER 15 / PHONE_VISIT 13)
+- `tools/xlsx_reader.py`: openpyxl 없이 xlsx를 읽는 표준 라이브러리 도우미
+- 정책: `python -I tools/convert_policies.py "../youth_wedding_support_2026.xlsx"` → `assets/data/policies.json`
+  - 지역·나이·혼인 N년·예비부부 가능·소득·무주택을 **정규식으로 1차 추출** (`extractedBy: rule`, `reviewed: false`). 다음 단계로 AI 추출 + 사람 검수 예정
+  - 고성군 정책 2건은 강원/경남 구분이 안 돼 엑셀 순서로 **경남 추정** → 확인 필요
+  - 판정은 `lib/features/policy/policy_matcher.dart` 규칙으로 함 (확실히 안 되는 것만 제외, 소득·무주택 등은 "조건 확인 필요")
+- 업체: `python -I tools/convert_vendors.py "../전국 공공예식장 및 연계업체 현황 (2).xlsx"` → `vendors.json`(실제 103곳, 가격 없음), `venue_vendor_matches.json`(1,920건), `demo_vendors.json`(시연용 561곳 = 17개 시도 × 11개 항목 × 3곳, 이름 앞 `[시연]`, 고정 시드로 임의 생성한 가격·평점)
+- 탭별 기능 (2026-11-15 기준 모두 구현):
+  - 예식장: 검색·지역·예약유형 필터, 상세(신청 단계, 예약/전화, **관련 예식 정책**, **근처 실제 업체**)
+  - 정책: 내 상황(지역·나이·예비/신혼·연차) → 규칙 판정, 분류 칩, 상세(맞는 부분/확인할 조건/원문/링크)
+  - 업체: 지역 칩 → 항목 칩, "가격 비교(시연용)" / "실제 연계 업체" 전환. 시연용은 예산 비교, 비교 담기(같은 항목 최대 3곳)→비교표, 상담 신청(날짜·시간 선택, 월요일 휴무·일부 마감은 고정 패턴), 계약 완료 표시
+  - 체크리스트: 결혼 정보(예식일·지역·총예산·하객 수, D-day), 예산(계약 합계), 11개 항목 상태, 내 상담 일정, 예식일 기준 할 일 20개(계약 완료 시 자동 체크)
+  - AI 상담: `ChatAgent` 인터페이스 + `LocalDataAgent`(앱 데이터·규칙 기반, 의도: 일정/정책/업체 항목/예식장/예산). **생성형 AI(Claude 등) 연결은 아직 안 함** → API 키 보호 방식(중계 서버 여부) 정한 뒤 같은 인터페이스로 구현
+- 공유 상태: `lib/data/app_state.dart` (메모리에만 저장, 앱 끄면 초기화)
+- 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
+- 디자인 시안: `lib/core/theme/app_palette.dart`에 A 웜 로즈(기본) / B 세이지 / C 모노·골드 / 템플릿 민트. 화면 상단 팔레트 버튼으로 전환(`theme_controller.dart`, 시연·비교용). 확정 후 하나만 남기기
+- 버튼·카드·칩 규칙은 `app_theme.dart` 상단 주석에 정리 (사용자 디자인 기준 받으면 조정)
 
 ## 다음 할 일
 1. 사용자의 디자인 기준(버튼 등) 받기 → 시안 3가지 → 디자인 기준 문서와 Flutter 테마 코드
