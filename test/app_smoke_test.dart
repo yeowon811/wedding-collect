@@ -66,15 +66,22 @@ void main() {
     await back(tester);
     await tester.pumpAndSettle();
 
-    // 예식장 조건 필터: 무료 대관 → 정원·요금 배지
-    await tester.tap(find.widgetWithText(FilterChip, '무료 대관'));
+    // 예식장 지역: 서울 → 강남구만 보기
+    expect(find.byType(FilterChip), findsNothing); // 예약방식·조건 버튼은 없앰
+    await tester.tap(find.widgetWithText(ChoiceChip, '서울 74'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('대관료 무료'), findsWidgets);
-    await tester.tap(find.widgetWithText(FilterChip, '무료 대관'));
-    await tester.tap(find.textContaining('명 수용'));
+    expect(find.textContaining('서울 시·군·구'), findsOneWidget);
+    final gangnam = find.byWidgetPredicate(
+        (w) => w is ChoiceChip && (w.label as Text).data!.startsWith('강남구 '));
+    await tester.tap(gangnam);
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('명 수용'));
+    expect(find.textContaining('서울 강남구'), findsWidgets);
+    for (final card in tester.widgetList<VenueCard>(find.byType(VenueCard))) {
+      expect(card.venue.sigungu, '강남구');
+    }
+    await tester.tap(find.text('지역 초기화'));
     await tester.pumpAndSettle();
+    expect(find.textContaining('서울 시·군·구'), findsNothing);
 
     // 업체: 드레스 2곳 비교
     await tab('업체');

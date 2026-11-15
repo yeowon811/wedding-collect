@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
 import '../../data/repositories/venue_repository.dart';
 import 'venue_detail_screen.dart';
-import 'widgets/booking_type_style.dart';
 import 'widgets/venue_card.dart';
 
-/// 공공예식장 찾기: 검색 + 지역·예약유형 필터 + 목록
+/// 공공예식장 찾기: 검색 + 시도 → 시군구(서울이면 강남구·강동구 …) + 목록
 class VenueHomeScreen extends StatefulWidget {
   const VenueHomeScreen({super.key, required this.repository});
 
@@ -24,38 +22,24 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   String _query = '';
   String? _sido; // null = 전체
-  final Set<BookingType> _types = {};
-  bool _fitGuests = false; // 내 하객 수 이상 수용
-  bool _freeOnly = false; // 무료 대관
-  bool _photoOnly = false; // 사진 있는 곳
-
-  bool get _anyFilter => _sido != null || _types.isNotEmpty || _fitGuests || _freeOnly || _photoOnly;
+  String? _sigungu; // null = 시도 전체
 
   List<Venue> _apply(List<Venue> all) {
     final q = _query.trim();
-    final guests = AppState.instance.plan.guests;
-    final list = all.where((v) {
-      // 값을 모르는 곳은 빼지 않고 아래로 보낸다 (확실히 안 맞는 곳만 제외)
-      if (_fitGuests && v.fits(guests) == false) return false;
-      if (_freeOnly && v.rentalFee != null && v.rentalFee! > 0) return false;
-      if (_photoOnly && v.images.isEmpty) return false;
+    return all.where((v) {
       if (_sido != null && v.sido != _sido) return false;
-      if (_types.isNotEmpty && !_types.contains(v.bookingType)) return false;
-      if (q.isNotEmpty &&
-          !v.name.contains(q) &&
-          !v.address.contains(q) &&
-          !v.region.contains(q)) {
+      if (_sigungu != null && v.sigungu != _sigungu) return false;
+      if (q.isNotEmpty && !v.name.contains(q) && !v.address.contains(q) && !v.region.contains(q)) {
         return false;
       }
       return true;
     }).toList();
-    if (_fitGuests || _freeOnly) {
-      int unknown(Venue v) =>
-          ((_fitGuests && v.capacity == null) ? 1 : 0) + ((_freeOnly && v.rentalFee == null) ? 1 : 0);
-      list.sort((a, b) => unknown(a).compareTo(unknown(b)));
-    }
-    return list;
   }
+
+  void _selectSido(String? sido) => setState(() {
+        _sido = sido;
+        _sigungu = null; // 시도가 바뀌면 시군구 선택은 초기화
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -77,8 +61,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 SliverToBoxAdapter(child: _header(all.length)),
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
-                SliverToBoxAdapter(child: _typeChips()),
-                SliverToBoxAdapter(child: _conditionChips()),
+                if (_sido != null) SliverToBoxAdapter(child: _sigunguChips(all)),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
                   const SliverFillRemaining(
@@ -129,7 +112,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '전국 $total곳 · 예약 방법을 한눈에 비교해요',
+            '전국 $total곳 · 지역을 고르면 시·군·구별로 볼 수 있어요',
             style: TextStyle(color: AppColors.textSecondary),
           ),
         ],
@@ -163,8 +146,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     for (final v in all) {
       counts[v.sido] = (counts[v.sido] ?? 0) + 1;
     }
-    final sidos = counts.keys.toList()
-      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final sidos = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
 
     return SizedBox(
       height: 48,
@@ -172,96 +154,82 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         children: [
-          _choice('전체', _sido == null, () => setState(() => _sido = null)),
+          _choice('전체', _sido == null, () => _selectSido(null)),
           for (final s in sidos)
-            _choice('$s ${counts[s]}', _sido == s,
-                () => setState(() => _sido = _sido == s ? null : s)),
+            _choice('$s ${counts[s]}', _sido == s, () => _selectSido(_sido == s ? null : s)),
         ],
       ),
     );
   }
 
-  Widget _choice(String label, bool selected, VoidCallback onTap) {
+  /// 선택한 시도 안의 시군구 (가나다순). 시군구가 하나뿐인 지역(세종 등)은 보여주지 않는다.
+  Widget _sigunguChips(List<Venue> all) {
+    final counts = <String, int>{};
+    for (final v in all.where((v) => v.sido == _sido && v.sigungu.isNotEmpty)) {
+      counts[v.sigungu] = (counts[v.sigungu] ?? 0) + 1;
+    }
+    if (counts.length < 2) return const SizedBox.shrink();
+    final names = counts.keys.toList()..sort();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text('$_sido 시·군·구 ${names.length}곳',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 2,
+            children: [
+              _choice('전체', _sigungu == null, () => setState(() => _sigungu = null), pad: false),
+              for (final g in names)
+                _choice('$g ${counts[g]}', _sigungu == g,
+                    () => setState(() => _sigungu = _sigungu == g ? null : g),
+                    pad: false),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _choice(String label, bool selected, VoidCallback onTap, {bool pad = true}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: EdgeInsets.only(right: pad ? 6 : 0),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         showCheckmark: false,
+        visualDensity: pad ? null : VisualDensity.compact,
         onSelected: (_) => onTap(),
       ),
     );
   }
 
-  Widget _typeChips() {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        children: [
-          for (final t in BookingType.values)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: FilterChip(
-                avatar: Icon(t.icon, size: 16, color: t.color),
-                label: Text(t.label),
-                selected: _types.contains(t),
-                showCheckmark: false,
-                onSelected: (on) => setState(() {
-                  on ? _types.add(t) : _types.remove(t);
-                }),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _conditionChips() {
-    final guests = AppState.instance.plan.guests;
-    Widget chip(String label, IconData icon, bool on, ValueChanged<bool> set) => Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: FilterChip(
-            avatar: Icon(icon, size: 16),
-            label: Text(label),
-            selected: on,
-            showCheckmark: false,
-            onSelected: (v) => setState(() => set(v)),
-          ),
-        );
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        children: [
-          chip('하객 $guests명 수용', Icons.groups_outlined, _fitGuests, (v) => _fitGuests = v),
-          chip('무료 대관', Icons.money_off, _freeOnly, (v) => _freeOnly = v),
-          chip('사진 있음', Icons.photo_outlined, _photoOnly, (v) => _photoOnly = v),
-        ],
-      ),
-    );
-  }
-
   Widget _resultBar(int count) {
+    final where = [if (_sido != null) _sido!, if (_sigungu != null) _sigungu!].join(' ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
       child: Row(
         children: [
           Text(
-            '$count곳',
+            where.isEmpty ? '$count곳' : '$where $count곳',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
           const Spacer(),
-          if (_anyFilter)
+          if (_sido != null)
             TextButton(
-              onPressed: () => setState(() {
-                _sido = null;
-                _types.clear();
-                _fitGuests = _freeOnly = _photoOnly = false;
-              }),
-              child: const Text('필터 초기화'),
+              onPressed: () => _selectSido(null),
+              child: const Text('지역 초기화'),
             ),
         ],
       ),
