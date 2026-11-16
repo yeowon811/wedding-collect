@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/theme_controller.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
@@ -30,11 +29,6 @@ class _ChatScreenState extends State<ChatScreen> {
   AppState get _app => AppState.instance;
   bool get _needsProfile => !_app.profileDone && !_app.profileSkipped;
 
-  /// 테스트에서 대화를 처음부터 시작할 때 사용
-  static void resetConversation() {
-    _messages.clear();
-    _agent = ConsultAgent(llm: GeminiClient.instance);
-  }
 
   @override
   void initState() {
@@ -57,6 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollDown();
     final answer = await task();
+    _agent.step.value = null;
     if (!mounted) return;
     setState(() {
       _messages.add(answer);
@@ -97,6 +92,8 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, _) {
         final setup = _needsProfile || _editingProfile;
         return Scaffold(
+          // 대화 영역은 아주 연한 회색 위에 흰 말풍선 (시안 A)
+          backgroundColor: setup ? null : const Color(0xFFF9FAFB),
           appBar: AppBar(
             title: const Text('AI 상담'),
             actions: [
@@ -112,7 +109,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   icon: const Icon(Icons.close),
                   onPressed: () => setState(() => _editingProfile = false),
                 ),
-              const PaletteButton(),
             ],
           ),
           body: setup ? _setupView() : _chatView(),
@@ -141,54 +137,54 @@ class _ChatScreenState extends State<ChatScreen> {
     return Column(
       children: [
         // 지금 상담 기준이 되는 내 정보
-        InkWell(
-          onTap: () => setState(() => _editingProfile = true),
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(children: [
-              Icon(Icons.person_outline, size: 16, color: AppColors.primaryDark),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  _app.profileDone && summary.isNotEmpty ? '내 정보: $summary' : '내 정보 없음 · 필요한 정보는 대화 중에 여쭤봐요',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: AppColors.primaryDark),
+        Container(
+          color: AppColors.background,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Material(
+                color: AppColors.fill,
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => setState(() => _editingProfile = true),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(
+                          _app.profileDone && summary.isNotEmpty ? summary : '내 정보 없음 · 필요한 정보는 대화 중에 여쭤봐요',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, color: AppColors.textBody),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('수정',
+                          style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
                 ),
               ),
-              Text('수정', style: TextStyle(fontSize: 12, color: AppColors.primaryDark, fontWeight: FontWeight.w700)),
-            ]),
+              const SizedBox(height: 6),
+              Text(
+                '${_agent.name} · 이름·연락처는 적지 마세요',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
           ),
         ),
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-          child: Text(
-            '현재: ${_agent.name} · 숫자·자격은 앱 데이터로만 답해요 · 이름·연락처는 적지 마세요',
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-          ),
-        ),
+        const Divider(),
         Expanded(
           child: ListView.builder(
             controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
             itemCount: _messages.length + (_busy ? 1 : 0),
             itemBuilder: (context, i) {
-              if (i == _messages.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-                );
-              }
+              if (i == _messages.length) return _ProgressSteps(step: _agent.step);
               final m = _messages[i];
               final isLast = i == _messages.length - 1;
               return Column(
@@ -197,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   _Bubble(message: m),
                   if (isLast && !m.fromUser && m.quickReplies.isNotEmpty && !_busy)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4, bottom: 8),
+                      padding: const EdgeInsets.only(top: 6, bottom: 8),
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 6,
@@ -206,8 +202,12 @@ class _ChatScreenState extends State<ChatScreen> {
                             ActionChip(
                               label: Text(r.label),
                               avatar: r.action == 'save_profile'
-                                  ? const Icon(Icons.save_outlined, size: 16)
+                                  ? Icon(Icons.bookmark_add_outlined, size: 16, color: AppColors.primary)
                                   : null,
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFFD1D6DB)),
+                              labelStyle: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
                               onPressed: () => _choose(r),
                             ),
                         ],
@@ -218,35 +218,44 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 8, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _input,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: _send,
-                    decoration: InputDecoration(
-                      hintText: '예: 20대 청년이 신혼생활에 받을 수 있는 정책은?',
-                      filled: true,
-                      fillColor: AppColors.surface,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+        Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppColors.divider)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _input,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: _send,
+                      decoration: const InputDecoration(
+                        hintText: '궁금한 걸 물어보세요',
+                        isDense: true,
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  tooltip: '보내기',
-                  onPressed: () => _send(_input.text),
-                  icon: Icon(Icons.send_rounded, color: AppColors.primaryDark),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 46,
+                    height: 46,
+                    child: FilledButton(
+                      onPressed: () => _send(_input.text),
+                      style: FilledButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(46, 46),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Icon(Icons.arrow_forward_rounded, size: 22, semanticLabel: '보내기'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -264,70 +273,255 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = message;
     final user = m.fromUser;
+    final width = MediaQuery.of(context).size.width;
+    if (user) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: width * 0.78),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(18),
+              topRight: Radius.circular(18),
+              bottomLeft: Radius.circular(18),
+              bottomRight: Radius.circular(4),
+            ),
+          ),
+          child: Text(m.text, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5)),
+        ),
+      );
+    }
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.84),
+      constraints: BoxConstraints(maxWidth: width * 0.88),
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: user ? AppColors.primary : AppColors.surface,
-          border: m.isQuestion ? Border.all(color: AppColors.primary.withValues(alpha: 0.5)) : null,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(user ? 16 : 4),
-            bottomRight: Radius.circular(user ? 4 : 16),
+          color: AppColors.surface,
+          border: Border.all(color: m.isQuestion ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(18),
+            topRight: Radius.circular(18),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(18),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (m.isQuestion)
+            if (m.isQuestion || m.aiWritten)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: InfoBadge(label: '정보 확인', icon: Icons.help_outline, color: AppColors.primaryDark),
-              ),
-            if (m.aiWritten)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: InfoBadge(
-                  label: 'Gemini가 앱 데이터로 작성',
-                  icon: Icons.auto_awesome,
-                  color: AppColors.primaryDark,
+                  label: m.isQuestion ? '정보 확인' : 'Gemini가 앱 데이터로 작성',
+                  color: AppColors.primary,
+                  background: AppColors.primarySoft,
                 ),
               ),
             if (m.basis != null && m.basis!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(m.isQuestion ? m.basis! : '기준: ${m.basis}',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(m.isQuestion ? m.basis! : '기준 · ${m.basis}',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               ),
-            Text(m.text, style: TextStyle(color: user ? Colors.white : AppColors.textPrimary, height: 1.45)),
+            Text(m.text, style: TextStyle(color: AppColors.textPrimary, fontSize: 15, height: 1.6)),
             for (final c in m.cards) ...[
               const SizedBox(height: 8),
-              Material(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                child: ListTile(
-                  dense: true,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  leading: Icon(c.icon, color: AppColors.primaryDark),
-                  title: Text(c.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(c.subtitle),
-                  trailing: c.badge == null ? null : InfoBadge(label: c.badge!, color: AppColors.primaryDark),
-                  onTap: c.open == null
-                      ? null
-                      : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => c.open!())),
-                ),
-              ),
+              _ResultCard(card: c),
             ],
             if (m.sources.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('근거: ${m.sources.join(' · ')}', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              const SizedBox(height: 10),
+              Text('출처 · ${m.sources.join(' · ')}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
+            if (m.trace.isNotEmpty) _WhyThisAnswer(trace: m.trace),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 답변 안의 결과 카드 (정책·예식장·업체). 누르면 상세 화면
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({required this.card});
+
+  final ChatCard card;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = card;
+    final likely = c.badge == '해당 가능성 높음' || c.badge == '하객 수용' || c.badge == '예산 안';
+    return Material(
+      color: AppColors.fill.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: c.open == null
+            ? null
+            : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => c.open!())),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(c.icon, size: 20, color: AppColors.textSecondary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(c.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(c.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              if (c.badge != null) ...[
+                const SizedBox(width: 8),
+                InfoBadge(
+                  label: c.badge!,
+                  color: likely ? AppColors.success : AppColors.textBody,
+                  background: likely ? AppColors.successSoft : Colors.white,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 답변을 만드는 동안 보여주는 진행 단계: 질문 이해 → 데이터 조회 → 답변 작성
+class _ProgressSteps extends StatelessWidget {
+  const _ProgressSteps({required this.step});
+
+  final ValueNotifier<AgentStep?> step;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<AgentStep?>(
+      valueListenable: step,
+      builder: (context, current, _) {
+        final now = current ?? AgentStep.understand;
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final s in AgentStep.values)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: s.index < now.index
+                            ? Icon(Icons.check_circle, size: 16, color: AppColors.success)
+                            : s == now
+                                ? CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)
+                                : Icon(Icons.circle_outlined, size: 16, color: AppColors.border),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        s.label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: s == now ? FontWeight.w700 : FontWeight.w500,
+                          color: s.index > now.index ? AppColors.textHint : AppColors.textPrimary,
+                        ),
+                      ),
+                    ]),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// "왜 이렇게 답했나요?" — 눌러서 질문 이해·사용한 정보·데이터 조회·답변 작성 과정을 펼친다
+class _WhyThisAnswer extends StatefulWidget {
+  const _WhyThisAnswer({required this.trace});
+
+  final List<String> trace;
+
+  @override
+  State<_WhyThisAnswer> createState() => _WhyThisAnswerState();
+}
+
+class _WhyThisAnswerState extends State<_WhyThisAnswer> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.manage_search_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 4),
+              Text('왜 이렇게 답했나요?',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Icon(_open ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.primary),
+            ]),
+          ),
+        ),
+        if (_open)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < widget.trace.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: i == widget.trace.length - 1 ? 0 : 8),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                        child: Text('${i + 1}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(widget.trace[i],
+                            style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.textBody)),
+                      ),
+                    ]),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

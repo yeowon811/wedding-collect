@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/info_badge.dart';
+import '../../core/widgets/inputs.dart';
 import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
 import '../../data/models/wedding_plan.dart';
@@ -25,24 +26,50 @@ class DemoVendorDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(v.category.label)),
+      // 주요 행동: 상담 신청(주) + 계약 완료 표시(보조), 화면 아래 고정
+      bottomNavigationBar: ListenableBuilder(
+        listenable: state,
+        builder: (context, _) {
+          final contracted = state.contracts[v.category]?.$1.id == v.id;
+          return BottomActionBar(children: [
+            ActionPair(
+              secondary: OutlinedButton(
+                onPressed: contracted
+                    ? () => state.setStatus(v.category, ItemStatus.consulting)
+                    : () {
+                        state.contract(v);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('${v.category.label}: 계약 완료로 표시했어요 (체크리스트 반영)'),
+                        ));
+                      },
+                child: Text(contracted ? '계약 취소' : '계약 완료 표시'),
+              ),
+              primary: FilledButton(
+                onPressed: () => showConsultationSheet(context, v),
+                child: const Text('상담 신청'),
+              ),
+            ),
+          ]);
+        },
+      ),
       body: ListenableBuilder(
         listenable: state,
         builder: (context, _) {
           final estimate = v.estimate(guests: state.plan.guests);
           final budget = state.plan.budgetFor(v.category);
           final mine = state.consultations.where((c) => c.vendor.id == v.id).toList();
-          final contracted = state.contracts[v.category]?.$1.id == v.id;
           final summary = ReviewRepository.summaryFor(v);
           final reviews = ReviewRepository.reviewsFor(v);
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              Wrap(spacing: 6, children: [
-                const InfoBadge(label: '시연용 가상 업체', color: AppColors.unknown),
-                InfoBadge(label: v.sido, color: AppColors.textSecondary),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                InfoBadge(label: '시연용 가상 업체', color: AppColors.textSecondary, background: AppColors.fill),
+                InfoBadge(label: v.sido, color: AppColors.textSecondary, background: AppColors.fill),
                 if (v.publicVenueOk)
-                  const InfoBadge(label: '공공예식장 출장 가능', color: AppColors.success),
+                  const InfoBadge(
+                      label: '공공예식장 출장 가능', color: AppColors.success, background: AppColors.successSoft),
               ]),
               const SizedBox(height: 10),
               Text(v.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
@@ -138,25 +165,6 @@ class DemoVendorDetailScreen extends StatelessWidget {
                   ),
               ],
               const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => showConsultationSheet(context, v),
-                icon: const Icon(Icons.event_note),
-                label: const Text('상담 신청 · 일정 선택'),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: contracted
-                    ? () => state.setStatus(v.category, ItemStatus.consulting)
-                    : () {
-                        state.contract(v);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('${v.category.label}: 계약 완료로 표시했어요 (체크리스트 반영)'),
-                        ));
-                      },
-                icon: Icon(contracted ? Icons.undo : Icons.handshake_outlined),
-                label: Text(contracted ? '계약 완료 취소' : '이 업체로 계약 완료 표시'),
-              ),
-              const SizedBox(height: 16),
               Text('시연용으로 만든 가상 업체·후기예요. 실제 예약은 이뤄지지 않아요.',
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],

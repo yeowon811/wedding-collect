@@ -63,11 +63,24 @@ class PolicyMatch {
   final List<String> checks; // 직접 확인해야 할 조건
 }
 
+/// 내 지역(또는 전국) 정책이지만 대상이 아닌 경우와 그 이유
+class PolicyMiss {
+  const PolicyMiss(this.policy, this.reason);
+
+  final Policy policy;
+  final String reason; // 예: "만 39세 이하 대상 (내 나이 만 41세)"
+}
+
 /// 대상 여부는 AI가 아니라 이 규칙으로 판정한다.
 /// 확실히 안 되는 정책만 빼고, 애매한 조건은 "확인 필요"로 남긴다.
 class PolicyMatcher {
-  static List<PolicyMatch> match(List<Policy> all, PolicyProfile p) {
+  static List<PolicyMatch> match(List<Policy> all, PolicyProfile p) => judge(all, p).matches;
+
+  /// 판정 결과 전체: 해당될 수 있는 정책 + 내 지역·전국 정책 중 대상이 아닌 정책(이유 포함).
+  /// 다른 지역 정책은 어느 쪽에도 넣지 않는다.
+  static ({List<PolicyMatch> matches, List<PolicyMiss> misses}) judge(List<Policy> all, PolicyProfile p) {
     final result = <PolicyMatch>[];
+    final misses = <PolicyMiss>[];
     for (final policy in all) {
       final reasons = <String>[];
       final checks = <String>[];
@@ -84,9 +97,16 @@ class PolicyMatcher {
         continue;
       }
 
+      final myAge = p.isAgeRange ? '만 ${p.age}~${p.ageHigh}세' : '만 ${p.age}세';
       // 나이: 내 나이(범위)와 정책 나이 조건이 전혀 안 겹칠 때만 제외
-      if (policy.ageMax != null && p.age > policy.ageMax!) continue;
-      if (policy.ageMin != null && p.ageHigh < policy.ageMin!) continue;
+      if (policy.ageMax != null && p.age > policy.ageMax!) {
+        misses.add(PolicyMiss(policy, '만 ${policy.ageMax}세 이하 대상 (내 나이 $myAge)'));
+        continue;
+      }
+      if (policy.ageMin != null && p.ageHigh < policy.ageMin!) {
+        misses.add(PolicyMiss(policy, '만 ${policy.ageMin}세 이상 대상 (내 나이 $myAge)'));
+        continue;
+      }
       if (policy.ageMax != null || policy.ageMin != null) {
         final range = '만 ${policy.ageMin ?? ''}~${policy.ageMax ?? ''}세';
         final fully = (policy.ageMin == null || p.age >= policy.ageMin!) &&
@@ -101,7 +121,10 @@ class PolicyMatcher {
       // 혼인 상태
       if (p.stage == MarriageStage.married) {
         final within = policy.marriedWithinYears;
-        if (within != null && p.marriedYears > within) continue;
+        if (within != null && p.marriedYears > within) {
+          misses.add(PolicyMiss(policy, '혼인 $within년 이내 대상 (혼인 ${p.marriedYears}년차)'));
+          continue;
+        }
         if (within != null) reasons.add('혼인 $within년 이내');
       } else {
         if (policy.allowsEngaged) {
@@ -113,7 +136,10 @@ class PolicyMatcher {
 
       // 무주택
       if (policy.requiresHomeless) {
-        if (p.homeless == false) continue;
+        if (p.homeless == false) {
+          misses.add(PolicyMiss(policy, '무주택자 대상 (집이 있음으로 입력)'));
+          continue;
+        }
         if (p.homeless == true) {
           reasons.add('무주택 조건 충족');
         } else {
@@ -137,6 +163,6 @@ class PolicyMatcher {
       if (ra != rb) return ra - rb;
       return a.checks.length - b.checks.length;
     });
-    return result;
+    return (matches: result, misses: misses);
   }
 }

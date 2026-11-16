@@ -104,8 +104,12 @@
 - 후기 (2026-11-15 추가): **시연용 업체에만** 있음. `lib/data/repositories/review_repository.dart`가 업체 ID 고정 시드로 생성 (별점 분포는 업체 평점·후기 수와 정확히 일치, 최근 30개 표시). 업체 상세에 요약(평균·분포·키워드)+최근 3개, 전체 보기(정렬·별점 필터), 상담/계약한 업체만 후기 쓰기. **실제 업체에는 가짜 후기를 만들지 않음** (안내 문구만 표시)
 - 공유 상태: `lib/data/app_state.dart` (메모리에만 저장, 앱 끄면 초기화)
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
-- 디자인 시안: `lib/core/theme/app_palette.dart`에 A 웜 로즈(기본) / B 세이지 / C 모노·골드 / 템플릿 민트. 화면 상단 팔레트 버튼으로 전환(`theme_controller.dart`, 시연·비교용). 확정 후 하나만 남기기
-- 버튼·카드·칩 규칙은 `app_theme.dart` 상단 주석에 정리 (사용자 디자인 기준 받으면 조정)
+- **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
+  - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`
+  - 입력: 나이처럼 정확한 숫자는 **슬라이더 대신 `StepperField`**(−/+·직접 입력), 하객·예산은 `PresetPicker`(자주 쓰는 값 칩 + 직접 입력), 2~3개 중 고르기는 `ChoiceRow`, 묶음 제목은 `FormSection`(아이콘 없음)
+  - 글자: 본문 15·설명 13 이상, 가장 연한 회색(textHint)은 입력 안내에만. 줄마다 아이콘·색 배지 남발 금지(정보는 이름·값 두 칸)
+  - 로딩은 `SkeletonList`, 결과 없음은 `EmptyState`(원인에 맞는 다음 행동 버튼)
+  - 화면 캡처: `flutter build web` → `python -I -m http.server 8095 --directory build/web` → `node tools/screenshots.mjs <폴더> "?tab=0" "?demo=1&tab=4" "?venue=H078" "?vendor=D0001" "?demo=1&policy=0"` (`|x,y`를 붙이면 그 위치를 누른 뒤 캡처, `WAIT_MS`로 대기 시간). 시연 링크는 `lib/app/demo_links.dart`
 
 ## 다음 할 일
 1. 사용자의 디자인 기준(버튼 등) 받기 → 시안 3가지 → 디자인 기준 문서와 Flutter 테마 코드

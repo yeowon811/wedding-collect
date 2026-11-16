@@ -64,10 +64,9 @@ class _ReviewListScreenState extends State<ReviewListScreen> {
               RatingSummaryView(summary: summary),
               const SizedBox(height: 12),
               if (state.canReview(v))
-                OutlinedButton.icon(
+                OutlinedButton(
                   onPressed: () => showWriteReviewSheet(context, v),
-                  icon: const Icon(Icons.rate_review_outlined),
-                  label: const Text('후기 쓰기'),
+                  child: const Text('후기 쓰기'),
                 ),
               const SizedBox(height: 12),
               SizedBox(

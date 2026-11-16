@@ -40,6 +40,7 @@ class ChatMessage {
     this.basis,
     this.isQuestion = false,
     this.aiWritten = false,
+    this.trace = const [],
   });
 
   final bool fromUser;
@@ -50,8 +51,9 @@ class ChatMessage {
   final String? basis; // 어떤 조건으로 찾았는지 (예: 서울 · 만 20~29세 · 신혼부부)
   final bool isQuestion; // 정보를 되묻는 메시지인지
   final bool aiWritten; // 생성형 AI(Gemini)가 앱 데이터로 문장을 쓴 답변인지
+  final List<String> trace; // "왜 이렇게 답했나요?": 질문 이해 → 사용한 정보 → 데이터 조회 → 답변 작성
 
-  ChatMessage copyWith({String? text, bool? aiWritten}) => ChatMessage(
+  ChatMessage copyWith({String? text, bool? aiWritten, List<String>? trace}) => ChatMessage(
         fromUser: fromUser,
         text: text ?? this.text,
         cards: cards,
@@ -60,7 +62,18 @@ class ChatMessage {
         basis: basis,
         isQuestion: isQuestion,
         aiWritten: aiWritten ?? this.aiWritten,
+        trace: trace ?? this.trace,
       );
+}
+
+/// 상담 에이전트가 지금 하고 있는 단계 (화면에 진행 상황으로 보여준다)
+enum AgentStep {
+  understand('질문 이해 중'),
+  lookup('앱 데이터 조회 중'),
+  write('답변 작성 중');
+
+  const AgentStep(this.label);
+  final String label;
 }
 
 /// 상담 에이전트 인터페이스.
@@ -72,6 +85,9 @@ class ChatMessage {
 /// AI는 정리·설명만 한다. 외부로는 조건과 후보 ID·요약만 보내고 연락처·개인정보는 보내지 않는다.
 abstract class ChatAgent {
   String get name;
+
+  /// 지금 진행 중인 단계 (없으면 null)
+  ValueNotifier<AgentStep?> get step;
 
   /// 상담 시작: 내 정보로 첫 추천
   Future<ChatMessage> start();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_palette.dart';
+import '../core/theme/app_colors.dart';
+import 'demo_links.dart';
 import '../data/repositories/repositories.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/checklist/checklist_screen.dart';
@@ -10,40 +11,54 @@ import '../features/venue/venue_home_screen.dart';
 
 /// 하단 탭으로 기능을 나눈 앱의 기본 틀
 class MainShell extends StatefulWidget {
-  const MainShell({super.key, required this.palette});
+  const MainShell({super.key});
 
-  /// 시안이 바뀌어도 선택한 탭이 유지되도록 같은 키를 쓴다
-  static final shellKey = GlobalKey<State<MainShell>>();
+  /// 다른 화면에서 탭을 바꿀 때 사용 (예: 예식장 화면의 "AI 상담" 배너)
+  static final tab = ValueNotifier<int>(
+      (int.tryParse(Uri.base.queryParameters['tab'] ?? '') ?? 0).clamp(0, 4)); // 웹 ?tab=N (캡처·시연용)
 
-  final AppPalette palette;
+  static void goTo(int index) => tab.value = index;
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  int get _index => MainShell.tab.value;
+
+  @override
+  void initState() {
+    super.initState();
+    MainShell.tab.addListener(_onTab);
+    WidgetsBinding.instance.addPostFrameCallback((_) => DemoLinks.openDetail(Navigator.of(context)));
+  }
+
+  @override
+  void dispose() {
+    MainShell.tab.removeListener(_onTab);
+    super.dispose();
+  }
+
+  void _onTab() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 시안이 바뀌면 화면들을 새 색으로 다시 만든다. 탭 위치는 유지된다.
-      body: KeyedSubtree(
-        key: ValueKey(widget.palette.id),
-        child: IndexedStack(
-          index: _index,
-          children: [
-            VenueHomeScreen(repository: Repos.venue),
-            PolicyScreen(repository: Repos.policy),
-            const VendorScreen(),
-            const ChecklistScreen(),
-            const ChatScreen(),
-          ],
-        ),
+      body: IndexedStack(
+        index: _index,
+        children: [
+          VenueHomeScreen(repository: Repos.venue),
+          PolicyScreen(repository: Repos.policy),
+          const VendorScreen(),
+          const ChecklistScreen(),
+          const ChatScreen(),
+        ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.divider))),
+        child: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: MainShell.goTo,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.location_city_outlined),
@@ -71,6 +86,7 @@ class _MainShellState extends State<MainShell> {
             label: 'AI 상담',
           ),
         ],
+        ),
       ),
     );
   }

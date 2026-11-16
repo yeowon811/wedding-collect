@@ -95,15 +95,19 @@ class DemoVendorCard extends StatelessWidget {
                 listenable: state,
                 builder: (context, _) {
                   final on = state.inCompare(v);
-                  return OutlinedButton.icon(
+                  // 카드 안의 작은 보조 버튼: 높이 36, 담으면 검정으로 채움
+                  return OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      backgroundColor: on ? AppColors.primary.withValues(alpha: 0.12) : null,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      backgroundColor: on ? AppColors.ink : Colors.white,
+                      foregroundColor: on ? Colors.white : AppColors.textPrimary,
+                      side: BorderSide(color: on ? AppColors.ink : AppColors.border),
                     ),
                     onPressed: () => state.toggleCompare(v),
-                    icon: Icon(on ? Icons.check : Icons.add, size: 16),
-                    label: Text(on ? '비교 중' : '비교 담기'),
+                    child: Text(on ? '비교 중' : '비교 담기'),
                   );
                 },
               ),
@@ -202,7 +206,10 @@ class _CardShell extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Material(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppColors.border),
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,

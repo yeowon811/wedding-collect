@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
+import '../../core/widgets/inputs.dart';
 import '../../core/utils/region.dart';
 import '../../data/models/policy.dart';
 import '../../data/models/vendor.dart';
@@ -13,7 +14,6 @@ import '../policy/policy_matcher.dart';
 import '../vendor/real_vendor_detail_screen.dart';
 import '../vendor/widgets/vendor_cards.dart';
 import '../../data/app_state.dart';
-import 'widgets/booking_type_style.dart';
 import 'widgets/venue_image.dart';
 
 /// 이 예식장 지역에서 받을 수 있는 예식 관련 정책 (공공예식장 ↔ 정책 연결)
@@ -41,14 +41,11 @@ class _RelatedPolicies extends StatelessWidget {
             const SizedBox(height: 6),
             for (final p in list)
               Card(
-                elevation: 0,
-                color: AppColors.primary.withValues(alpha: 0.07),
                 margin: const EdgeInsets.symmetric(vertical: 4),
                 child: ListTile(
-                  leading: Icon(Icons.volunteer_activism, color: AppColors.primaryDark),
-                  title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                   subtitle: Text(p.regionLabel),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Icon(Icons.chevron_right, color: AppColors.textHint),
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => PolicyDetailScreen(
                       match: PolicyMatch(p, MatchLevel.check, ['${p.regionLabel} 예식 지원'],
@@ -125,6 +122,28 @@ class VenueDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('예식장 정보')),
+      // 주요 행동은 화면 아래에 고정 (스크롤하지 않아도 바로 누를 수 있게)
+      bottomNavigationBar: BottomActionBar(children: [
+        if (contactIsPhone)
+          ActionPair(
+            secondary: OutlinedButton(
+              onPressed: () => _open(context, Uri.parse('tel:${v.bookingContact}')),
+              child: const Text('전화 문의'),
+            ),
+            primary: FilledButton(
+              onPressed: () => _open(context, Uri.parse(v.bookingUrl)),
+              child: const Text('예약 페이지 열기'),
+            ),
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => _open(context, Uri.parse(v.bookingUrl)),
+              child: const Text('예약 페이지 열기'),
+            ),
+          ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -146,12 +165,9 @@ class VenueDetailScreen extends StatelessWidget {
               InfoBadge(
                 label: v.isLimited ? '기간 제한' : '예약 가능',
                 color: v.isLimited ? AppColors.warning : AppColors.success,
+                background: v.isLimited ? AppColors.warningSoft : AppColors.successSoft,
               ),
-              InfoBadge(
-                label: v.bookingType.label,
-                icon: v.bookingType.icon,
-                color: v.bookingType.color,
-              ),
+              InfoBadge(label: v.bookingType.label, color: AppColors.textBody, background: AppColors.fill),
             ],
           ),
           const SizedBox(height: 20),
@@ -185,21 +201,7 @@ class VenueDetailScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: () => _open(context, Uri.parse(v.bookingUrl)),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('예약 페이지 열기'),
-          ),
-          const SizedBox(height: 10),
-          if (contactIsPhone)
-            OutlinedButton.icon(
-              onPressed: () => _open(context, Uri.parse('tel:${v.bookingContact}')),
-              icon: const Icon(Icons.call_outlined),
-              label: Text('전화 문의 ${v.bookingContact}'),
-            )
-          else
-            Text('문의: ${v.bookingContact}',
-                style: TextStyle(color: AppColors.textSecondary)),
+          Text('문의 ${v.bookingContact}', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           const SizedBox(height: 28),
           _RelatedPolicies(venue: v),
           _NearbyVendors(venue: v),
@@ -242,7 +244,7 @@ class VenueDetailScreen extends StatelessWidget {
 
   Widget _detailBox(String text) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(left: 28, bottom: 4),
+        margin: const EdgeInsets.only(left: 92, bottom: 4),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.placeholder.withValues(alpha: 0.5),
@@ -334,14 +336,15 @@ class VenueDetailScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.primaryDark),
-          const SizedBox(width: 10),
+          // 줄마다 아이콘을 붙이지 않고 이름·값 두 칸으로만 정리 (시안 A)
           SizedBox(
-            width: 72,
-            child: Text(label,
-                style: TextStyle(color: AppColors.textSecondary)),
+            width: 84,
+            child: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.45)),
           ),
-          Expanded(child: Text(value)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(value, style: TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.45)),
+          ),
         ],
       ),
     );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/theme_controller.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
@@ -47,13 +48,12 @@ class _VendorScreenState extends State<VendorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('업체 찾기'),
-        actions: const [PaletteButton()],
       ),
       body: FutureBuilder(
         future: _future,
         builder: (context, snap) {
           if (snap.hasError) return Center(child: Text('데이터를 불러오지 못했어요\n${snap.error}'));
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snap.hasData) return const SkeletonList(header: false);
           final (demo, real) = snap.data!;
           return Column(
             children: [
@@ -222,10 +222,13 @@ class _VendorScreenState extends State<VendorScreen> {
           ),
         ),
         if (list.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(child: Text('이 지역에는 등록된 실제 업체가 없어요.\n가까운 지역을 선택해 보세요.',
-                textAlign: TextAlign.center)),
+          EmptyState(
+            icon: Icons.storefront_outlined,
+            title: '$_sido에는 등록된 실제 연계 업체가 없어요',
+            message: '위에서 가까운 지역을 고르거나, 시연용 가격 비교로 업체를 살펴보세요.',
+            actions: [
+              EmptyAction('가격 비교(시연용) 보기', () => _set(() => _mode = VendorMode.demo)),
+            ],
           ),
         for (final v in list)
           RealVendorCard(

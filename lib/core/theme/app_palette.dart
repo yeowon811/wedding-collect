@@ -1,88 +1,48 @@
 import 'package:flutter/material.dart';
 
-/// 디자인 시안별 색 묶음. 시안을 확정하면 나머지는 지우고 하나만 남긴다.
+/// 디자인 시안 A "클린 미니멀"의 색 (2026-11-16 확정).
+/// 흰 바탕 + 진한 회색 글자 + 파란 포인트 하나. 면 구분은 그림자 대신 연한 회색 면으로 한다.
 class AppPalette {
   const AppPalette({
-    required this.id,
-    required this.label,
     required this.primary,
     required this.primaryDark,
+    required this.primarySoft,
     required this.background,
+    required this.fill,
+    required this.border,
     required this.textPrimary,
+    required this.textBody,
     required this.textSecondary,
+    required this.textHint,
     required this.placeholder,
-    required this.headerStart,
-    required this.headerEnd,
-    required this.onHeader,
+    required this.ink,
   });
 
-  final String id;
-  final String label;
-  final Color primary; // 버튼, 선택된 칩, 강조
-  final Color primaryDark; // 눌림, 아이콘, 진한 강조
+  final Color primary; // 메인 버튼, 선택 표시, 링크
+  final Color primaryDark; // 눌림, 진한 강조
+  final Color primarySoft; // 포인트 색의 연한 면 (추천 배너, AI 배지)
   final Color background; // 화면 바탕
-  final Color textPrimary;
-  final Color textSecondary;
-  final Color placeholder; // 빈 이미지 자리, 연한 면
-  final Color headerStart; // 카드 머리띠 그라데이션
-  final Color headerEnd;
-  final Color onHeader; // 머리띠 위 글자색
+  final Color fill; // 검색창·칩·카드 안쪽 같은 연한 면
+  final Color border; // 테두리·구분선
+  final Color textPrimary; // 제목·본문
+  final Color textBody; // 칩·보조 본문
+  final Color textSecondary; // 설명·지역
+  final Color textHint; // 입력 안내·비활성
+  final Color placeholder; // 사진 없는 자리
+  final Color ink; // 선택된 칩·사용자 강조 (거의 검정)
 
-  static const mint = AppPalette(
-    id: 'mint',
-    label: '기본 (템플릿)',
-    primary: Color(0xFF54D3C2),
-    primaryDark: Color(0xFF2FA898),
-    background: Color(0xFFF6F6F6),
-    textPrimary: Color(0xFF17262A),
-    textSecondary: Color(0xFF6B7478),
-    placeholder: Color(0xFFE8E3DC),
-    headerStart: Color(0xFF6ADBCB),
-    headerEnd: Color(0xFF2FA898),
-    onHeader: Colors.white,
+  static const clean = AppPalette(
+    primary: Color(0xFF3B5BDB),
+    primaryDark: Color(0xFF2F4AC0),
+    primarySoft: Color(0xFFF0F4FF),
+    background: Color(0xFFFFFFFF),
+    fill: Color(0xFFF2F4F6),
+    border: Color(0xFFE5E8EB),
+    textPrimary: Color(0xFF191F28),
+    textBody: Color(0xFF4E5968),
+    textSecondary: Color(0xFF6B7684),
+    textHint: Color(0xFF8B95A1),
+    placeholder: Color(0xFFE9ECEF),
+    ink: Color(0xFF191F28),
   );
-
-  static const rose = AppPalette(
-    id: 'rose',
-    label: 'A. 웜 로즈 & 아이보리',
-    primary: Color(0xFFC8737B),
-    primaryDark: Color(0xFFA4545D),
-    background: Color(0xFFFBF6F2),
-    textPrimary: Color(0xFF3A2A2C),
-    textSecondary: Color(0xFF85716F),
-    placeholder: Color(0xFFF1E4DF),
-    headerStart: Color(0xFFE3A9A5),
-    headerEnd: Color(0xFFC8737B),
-    onHeader: Colors.white,
-  );
-
-  static const sage = AppPalette(
-    id: 'sage',
-    label: 'B. 세이지 그린 & 화이트',
-    primary: Color(0xFF6F9277),
-    primaryDark: Color(0xFF4E7258),
-    background: Color(0xFFF4F6F2),
-    textPrimary: Color(0xFF1F2D25),
-    textSecondary: Color(0xFF66736B),
-    placeholder: Color(0xFFE2E9E1),
-    headerStart: Color(0xFF9DB8A2),
-    headerEnd: Color(0xFF5E8267),
-    onHeader: Colors.white,
-  );
-
-  static const monoGold = AppPalette(
-    id: 'monoGold',
-    label: 'C. 모노톤 & 골드',
-    primary: Color(0xFFB08D4F),
-    primaryDark: Color(0xFF86683A),
-    background: Color(0xFFF6F5F2),
-    textPrimary: Color(0xFF1C1C1C),
-    textSecondary: Color(0xFF6E6E6E),
-    placeholder: Color(0xFFE6E3DC),
-    headerStart: Color(0xFF3A3A3A),
-    headerEnd: Color(0xFF151515),
-    onHeader: Color(0xFFE7CF9C),
-  );
-
-  static const all = [rose, sage, monoGold, mint];
 }

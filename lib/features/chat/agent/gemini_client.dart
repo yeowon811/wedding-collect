@@ -241,21 +241,29 @@ class GeminiClient {
   Future<String?> rewrite({required String question, required String draft}) async {
     try {
       final text = await rewriteRaw(question: question, draft: draft);
-      if (text == null) return null;
+      if (text == null) {
+        lastRewriteNote = 'Gemini 응답 없음 → 앱이 만든 문장 사용';
+        return null;
+      }
       if (!numbersAreGrounded(text, draft)) {
-        debugPrint('Gemini 답변에 조회 결과에 없는 숫자가 있어 원래 문장을 사용');
+        lastRewriteNote = 'Gemini 문장에 조회 결과에 없는 숫자가 있어 버림 → 앱이 만든 문장 사용';
         return null;
       }
       if (!termsAreGrounded(text, draft)) {
-        debugPrint('Gemini 답변에 조회 결과에 없는 표시어가 있어 원래 문장을 사용');
+        lastRewriteNote = "Gemini 문장에 조회 결과에 없는 표시어('시연용' 등)가 있어 버림 → 앱이 만든 문장 사용";
         return null;
       }
+      lastRewriteNote = 'Gemini가 조회 결과만 보고 다시 씀 · 숫자 검사 통과 · 표시어 검사 통과';
       return text.replaceAll('**', '');
     } catch (e) {
       debugPrint('Gemini 답변 작성 실패: $e');
+      lastRewriteNote = 'Gemini 연결 오류 → 앱이 만든 문장 사용';
       return null;
     }
   }
+
+  /// 마지막 [rewrite] 결과 설명 ("왜 이렇게 답했나요?"에 표시)
+  String lastRewriteNote = '';
 
   /// 데이터 조회가 필요 없는 일반 질문에 대한 짧은 안내. 실패하면 null.
   Future<String?> chat(String question) async {

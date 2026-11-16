@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
+import '../../core/widgets/inputs.dart';
 import '../../data/models/vendor.dart';
 
 /// 실제 연계업체 상세: 공개된 정보와 연락 수단만 보여준다 (가격 없음)
@@ -17,6 +18,31 @@ class RealVendorDetailScreen extends StatelessWidget {
     final phone = v.phone.replaceAll(RegExp(r'[^0-9]'), '');
     return Scaffold(
       appBar: AppBar(title: const Text('업체 정보')),
+      bottomNavigationBar: v.url.isEmpty && phone.isEmpty
+          ? null
+          : BottomActionBar(children: [
+              if (v.url.isNotEmpty && phone.isNotEmpty)
+                ActionPair(
+                  secondary: OutlinedButton(
+                    onPressed: () => launchUrl(Uri.parse('tel:$phone')),
+                    child: const Text('전화 문의'),
+                  ),
+                  primary: FilledButton(
+                    onPressed: () => launchUrl(Uri.parse(v.url), mode: LaunchMode.externalApplication),
+                    child: const Text('홈페이지 열기'),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: phone.isNotEmpty
+                      ? FilledButton(
+                          onPressed: () => launchUrl(Uri.parse('tel:$phone')), child: const Text('전화 문의'))
+                      : FilledButton(
+                          onPressed: () => launchUrl(Uri.parse(v.url), mode: LaunchMode.externalApplication),
+                          child: const Text('홈페이지 열기')),
+                ),
+            ]),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -55,20 +81,6 @@ class RealVendorDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          if (v.url.isNotEmpty)
-            FilledButton.icon(
-              onPressed: () => launchUrl(Uri.parse(v.url), mode: LaunchMode.externalApplication),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('홈페이지 열기'),
-            ),
-          const SizedBox(height: 10),
-          if (phone.isNotEmpty)
-            OutlinedButton.icon(
-              onPressed: () => launchUrl(Uri.parse('tel:$phone')),
-              icon: const Icon(Icons.call),
-              label: const Text('전화 문의'),
-            ),
-          const SizedBox(height: 16),
           Text('출처: 전국 공공예식장 및 연계업체 현황 (직접 수집)',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ],

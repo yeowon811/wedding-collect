@@ -4,10 +4,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/info_badge.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/venue.dart';
-import 'booking_type_style.dart';
 import 'venue_image.dart';
 
-/// 예식장 목록 카드 (hotel_booking의 hotel_list_view 구조). 공유누리 사진이 있으면 위에 보여준다.
+/// 예식장 목록 카드 (디자인 시안 A): 큰 사진 → 지역 → 이름 → 정원·대관료·예약 방식 배지.
+/// 카드 테두리·그림자 없이 흰 바탕 위에 사진과 글자만 둔다.
 class VenueCard extends StatelessWidget {
   const VenueCard({super.key, required this.venue, required this.onTap});
 
@@ -16,37 +16,20 @@ class VenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        elevation: 0,
-        shadowColor: Colors.black26,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.25),
-                  offset: const Offset(2, 4),
-                  blurRadius: 12,
-                ),
-              ],
-              color: AppColors.surface,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (venue.images.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: AspectRatio(
-                      aspectRatio: 2.4,
-                      child: Stack(
+              child: AspectRatio(
+                aspectRatio: venue.images.isEmpty ? 2.8 : 2.0,
+                child: venue.images.isEmpty
+                    ? const _NoPhoto()
+                    : Stack(
                         fit: StackFit.expand,
                         children: [
                           VenueImage(url: venue.coverImage!),
@@ -55,141 +38,92 @@ class VenueCard extends StatelessWidget {
                           if (venue.images.length > 1)
                             Positioned(
                               right: 10,
-                              bottom: 8,
+                              bottom: 10,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: Text('사진 ${venue.images.length}장',
-                                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                child: Text('1 / ${venue.images.length}',
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                             ),
                         ],
                       ),
-                    ),
-                  ),
-                _RegionHeader(venue: venue, roundTop: venue.images.isEmpty),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        venue.name,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              size: 14, color: AppColors.primary),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              venue.address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 13, color: AppColors.textSecondary),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          InfoBadge(
-                            label: venue.bookingType.label,
-                            icon: venue.bookingType.icon,
-                            color: venue.bookingType.color,
-                          ),
-                          _capacityBadge(venue),
-                          InfoBadge(
-                            label: venue.feeLabel,
-                            icon: venue.rentalFee == null ? Icons.help_outline : Icons.payments_outlined,
-                            color: venue.rentalFee == null
-                                ? AppColors.unknown
-                                : (venue.isFree ? AppColors.success : AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(venue.region, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ),
+                if (venue.isLimited)
+                  const InfoBadge(label: '기간 제한', color: AppColors.warning, background: AppColors.warningSoft),
               ],
             ),
-          ),
+            const SizedBox(height: 4),
+            Text(
+              venue.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _capacityBadge(venue),
+                _feeBadge(venue),
+                InfoBadge(label: venue.bookingType.label, color: AppColors.textBody, background: AppColors.fill),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// 정원 배지: 내 하객 수 기준으로 색을 바꾼다
+/// 정원 배지: 내 하객 수를 수용하면 초록, 모자라면 주황, 모르면 회색
 Widget _capacityBadge(Venue v) {
-  final guests = AppState.instance.plan.guests;
-  final fits = v.fits(guests);
-  return InfoBadge(
-    label: v.capacityLabel,
-    icon: fits == null ? Icons.help_outline : (fits ? Icons.groups : Icons.group_off_outlined),
-    color: fits == null ? AppColors.unknown : (fits ? AppColors.success : AppColors.warning),
-  );
+  final fits = v.fits(AppState.instance.plan.guests);
+  return switch (fits) {
+    true => InfoBadge(label: v.capacityLabel, color: AppColors.success, background: AppColors.successSoft),
+    false => InfoBadge(label: v.capacityLabel, color: AppColors.warning, background: AppColors.warningSoft),
+    null => InfoBadge(label: v.capacityLabel, color: AppColors.textSecondary, background: AppColors.fill),
+  };
 }
 
-class _RegionHeader extends StatelessWidget {
-  const _RegionHeader({required this.venue, this.roundTop = true});
+Widget _feeBadge(Venue v) => v.isFree
+    ? InfoBadge(label: v.feeLabel, color: AppColors.success, background: AppColors.successSoft)
+    : InfoBadge(
+        label: v.feeLabel,
+        color: v.rentalFee == null ? AppColors.textSecondary : AppColors.textBody,
+        background: AppColors.fill,
+      );
 
-  final Venue venue;
-  final bool roundTop;
+class _NoPhoto extends StatelessWidget {
+  const _NoPhoto();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: roundTop ? const BorderRadius.vertical(top: Radius.circular(16)) : null,
-        gradient: LinearGradient(
-          colors: [AppColors.headerStart, AppColors.headerEnd],
-        ),
-      ),
-      child: Row(
+    return ColoredBox(
+      color: AppColors.placeholder,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.celebration_outlined, color: AppColors.onHeader, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              venue.region,
-              style: TextStyle(
-                color: AppColors.onHeader,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              venue.isLimited ? '기간 제한' : '예약 가능',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: venue.isLimited ? AppColors.warning : AppColors.success,
-              ),
-            ),
-          ),
+          Icon(Icons.image_outlined, color: AppColors.textHint, size: 28),
+          const SizedBox(height: 4),
+          Text('사진 준비 중', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ],
       ),
     );

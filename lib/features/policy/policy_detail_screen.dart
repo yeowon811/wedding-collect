@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
+import '../../core/widgets/inputs.dart';
 import 'policy_matcher.dart';
 
 /// 정책 상세: 판정 근거, 확인할 조건, 지원 자격 원문, 신청 링크
@@ -18,6 +19,15 @@ class PolicyDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('정책 정보')),
+      bottomNavigationBar: BottomActionBar(children: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => launchUrl(Uri.parse(p.url), mode: LaunchMode.externalApplication),
+            child: const Text('신청 페이지 열기'),
+          ),
+        ),
+      ]),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -59,12 +69,6 @@ class PolicyDetailScreen extends StatelessWidget {
             child: Text(p.eligibility, style: const TextStyle(height: 1.55)),
           ),
           const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () => launchUrl(Uri.parse(p.url), mode: LaunchMode.externalApplication),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('신청 페이지 열기'),
-          ),
-          const SizedBox(height: 16),
           Text(
             '출처: $host · 조건 항목은 원문에서 자동 추출(검수 전)했어요. '
             '실제 대상 여부는 담당 기관에서 최종 확인하세요.',

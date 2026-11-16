@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/app/app.dart';
+import 'package:wedding_collect/app/main_shell.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
@@ -9,7 +10,6 @@ import 'package:wedding_collect/data/models/policy.dart';
 import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
 import 'package:wedding_collect/features/chat/agent/understanding.dart';
-import 'package:wedding_collect/features/chat/chat_agent.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
 
 /// 모든 탭을 열어 보고 주요 흐름이 오류 없이 그려지는지 확인한다.
@@ -35,9 +35,10 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
+    MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
-    expect(find.text('공공예식장 찾기'), findsWidgets);
+    expect(find.text('공공예식장'), findsWidgets);
     expect(find.textContaining('전국 240곳'), findsOneWidget);
 
     for (final tab in ['정책', '업체', '체크리스트', 'AI 상담', '예식장']) {
@@ -52,6 +53,7 @@ void main() {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
+    MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
 
@@ -108,10 +110,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('[시연]').first);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('상담 신청 · 일정 선택'), 300,
+    await tester.scrollUntilVisible(find.text('상담 신청'), 300,
         scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('상담 신청 · 일정 선택'));
+    await tester.tap(find.text('상담 신청'));
     await tester.pumpAndSettle();
     final open = find.byWidgetPredicate((w) =>
         w is ChoiceChip && w.onSelected != null && (w.label as Text).data!.endsWith(':00'));
@@ -145,10 +147,10 @@ void main() {
     await tester.tap(find.widgetWithText(ChoiceChip, '전체'));
     await back(tester);
 
-    await tester.scrollUntilVisible(find.text('이 업체로 계약 완료 표시'), 300,
+    await tester.scrollUntilVisible(find.text('계약 완료 표시'), 300,
         scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('이 업체로 계약 완료 표시'));
+    await tester.tap(find.text('계약 완료 표시'));
     await tester.pumpAndSettle();
     await back(tester);
     await tester.pumpAndSettle();
@@ -164,13 +166,6 @@ void main() {
     await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), 200, scrollable: list);
-
-    // 시안 바꾸기
-    await tester.tap(find.byTooltip('디자인 시안 바꾸기').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('C. 모노톤 & 골드').last);
-    await tester.pumpAndSettle();
-    expect(find.text('준비 체크리스트'), findsOneWidget); // 탭 유지
 
     expect(tester.takeException(), isNull);
   });

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/theme_controller.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton.dart';
+import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
 import '../../data/repositories/venue_repository.dart';
 import 'venue_detail_screen.dart';
 import 'widgets/venue_card.dart';
 
-/// 공공예식장 찾기: 검색 + 시도 → 시군구(서울이면 강남구·강동구 …) + 목록
+/// 공공예식장 찾기: 검색 + AI 추천 배너 + 시도 → 시군구(서울이면 강남구·강동구 …) + 목록
 class VenueHomeScreen extends StatefulWidget {
   const VenueHomeScreen({super.key, required this.repository});
 
@@ -20,7 +23,14 @@ class VenueHomeScreen extends StatefulWidget {
 class _VenueHomeScreenState extends State<VenueHomeScreen> {
   late final Future<List<Venue>> _future = widget.repository.loadAll();
 
+  final _search = TextEditingController();
   String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
   String? _sido; // null = 전체
   String? _sigungu; // null = 시도 전체
 
@@ -52,22 +62,20 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
               return Center(child: Text('데이터를 불러오지 못했어요\n${snap.error}'));
             }
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const SkeletonList(kind: SkeletonKind.photoCard, count: 2);
             }
             final all = snap.data!;
             final shown = _apply(all);
             return CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(child: _header(all.length)),
+                SliverToBoxAdapter(child: _header(all)),
                 SliverToBoxAdapter(child: _searchBar()),
+                SliverToBoxAdapter(child: _aiBanner()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
                 if (_sido != null) SliverToBoxAdapter(child: _sigunguChips(all)),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: Text('조건에 맞는 예식장이 없어요')),
-                  )
+                  SliverToBoxAdapter(child: _empty())
                 else
                   SliverList.builder(
                     itemCount: shown.length,
@@ -89,31 +97,26 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     );
   }
 
-  Widget _header(int total) {
+  Widget _header(List<Venue> all) {
+    final free = all.where((v) => v.isFree).length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '공공예식장 찾기',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const PaletteButton(),
-            ],
+          Text(
+            '공공예식장',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            '전국 $total곳 · 지역을 고르면 시·군·구별로 볼 수 있어요',
-            style: TextStyle(color: AppColors.textSecondary),
+            '전국 ${all.length}곳 · 대관료 무료 $free곳',
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -122,18 +125,65 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   Widget _searchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: TextField(
+        controller: _search,
         onChanged: (v) => setState(() => _query = v),
-        decoration: InputDecoration(
-          hintText: '예식장 이름, 지역, 주소로 검색',
-          prefixIcon: Icon(Icons.search, color: AppColors.primary),
-          filled: true,
-          fillColor: AppColors.surface,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(28),
-            borderSide: BorderSide.none,
+        decoration: const InputDecoration(
+          hintText: '예식장 이름, 지역 검색',
+          prefixIcon: Icon(Icons.search),
+        ),
+      ),
+    );
+  }
+
+  /// 내 조건으로 AI 추천받기 → AI 상담 탭
+  Widget _aiBanner() {
+    final app = AppState.instance;
+    final summary = app.profileDone ? app.profile.summary : '';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Material(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => MainShell.goTo(4),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '내 조건으로 추천받기',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        summary.isEmpty ? '지역·하객 수·예산을 알려주면 AI가 골라 드려요' : summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: AppColors.textBody),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () => MainShell.goTo(4),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                  child: const Text('AI 상담'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -149,10 +199,10 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     final sidos = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
 
     return SizedBox(
-      height: 48,
+      height: 62,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
         children: [
           _choice('전체', _sido == null, () => _selectSido(null)),
           for (final s in sidos)
@@ -171,30 +221,24 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     if (counts.length < 2) return const SizedBox.shrink();
     final names = counts.keys.toList()..sort();
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 2, 16, 2),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Text('$_sido 시·군·구 ${names.length}곳',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ),
           Wrap(
             spacing: 6,
-            runSpacing: 2,
+            runSpacing: 6,
             children: [
-              _choice('전체', _sigungu == null, () => setState(() => _sigungu = null), pad: false),
+              _subChip('전체', _sigungu == null, () => setState(() => _sigungu = null)),
               for (final g in names)
-                _choice('$g ${counts[g]}', _sigungu == g,
-                    () => setState(() => _sigungu = _sigungu == g ? null : g),
-                    pad: false),
+                _subChip('$g ${counts[g]}', _sigungu == g,
+                    () => setState(() => _sigungu = _sigungu == g ? null : g)),
             ],
           ),
         ],
@@ -202,28 +246,68 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     );
   }
 
-  Widget _choice(String label, bool selected, VoidCallback onTap, {bool pad = true}) {
+  /// 시도 칩: 회색 알약, 선택되면 검정
+  Widget _choice(String label, bool selected, VoidCallback onTap) {
     return Padding(
-      padding: EdgeInsets.only(right: pad ? 6 : 0),
+      padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
-        showCheckmark: false,
-        visualDensity: pad ? null : VisualDensity.compact,
         onSelected: (_) => onTap(),
       ),
+    );
+  }
+
+  /// 시군구 칩: 흰 바탕 + 테두리, 선택되면 진한 테두리 (시도 칩보다 한 단계 낮은 선택)
+  Widget _subChip(String label, bool selected, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      visualDensity: VisualDensity.compact,
+      backgroundColor: Colors.white,
+      selectedColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      side: BorderSide(color: selected ? AppColors.ink : AppColors.border, width: selected ? 1.5 : 1),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        color: selected ? AppColors.ink : AppColors.textBody,
+      ),
+    );
+  }
+
+  /// 결과가 없을 때: 원인에 맞는 다음 행동을 제안한다
+  Widget _empty() {
+    final where = [if (_sido != null) _sido!, if (_sigungu != null) _sigungu!].join(' ');
+    final q = _query.trim();
+    return EmptyState(
+      title: q.isNotEmpty ? "'$q' 검색 결과가 없어요" : '$where에는 등록된 공공예식장이 없어요',
+      message: q.isNotEmpty
+          ? '이름의 일부만 적거나(예: "시청") 지역 이름으로 찾아보세요.'
+          : '가까운 지역의 공공예식장을 살펴보거나, AI 상담에서 조건에 맞는 곳을 물어보세요.',
+      actions: [
+        if (q.isNotEmpty)
+          EmptyAction('검색어 지우기', () {
+            _search.clear();
+            setState(() => _query = '');
+          }),
+        if (_sigungu != null) EmptyAction('$_sido 전체 보기', () => setState(() => _sigungu = null)),
+        if (_sido != null) EmptyAction('전국 보기', () => _selectSido(null)),
+        EmptyAction('AI 상담에서 물어보기', () => MainShell.goTo(4)),
+      ],
     );
   }
 
   Widget _resultBar(int count) {
     final where = [if (_sido != null) _sido!, if (_sigungu != null) _sigungu!].join(' ');
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
       child: Row(
         children: [
           Text(
-            where.isEmpty ? '$count곳' : '$where $count곳',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            where.isEmpty ? '전체 $count곳' : '$where $count곳',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.textPrimary),
           ),
           const Spacer(),
           if (_sido != null)

@@ -33,6 +33,35 @@ class ConsultAgent implements ChatAgent {
 
   String _question = ''; // 지금 답하고 있는 원래 질문 (⑤ 답변 문장에 사용)
 
+  @override
+  final step = ValueNotifier<AgentStep?>(null);
+
+  // "왜 이렇게 답했나요?"에 쓰는 기록
+  String _nluNote = ''; // 질문을 누가(규칙/Gemini) 이해했는지
+  String _lookupNote = ''; // 어떤 데이터를 어떻게 골랐는지
+
+  static const _intentLabel = {
+    ConsultIntent.recommend: '전체 추천',
+    ConsultIntent.policy: '지원 정책',
+    ConsultIntent.venue: '공공예식장',
+    ConsultIntent.vendor: '업체 추천',
+    ConsultIntent.budget: '예산 배분',
+    ConsultIntent.schedule: '준비 순서',
+    ConsultIntent.help: '일반 질문',
+  };
+
+  static const _slotLabel = {
+    Slot.sido: '지역',
+    Slot.age: '나이',
+    Slot.stage: '결혼 단계',
+    Slot.marriedYears: '혼인 연차',
+    Slot.guests: '하객 수',
+    Slot.budget: '총예산',
+    Slot.item: '항목',
+    Slot.homeless: '무주택 여부',
+    Slot.weddingDate: '예식일',
+  };
+
   AppState get _app => AppState.instance;
 
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
@@ -59,7 +88,8 @@ class ConsultAgent implements ChatAgent {
       );
     }
     _question = '내 정보에 맞게 예식장·정책·예산·할 일을 한 번에 추천해줘';
-    final rec = await _polish(await _answer(const Understanding(intent: ConsultIntent.recommend)));
+    _nluNote = '상담 시작 시 내 정보로 바로 추천';
+    final rec = await _finish(const Understanding(intent: ConsultIntent.recommend));
     return rec.copyWith(
       text: rec.aiWritten ? rec.text : '입력해 주신 정보로 먼저 정리해 봤어요.\n\n${rec.text}',
     );
@@ -70,6 +100,7 @@ class ConsultAgent implements ChatAgent {
     final text = question.trim();
     if (_asking != null && _pending != null) {
       if (_isDontKnow(text)) return _skipCurrent();
+      step.value = AgentStep.understand;
       final (:u, :isAnswer) = await _understand(text, expecting: _asking);
       if (!isAnswer && u.intent != ConsultIntent.help && u.intent != _pending!.intent) {
         // 되묻는 중에 다른 질문을 하면 새 질문으로 처리한다
@@ -84,6 +115,7 @@ class ConsultAgent implements ChatAgent {
       return _process(_pending!);
     }
     _question = text;
+    step.value = AgentStep.understand;
     return _process((await _understand(text)).u);
   }
 
@@ -92,7 +124,11 @@ class ConsultAgent implements ChatAgent {
   Future<({Understanding u, bool isAnswer})> _understand(String text, {Slot? expecting}) async {
     final rule = _nlu.parse(text, expecting: expecting);
     final ai = await _llm?.understand(text, expecting: expecting);
-    if (ai == null) return (u: rule, isAnswer: false);
+    if (ai == null) {
+      _nluNote = _llm == null ? '규칙(키워드)으로 이해' : 'Gemini 응답 없음 → 규칙(키워드)으로 이해';
+      return (u: rule, isAnswer: false);
+    }
+    _nluNote = 'Gemini가 이해 (정해진 형식·값 범위 검사 후 사용, 놓친 값은 규칙으로 보완)';
     return (
       isAnswer: ai.isAnswer,
       u: Understanding(
@@ -150,9 +186,31 @@ class ConsultAgent implements ChatAgent {
       _asking = missing.first;
       return _ask(missing.first, u, remaining: missing.length);
     }
+    final skipped = [for (final s in _skipped) _slotLabel[s]!];
     _clearPending();
     if (u.intent == ConsultIntent.help) return _helpAnswer();
-    return _polish(await _answer(u));
+    return _finish(u, skipped: skipped);
+  }
+
+  /// ④ 데이터 조회 → ⑤ 답변 작성 + "왜 이렇게 답했나요?" 기록
+  Future<ChatMessage> _finish(Understanding u, {List<String> skipped = const []}) async {
+    step.value = AgentStep.lookup;
+    _lookupNote = '';
+    final m = await _answer(u);
+    if (_llm != null) step.value = AgentStep.write;
+    final out = await _polish(m);
+    final what = [
+      '목적 ${_intentLabel[u.intent]}',
+      if (u.topic != null) '분야 ${u.topic!.label}',
+      if (u.item != null) '항목 ${u.item!.label}',
+    ].join(' · ');
+    final used = (m.basis?.isNotEmpty ?? false) ? m.basis! : (_known.summary.isEmpty ? '없음' : _known.summary);
+    return out.copyWith(trace: [
+      '질문 이해 · $what — $_nluNote',
+      '사용한 정보 · $used${skipped.isEmpty ? '' : ' (모른다고 하신 정보: ${skipped.join(', ')} → 없이 진행)'}',
+      if (_lookupNote.isNotEmpty) '데이터 조회 · $_lookupNote',
+      '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : _llm.lastRewriteNote}',
+    ]);
   }
 
   /// 데이터로 답할 수 없는 질문: Gemini가 일반 안내를 하고, 물어볼 수 있는 것을 보여준다
@@ -343,6 +401,8 @@ class ConsultAgent implements ChatAgent {
       topicNote = '';
     }
     final likely = matches.where((m) => m.level == MatchLevel.likely).length;
+    _lookupNote = '정책 데이터를 정해진 규칙으로 판정 → 해당 가능 ${matches.length}건 '
+        '(가능성 높음 $likely건)${topicNote.isEmpty ? '' : ' · ${topicNote.trim()} 분야만'}';
     final top = matches.take(3).toList();
     final region = _known.sido ?? '전국';
     final lines = [
@@ -390,6 +450,7 @@ class ConsultAgent implements ChatAgent {
     final sido = _known.sido!;
     final guests = _known.guests;
     final list = await ConsultTools.searchVenues(sido: sido, guests: guests);
+    _lookupNote = '$sido 공공예식장 ${list.length}곳 → 하객 수용 · 무료 · 예약 가능 순으로 정렬';
     if (list.isEmpty) {
       return ChatMessage(
         fromUser: false,
@@ -435,6 +496,7 @@ class ConsultAgent implements ChatAgent {
     final guests = _known.guests ?? _app.plan.guests;
     final (picks, inBudget, count, budget) =
         await ConsultTools.searchVendors(item: item, sido: sido, totalBudget: total, guests: guests);
+    _lookupNote = '$sido ${item.label} 시연용 업체 $count곳 → 추천 예산 $budget만원 안 $inBudget곳, 평점순';
     return ChatMessage(
       fromUser: false,
       basis: '$sido · 총예산 ${formatManwon(total)}${_known.budget == null ? '(기본값)' : ''} · 하객 $guests명',
@@ -464,6 +526,7 @@ class ConsultAgent implements ChatAgent {
   ChatMessage _budgetAnswer() {
     final total = _known.budget!;
     final plan = ConsultTools.budgetPlan(total);
+    _lookupNote = '앱 기본 배분 비율 × 총예산 ${formatManwon(total)}';
     return ChatMessage(
       fromUser: false,
       basis: '총예산 ${formatManwon(total)}${_known.guests != null ? ' · 하객 ${_known.guests}명' : ''}',
@@ -481,6 +544,7 @@ class ConsultAgent implements ChatAgent {
 
   ChatMessage _scheduleAnswer() {
     final tasks = ConsultTools.nextTasks();
+    _lookupNote = '예식일 기준 체크리스트 ${kChecklistTasks.length}개 중 아직 안 한 일을 순서대로';
     final date = _known.weddingDate;
     final daysLeft = date?.difference(DateTime.now()).inDays;
     // 권장 시기(예식 D-N)가 이미 지난 일: 남은 날보다 D-N이 크면 늦은 것
@@ -513,6 +577,7 @@ class ConsultAgent implements ChatAgent {
     final budget = _known.budget;
     final top3 = budget == null ? const [] : ConsultTools.budgetPlan(budget).take(3).toList();
     final tasks = ConsultTools.nextTasks(count: 2);
+    _lookupNote = '예식장 검색 · 정책 판정 · 예산 배분 · 할 일 도구의 결과를 모아 정리';
 
     return ChatMessage(
       fromUser: false,
