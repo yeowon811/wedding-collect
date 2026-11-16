@@ -181,13 +181,29 @@ void main() {
     expect(venues.length, 240);
 
     // 공유누리 수집 데이터 (validate_venues.py 보고서 수치와 같아야 함)
-    expect(venues.where((v) => v.isCollected).length, 182);
+    expect(venues.where((v) => v.isCollected).length, 231);
     expect(venues.where((v) => v.collectSource == '공유누리').length, 117);
     expect(venues.where((v) => v.collectSource == '서울마이웨딩(더아결)').length, 65);
-    expect(venues.where((v) => v.capacity != null).length, 146);
-    expect(venues.where((v) => v.rentalFee != null).length, 169);
-    expect(venues.where((v) => v.isFree).length, 98);
-    expect(venues.where((v) => v.images.isNotEmpty).length, 178);
+    expect(venues.where((v) => v.collectSource?.startsWith('기관 안내 페이지') ?? false).length, 49);
+    expect(venues.where((v) => v.capacity != null).length, 159);
+    expect(venues.where((v) => v.rentalFee != null).length, 183);
+    expect(venues.where((v) => v.isFree).length, 110);
+    expect(venues.where((v) => v.images.isNotEmpty).length, 180);
+    // 기관 페이지 수집: 다양한 정원·요금 문구, 지원 사업 안내, 수집 실패 사유
+    final h018 = venues.firstWhere((v) => v.id == 'H018'); // '하객은 50명 이하로 인원 제한합니다.'
+    expect(h018.capacity, 50);
+    final h023 = venues.firstWhere((v) => v.id == 'H023'); // '유료 450,000원(원/회차 당)'
+    expect(h023.rentalFee, 450000);
+    final h178 = venues.firstWhere((v) => v.id == 'H178'); // '…수용가능인원 350명 정도'
+    expect(h178.capacity, 350);
+    expect(h178.dataNotes.any((n) => n.contains('대략적인 값')), isTrue);
+    final h057 = venues.firstWhere((v) => v.id == 'H057'); // '대관료 : 협의 후 결정'
+    expect(h057.rentalFee, isNull);
+    expect(h057.feeText, '대관료 : 협의 후 결정');
+    expect(venues.where((v) => v.programInfo != null).length, greaterThan(20));
+    final h159 = venues.firstWhere((v) => v.id == 'H159'); // 세종: 사이트 접속 차단
+    expect(h159.isCollected, isFalse);
+    expect(h159.dataNotes.single, startsWith('수집 실패: 접근 차단'));
     expect(venues.fold<int>(0, (n, v) => n + v.aiImages.length), 20);
     // 정원 '1명'·'문의' 같은 값은 숫자로 쓰지 않고, 확인 필요 안내가 붙는다
     for (final v in venues.where((v) => v.capacityText != null && v.capacity == null)) {

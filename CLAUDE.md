@@ -75,7 +75,14 @@
     - **AI 생성 이미지 20장(18곳)**: 파일명 'AI'·'OPENAI_IMAGE'로 판별(수집 파일 표시와 일치). 앱에서 'AI 생성 이미지' 배지, 카드 대표 사진은 실제 사진 우선
     - 변환: `python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx"`, 검증: `validate_venues.py ... --supplement "../공공예식장_더아결수집.xlsx"`
     - JSON 필드 `eshareStatus` → `collectSource`(공유누리/서울마이웨딩(더아결)) + `collectStatus`로 바꿈
-  - **사용자가 미수집 데이터를 나중에 다시 제공할 예정** → 같은 형식 엑셀로 받으면 위 두 명령만 다시 실행
+  - **2026-11-16: `공공예식장_나머지.xlsx` 추가** (기관 페이지 직접 수집). 대상 58곳 = 앞 두 출처 미수집분과 정확히 같음, 기본 13개 열도 같음
+    - 수집상태: 수집완료 15 · 수집완료(일부) 6 · 수집완료(공통) 1 · 시설별 정보 없음 27(지원 사업 공통 안내만) → 49곳 수집, **접근 차단 8(세종 가족센터)·접속 실패 1(전남여성가족재단) → 미수집 9곳**(상세 화면에 실패 사유 표시)
+    - 새 필드: `hoursText`(이용시간 원문), `reservationInfo`(예약방법), `selection`(선별방법), `inquiry`(시설 문의), `programInfo`(공통 지원 사업 안내: 국립공원 숲 결혼식·인천 맺어드림·울산 U:ON 웨딩·충북 축복웨딩). `collectSource` = `기관 안내 페이지(도메인)`
+    - 정원 문구 처리: '50명 이하' → 50, '250 여명'·'350명 정도' → 숫자 + "대략적인 값" 주의. 요금: '대관료 : 무료'·'무료대관…' → 0, '없음' → 0(주의 표시), '유료 450,000원(원/회차 당)' → 450000, '협의 후 결정'·프로그램별은 원문
+    - 파주(pajumaru.com) 사진 2장은 사이트 인증서 문제로 https 접속 실패(브라우저는 열릴 수 있음, 안드로이드는 대체 이미지)
+    - 전체: 240곳 중 231곳 수집, 정원 159 · 요금 183(무료 110) · 사진 180곳
+  - 변환: `python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx" "../공공예식장_나머지.xlsx"` (추가 파일 종류는 열 이름으로 자동 판별)
+  - 검증: `python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" --supplement "../공공예식장_더아결수집.xlsx" --supplement "../공공예식장_나머지.xlsx" --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx"`
   - 웹에서는 공유누리 이미지에 CORS 헤더가 없어 `WebHtmlElementStrategy.fallback` 사용. 사진 이용 조건(공공누리 유형)은 소개서 출처 표에 적기 전에 확인 필요
 - `tools/xlsx_reader.py`: openpyxl 없이 xlsx를 읽는 표준 라이브러리 도우미
 - 정책: `python -I tools/convert_policies.py "../youth_wedding_support_2026.xlsx"` → `assets/data/policies.json`

@@ -62,6 +62,11 @@ class Venue {
     this.availableDates2027,
     this.partnerVendors = const [],
     this.extraInfo,
+    this.hoursText,
+    this.reservationInfo,
+    this.selection,
+    this.inquiry,
+    this.programInfo,
     this.images = const [],
     this.aiImages = const {},
     this.dataNotes = const [],
@@ -90,8 +95,8 @@ class Venue {
   final int? capacityMin; // 범위로 적힌 경우 최소값 (예: 100명~200명 → 100)
   final int? rentalFee; // 원 (무료 = 0)
 
-  // ── 추가 수집 정보 (공유누리 또는 서울마이웨딩(더아결)). 없으면 null ──
-  final String? collectSource; // 공유누리 / 서울마이웨딩(더아결)
+  // ── 추가 수집 정보 (공유누리 / 서울마이웨딩(더아결) / 기관 안내 페이지). 없으면 null ──
+  final String? collectSource; // 공유누리 / 서울마이웨딩(더아결) / 기관 안내 페이지(도메인)
   final String? collectStatus; // 수집완료 / 수집완료(별도운영) / 페이지 없음 …
   final String? capacityText; // 원본 정원 값
   final String? feeText; // 예: 기본요금 100,000원
@@ -113,6 +118,11 @@ class Venue {
   final String? availableDates2027;
   final List<String> partnerVendors; // 협력 전문 웨딩업체 이름
   final String? extraInfo; // 기타 안내
+  final String? hoursText; // 이용시간·예식 가능일 (기관 페이지 원문 한 줄)
+  final String? reservationInfo; // 예약 방법 상세
+  final String? selection; // 선별 방법 (선착순·심사)
+  final String? inquiry; // 시설 문의처
+  final String? programInfo; // 지자체·기관 공통 지원 사업 안내 (예: 국립공원 숲 결혼식)
   final List<String> images; // 사진 주소
   final Set<String> aiImages; // images 중 AI 생성 이미지
   final List<String> dataNotes; // 데이터 주의 사항 ("확인 필요" 안내)
@@ -191,6 +201,11 @@ class Venue {
         availableDates2027: j['availableDates2027'] as String?,
         partnerVendors: ((j['partnerVendors'] as List?) ?? const []).cast<String>(),
         extraInfo: j['extraInfo'] as String?,
+        hoursText: j['hoursText'] as String?,
+        reservationInfo: j['reservationInfo'] as String?,
+        selection: j['selection'] as String?,
+        inquiry: j['inquiry'] as String?,
+        programInfo: j['programInfo'] as String?,
         images: ((j['images'] as List?) ?? const []).cast<String>(),
         aiImages: ((j['aiImages'] as List?) ?? const []).cast<String>().toSet(),
         dataNotes: ((j['dataNotes'] as List?) ?? const []).cast<String>(),

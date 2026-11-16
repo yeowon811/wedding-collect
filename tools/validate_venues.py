@@ -12,7 +12,7 @@
 
 사용법 (wedding-collect 폴더에서):
     python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" \
-        --supplement "../공공예식장_더아결수집.xlsx" \
+        --supplement "../공공예식장_더아결수집.xlsx" --supplement "../공공예식장_나머지.xlsx" \
         --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx" [--check-images]
 """
 import argparse
@@ -93,25 +93,45 @@ def main():
 
     # ── 2) 추가 수집 파일 ──
     eshare_ids = {g(r, "예식장ID") for r in body if g(r, "eshare 수집상태")}
-    supp = []  # (rows, g)
+    done_ids = set(eshare_ids)  # 앞 파일들까지 수집된 예식장
+    supp = []  # (종류, rows, g)
     for path in args.supplement:
+        kind = cv.supplement_kind(path)
         srows, sg = sheet(path)
-        supp.append((srows, sg))
+        supp.append((kind, srows, sg))
         name = os.path.basename(path)
         ids = [sg(r, "예식장ID") for r in srows[1:]]
+        todo_ids = set(base_by_id) - done_ids
         rep.check(f"[{name}] 모든 ID가 기준 파일에 있음", set(ids) <= set(base_by_id),
                   f"없는 ID: {sorted(set(ids) - set(base_by_id))[:10]}", f"{len(ids)}곳")
-        rep.check(f"[{name}] 공유누리 미수집 예식장과 대상이 같음",
-                  set(ids) == set(base_by_id) - eshare_ids,
-                  f"차이: {sorted(set(ids) ^ (set(base_by_id) - eshare_ids))[:10]}",
-                  f"공유누리 미수집 {len(set(base_by_id) - eshare_ids)}곳과 정확히 일치")
+        rep.check(f"[{name}] 앞 파일들에서 미수집인 예식장과 대상이 같음",
+                  set(ids) == todo_ids,
+                  f"차이: {sorted(set(ids) ^ todo_ids)[:10]}",
+                  f"미수집 {len(todo_ids)}곳과 정확히 일치")
         bdiff = [r[0] for r in srows[1:] if r[:BASE_COLS] != base_by_id.get(r[0], [])[:BASE_COLS]]
         rep.check(f"[{name}] 기본 13개 열 값이 기준과 같음", not bdiff, f"다른 행: {bdiff[:10]}",
                   "이름·주소·좌표·예약정보 모두 같음")
-        collected = [r for r in srows[1:] if sg(r, "더아결 수집상태")]
-        overlap = {sg(r, "예식장ID") for r in collected} & eshare_ids
-        rep.check(f"[{name}] 공유누리 수집분과 겹치지 않음", not overlap, f"겹침: {sorted(overlap)}",
+        if kind == "theagyeol":
+            collected = [r for r in srows[1:] if sg(r, "더아결 수집상태")]
+        else:
+            collected = [r for r in srows[1:] if sg(r, "수집상태") in cv.REST_COLLECTED]
+        overlap = {sg(r, "예식장ID") for r in collected} & done_ids
+        rep.check(f"[{name}] 앞 출처 수집분과 겹치지 않음", not overlap, f"겹침: {sorted(overlap)}",
                   f"수집 {len(collected)}곳, 겹침 0")
+        done_ids |= {sg(r, "예식장ID") for r in collected}
+
+        if kind == "rest":
+            statuses = {}
+            for r in srows[1:]:
+                statuses[sg(r, "수집상태")] = statuses.get(sg(r, "수집상태"), 0) + 1
+            unknown = [st for st in statuses if st not in cv.REST_COLLECTED | {"접근 차단", "접속 실패"}]
+            rep.check(f"[{name}] 수집상태 값이 알려진 값", not unknown, f"모르는 값: {unknown}",
+                      ", ".join(f"{k} {n}" for k, n in sorted(statuses.items(), key=lambda x: -x[1])))
+            img_over = [sg(r, "예식장ID") for r in srows[1:]
+                        if sum(1 for i in (1, 2) if sg(r, f"이미지{i} URL")) > int(sg(r, "사진 수(페이지 기준)") or 0)]
+            rep.check(f"[{name}] 사진 주소 수 ≤ 페이지 사진 수", not img_over, f"{img_over}",
+                      f"사진 주소 {sum(1 for r in srows[1:] for i in (1, 2) if sg(r, f'이미지{i} URL'))}장")
+            continue
 
         img_bad, ai_bad = [], []
         for r in collected:
@@ -150,7 +170,7 @@ def main():
                     ("규모면적", "area")]
     for r in body:
         v = by_id[g(r, "예식장ID")]
-        if v["collectSource"] == THEAGYEOL:
+        if v["collectSource"] not in (None, "공유누리"):
             continue
         for col, key in eshare_pairs:
             if (g(r, col) or None) != v[key]:
@@ -158,7 +178,22 @@ def main():
     the_pairs = [("수용인원", "capacityText"), ("대관료", "feeText"), ("주차", "parking"), ("피로연", "reception"),
                  ("예식가능일자(26년)", "availableDates2026"), ("예식불가일자(26년)", "unavailableDates2026"),
                  ("예식가능일자(27년)", "availableDates2027"), ("기타 안내", "extraInfo")]
-    for srows, sg in supp:
+    rest_pairs = [("정원", "capacityText"), ("요금", "feeText"), ("이용시간·예식 가능일", "hoursText"),
+                  ("운영·이용기간", "operatingPeriod"), ("예약방법", "reservationInfo"), ("이용대상", "target"),
+                  ("선별방법", "selection"), ("주차", "parking"), ("실내·외", "indoorOutdoor"), ("문의", "inquiry"),
+                  ("기타 안내", "extraInfo"), ("공통 사업 안내", "programInfo")]
+    for kind, srows, sg in supp:
+        if kind == "rest":
+            for r in srows[1:]:
+                if sg(r, "수집상태") not in cv.REST_COLLECTED:
+                    continue
+                v = by_id[sg(r, "예식장ID")]
+                for col, key in rest_pairs:
+                    if (sg(r, col) or None) != v[key]:
+                        raw_diff.append((v["id"], col))
+                if [sg(r, f"이미지{i} URL") for i in (1, 2) if sg(r, f"이미지{i} URL")] != v["images"]:
+                    raw_diff.append((v["id"], "이미지 URL"))
+            continue
         for r in srows[1:]:
             if not sg(r, "더아결 수집상태"):
                 continue
@@ -223,7 +258,8 @@ def main():
         need, why = [], []
         if not v["collectStatus"]:
             need += ["정원", "요금", "운영·예식 가능일", "사진"]
-            why.append("공유누리·더아결 모두 미수집 (지자체 자체 예약처)")
+            why.append("공유누리·더아결·기관 페이지 모두 미수집")
+            why += v["dataNotes"]
         else:
             if v["capacity"] is None:
                 need.append("정원")
@@ -251,7 +287,10 @@ def main():
     stat = lambda pred: sum(1 for v in js if pred(v))  # noqa: E731
     sources = {}
     for v in js:
-        sources[v["collectSource"] or "미수집"] = sources.get(v["collectSource"] or "미수집", 0) + 1
+        key = v["collectSource"] or "미수집"
+        if key.startswith("기관 안내 페이지"):
+            key = "기관 안내 페이지 (지자체·공공기관 사이트 직접 수집)"
+        sources[key] = sources.get(key, 0) + 1
     files = [os.path.basename(args.source)] + [os.path.basename(p) for p in args.supplement]
     lines = [
         "# 공공예식장 데이터 검증 보고서",
@@ -286,6 +325,7 @@ def main():
             ("피로연 정보", stat(lambda v: v["reception"])),
             ("예식 가능일(26·27년)", stat(lambda v: v["availableDates2026"] or v["availableDates2027"])),
             ("주차", stat(lambda v: v["parking"])),
+            ("지원 사업 공통 안내 (숲 결혼식·맺어드림 등)", stat(lambda v: v["programInfo"])),
         ]],
         "",
         "## 숫자로 쓰지 않고 원문·'확인 필요'로 둔 값",

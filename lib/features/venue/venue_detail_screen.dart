@@ -231,6 +231,10 @@ class VenueDetailScreen extends StatelessWidget {
       if (v.availableDates2027 != null) _row(Icons.event_note, '27년 예식일', v.availableDates2027!),
       if (v.reception != null) _row(Icons.restaurant, '피로연', v.reception!),
       if (v.extraInfo != null) _row(Icons.campaign_outlined, '기타 안내', v.extraInfo!),
+      if (v.programInfo != null) ...[
+        _row(Icons.volunteer_activism_outlined, '지원 사업', '이 예식장이 포함된 지자체·기관 공통 지원 사업이에요'),
+        _detailBox(v.programInfo!),
+      ],
     ];
     if (rows.isEmpty) return const SizedBox.shrink();
     return _section('예식 안내', rows);
@@ -253,17 +257,21 @@ class VenueDetailScreen extends StatelessWidget {
       if (v.hoursWeekday != null) '평일 ${v.hoursWeekday}',
       if (v.hoursSaturday != null) '토요일 ${v.hoursSaturday}',
       if (v.hoursHoliday != null) '일·공휴일 ${v.hoursHoliday}',
+      if (v.hoursText != null) v.hoursText!,
     ];
     final rows = [
       if (hours.isNotEmpty) _row(Icons.schedule, '운영시간', hours.join('\n')),
       if (v.operatingPeriod != null) _row(Icons.date_range, '이용 기간', v.operatingPeriod!),
       if (v.applyPeriod != null) _row(Icons.edit_calendar_outlined, '접수', v.applyPeriod!),
+      if (v.reservationInfo != null) _row(Icons.edit_note, '예약 방법', v.reservationInfo!),
       if (v.approval != null) _row(Icons.fact_check_outlined, '심사', v.approval!),
+      if (v.selection != null) _row(Icons.fact_check_outlined, '선정 방식', v.selection!),
       if (v.prepTime != null) _row(Icons.timer_outlined, '준비 시간', v.prepTime!),
       if (v.target != null) _row(Icons.person_outline, '이용 대상', v.target!),
       if (v.indoorOutdoor != null) _row(Icons.park_outlined, '실내·외', v.indoorOutdoor!),
       if (v.parking != null) _row(Icons.local_parking, '주차', v.parking!),
       if (v.area != null) _row(Icons.square_foot, '면적', v.area!),
+      if (v.inquiry != null) _row(Icons.support_agent, '시설 문의', v.inquiry!),
     ];
     if (rows.isEmpty) return const SizedBox.shrink();
     return _section('이용 정보', rows);
@@ -276,7 +284,10 @@ class VenueDetailScreen extends StatelessWidget {
             ...v.dataNotes,
             if (v.aiImages.isNotEmpty) '사진 ${v.images.length}장 중 ${v.aiImages.length}장은 AI 생성 이미지예요 (실제 모습과 다를 수 있음).',
           ]
-        : ['정원·요금·예식 가능일·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.'];
+        : [
+            '정원·요금·예식 가능일·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.',
+            ...v.dataNotes, // 수집 실패 사유 (예: 사이트 접속 차단)
+          ];
     if (notes.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,

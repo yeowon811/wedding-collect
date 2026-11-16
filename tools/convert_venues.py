@@ -4,8 +4,8 @@
 - `공공예식장_eshare수집.xlsx` (권장): 기본 13개 열 + 공유누리(eshare) 수집 열(정원·요금·운영시간·사진 등)
 - `전국 공공예식장 및 연계업체 현황 (2).xlsx`: 기본 13개 열만 (eshare 열이 없으면 모두 null)
 
-사용법 (wedding-collect 폴더에서). 첫 파일이 기준(240곳 전체), 뒤 파일은 추가 수집본:
-    python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx"
+사용법 (wedding-collect 폴더에서). 첫 파일이 기준(240곳 전체), 뒤 파일은 추가 수집본(열 이름으로 종류 판별):
+    python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx" "../공공예식장_나머지.xlsx"
 변환 후 검증:
     python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx"
 """
@@ -156,7 +156,12 @@ def build(path: str):
             "unavailableDates2026": None,
             "availableDates2027": None,
             "partnerVendors": [],  # 협력 전문 웨딩업체 이름 (더아결)
-            "extraInfo": None,  # 기타 안내 (더아결)
+            "extraInfo": None,  # 기타 안내 (더아결·기관 페이지)
+            "hoursText": None,  # 이용시간·예식 가능일 (기관 페이지, 한 줄 원문)
+            "reservationInfo": None,  # 예약 방법 상세 (기관 페이지)
+            "selection": None,  # 선별 방법: 선착순·심사 (기관 페이지)
+            "inquiry": None,  # 시설 문의처 (기관 페이지)
+            "programInfo": None,  # 지자체·기관 공통 지원 사업 안내 (예: 국립공원 숲 결혼식)
             "images": images,
             "aiImages": [],  # images 중 AI 생성 이미지
             "dataNotes": notes,  # 앱에서 "확인 필요"로 보여줄 데이터 주의 사항
@@ -249,11 +254,124 @@ def apply_theagyeol(venues: list, path: str) -> None:
         })
 
 
+# ───────────────────────── 기관 페이지 직접 수집 파일 (공공예식장_나머지) ─────────────────────────
+
+# 이 상태면 시설 정보(또는 지원 사업 공통 안내)를 수집한 것으로 본다. 접근 차단·접속 실패는 미수집.
+REST_COLLECTED = {"수집완료", "수집완료(일부)", "수집완료(공통)", "시설별 정보 없음"}
+
+
+def parse_capacity_rest(text: str):
+    """기관 페이지의 정원 문구 → (최대 인원, 주의). 예: '300 명', '50명 이하로 제한', '수용가능 하객수 : 250 여명'."""
+    text = text.strip()
+    if not text:
+        return None, None
+    m = re.fullmatch(r"([\d,]+)\s*명", text)
+    if m:
+        n = int(m.group(1).replace(",", ""))
+        return (n, None) if n > SUSPICIOUS_CAPACITY_MAX else (None, f"정원 '{text}'은 등록 오류로 보임")
+    m = re.search(r"([\d,]+)\s*명\s*이하", text)
+    if m:
+        return int(m.group(1).replace(",", "")), None
+    m = re.search(r"수용\s*가능[^\d]*([\d,]+)\s*여?\s*명", text) or re.fullmatch(r"([\d,]+)\s*여\s*명", text)
+    if m:
+        return int(m.group(1).replace(",", "")), "정원은 '약 N명'으로 안내된 대략적인 값(원문 참고)"
+    return None, f"정원 '{text}'은 숫자로 쓸 수 없음"
+
+
+def parse_fee_rest(text: str):
+    """'무료'·'대관료 : 무료'·'없음' → 0원. '유료 450,000원(원/회차 당)' → 450000. 협의·프로그램별은 원문."""
+    raw = text.strip()
+    if not raw:
+        return None, None
+    t = re.sub(r"^대관료\s*:\s*", "", raw)
+    if t.startswith("무료"):
+        return 0, None
+    if t == "없음":
+        return 0, "요금이 '없음'으로 안내됨 → 무료로 표시(기관 확인 권장)"
+    m = re.fullmatch(r"유료\s*([\d,]+)\s*원.*", t)
+    if m:
+        return int(m.group(1).replace(",", "")), None
+    return None, "대관료가 협의·프로그램별로 달라 숫자로 정리하지 않음(원문 참고)"
+
+
+def apply_rest(venues: list, path: str) -> None:
+    """기관 페이지에서 직접 수집한 파일(공유누리·더아결 미수집 58곳)의 값을 채운다."""
+    rows = read_sheets(path)["공공예식장 목록"]
+    idx = {name: i for i, name in enumerate(rows[0])}
+    by_id = {v["id"]: v for v in venues}
+
+    for r in rows[1:]:
+        def g(key, r=r):
+            i = idx.get(key)
+            return r[i].strip() if i is not None and i < len(r) else ""
+
+        v = by_id[g("예식장ID")]
+        status = g("수집상태")
+        if not status:
+            continue
+        if v["collectStatus"]:
+            raise ValueError(f"{v['id']}는 이미 {v['collectSource']}에서 수집됨 (중복 출처)")
+        if status not in REST_COLLECTED:
+            # 접근 차단·접속 실패: 미수집으로 두고 이유만 남긴다
+            v["dataNotes"] = [f"수집 실패: {status}" + (f" ({g('수집 비고')})" if g("수집 비고") else "")]
+            continue
+
+        capacity, cap_note = parse_capacity_rest(g("정원"))
+        fee, fee_note = parse_fee_rest(g("요금"))
+        images = [g(f"이미지{i} URL") for i in (1, 2) if g(f"이미지{i} URL")]
+        reported = int(g("사진 수(페이지 기준)") or 0)
+        notes = [n for n in [cap_note, fee_note] if n]
+        if status == "시설별 정보 없음":
+            notes.append("이 시설만의 정원·요금 안내가 없음(지원 사업 공통 안내만 있음)")
+        elif status == "수집완료(일부)":
+            notes.append("기관 페이지에 일부 항목만 있음")
+        if reported and not images:
+            notes.append(f"기관 페이지에 사진 {reported}장이 있으나 앱에 가져오지 못함(예약 페이지에서 확인)")
+        elif reported and len(images) < reported:
+            notes.append(f"사진 {reported}장 중 {len(images)}장만 주소 확인")
+        if g("수집 비고") and "이미지 주소 미추출" not in g("수집 비고"):
+            notes.append(g("수집 비고"))
+        area = g("면적")
+
+        v.update({
+            "collectSource": f"기관 안내 페이지({g('상세안내 사이트(도메인)').removeprefix('www.')})",
+            "collectStatus": status,
+            "capacity": capacity,
+            "capacityText": g("정원") or None,
+            "rentalFee": fee,
+            "feeText": g("요금") or None,
+            "hoursText": g("이용시간·예식 가능일") or None,
+            "operatingPeriod": g("운영·이용기간") or None,
+            "reservationInfo": g("예약방법") or None,
+            "target": g("이용대상") or None,
+            "selection": g("선별방법") or None,
+            "parking": g("주차") or None,
+            "area": area if area and not re.fullmatch(r"0\s*㎡", area) else None,  # '0㎡'는 미기재
+            "indoorOutdoor": g("실내·외") or None,
+            "inquiry": g("문의") or None,
+            "extraInfo": g("기타 안내") or None,
+            "programInfo": g("공통 사업 안내") or None,
+            "images": images,
+            "aiImages": [u for u in images if is_ai_image(u)],
+            "dataNotes": notes,
+        })
+
+
+def supplement_kind(path: str) -> str:
+    """추가 수집 파일 종류를 열 이름으로 판별한다."""
+    header = read_sheets(path)["공공예식장 목록"][0]
+    if "더아결 수집상태" in header:
+        return "theagyeol"
+    if "수집상태" in header and "공통 사업 안내" in header:
+        return "rest"
+    raise ValueError(f"알 수 없는 추가 수집 파일 형식: {path}")
+
+
 def build_all(base: str, supplements=()) -> list:
     """기준 파일(공유누리 수집본) + 추가 수집 파일들을 합친다."""
     venues = build(base)
     for path in supplements:
-        apply_theagyeol(venues, path)
+        (apply_theagyeol if supplement_kind(path) == "theagyeol" else apply_rest)(venues, path)
     return venues
 
 
