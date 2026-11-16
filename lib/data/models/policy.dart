@@ -11,13 +11,13 @@ enum PolicyCategory {
   final String label;
 
   static PolicyCategory fromCode(String code) => switch (code) {
-        'WEDDING' => wedding,
-        'CASH' => cash,
-        'HOUSING' => housing,
-        'HEALTH' => health,
-        'EDUCATION' => education,
-        _ => etc,
-      };
+    'WEDDING' => wedding,
+    'CASH' => cash,
+    'HOUSING' => housing,
+    'HEALTH' => health,
+    'EDUCATION' => education,
+    _ => etc,
+  };
 }
 
 /// 청년 결혼 지원 정책 1건.
@@ -63,20 +63,20 @@ class Policy {
       isNational ? '전국' : (sigungu.isEmpty ? sido : '$sido $sigungu');
 
   factory Policy.fromJson(Map<String, dynamic> j) => Policy(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        agency: j['agency'] as String,
-        sido: j['sido'] as String,
-        sigungu: j['sigungu'] as String,
-        eligibility: j['eligibility'] as String,
-        url: j['url'] as String,
-        category: PolicyCategory.fromCode(j['category'] as String),
-        ageMin: (j['ageMin'] as num?)?.toInt(),
-        ageMax: (j['ageMax'] as num?)?.toInt(),
-        allowsEngaged: j['allowsEngaged'] as bool,
-        marriedWithinYears: (j['marriedWithinYears'] as num?)?.toInt(),
-        hasIncomeLimit: j['hasIncomeLimit'] as bool,
-        requiresHomeless: j['requiresHomeless'] as bool,
-        reviewed: j['reviewed'] as bool,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    agency: j['agency'] as String,
+    sido: j['sido'] as String,
+    sigungu: j['sigungu'] as String,
+    eligibility: j['eligibility'] as String,
+    url: j['url'] as String,
+    category: PolicyCategory.fromCode(j['category'] as String),
+    ageMin: (j['ageMin'] as num?)?.toInt(),
+    ageMax: (j['ageMax'] as num?)?.toInt(),
+    allowsEngaged: j['allowsEngaged'] as bool,
+    marriedWithinYears: (j['marriedWithinYears'] as num?)?.toInt(),
+    hasIncomeLimit: j['hasIncomeLimit'] as bool,
+    requiresHomeless: j['requiresHomeless'] as bool,
+    reviewed: j['reviewed'] as bool,
+  );
 }

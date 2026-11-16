@@ -11,30 +11,42 @@ class VendorRepository {
   Map<String, List<VendorMatch>>? _matches;
 
   Future<List<dynamic>> _json(String name) async =>
-      jsonDecode(await rootBundle.loadString('assets/data/$name')) as List<dynamic>;
+      jsonDecode(await rootBundle.loadString('assets/data/$name'))
+          as List<dynamic>;
 
-  Future<List<RealVendor>> realVendors() async => _real ??= (await _json('vendors.json'))
-      .cast<Map<String, dynamic>>()
-      .map(RealVendor.fromJson)
-      .toList(growable: false);
+  Future<List<RealVendor>> realVendors() async =>
+      _real ??= (await _json('vendors.json'))
+          .cast<Map<String, dynamic>>()
+          .map(RealVendor.fromJson)
+          .toList(growable: false);
 
-  Future<List<DemoVendor>> demoVendors() async => _demo ??= (await _json('demo_vendors.json'))
-      .cast<Map<String, dynamic>>()
-      .map(DemoVendor.fromJson)
-      .toList(growable: false);
+  Future<List<DemoVendor>> demoVendors() async =>
+      _demo ??= (await _json('demo_vendors.json'))
+          .cast<Map<String, dynamic>>()
+          .map(DemoVendor.fromJson)
+          .toList(growable: false);
 
   Future<Map<String, List<VendorMatch>>> _allMatches() async {
     if (_matches != null) return _matches!;
-    final raw = jsonDecode(await rootBundle.loadString('assets/data/venue_vendor_matches.json'))
-        as Map<String, dynamic>;
-    return _matches = raw.map((k, v) => MapEntry(
-          k,
-          (v as List).cast<Map<String, dynamic>>().map(VendorMatch.fromJson).toList(),
-        ));
+    final raw = jsonDecode(
+      await rootBundle.loadString('assets/data/venue_vendor_matches.json'),
+    ) as Map<String, dynamic>;
+    return _matches = raw.map(
+      (k, v) => MapEntry(
+        k,
+        (v as List)
+            .cast<Map<String, dynamic>>()
+            .map(VendorMatch.fromJson)
+            .toList(),
+      ),
+    );
   }
 
   /// 예식장 근처 실제 업체 (분류별 상위 [perCategory]곳)
-  Future<List<(VendorMatch, RealVendor)>> nearbyFor(String venueId, {int perCategory = 2}) async {
+  Future<List<(VendorMatch, RealVendor)>> nearbyFor(
+    String venueId, {
+    int perCategory = 2,
+  }) async {
     final matches = (await _allMatches())[venueId] ?? const [];
     final byId = {for (final v in await realVendors()) v.id: v};
     final result = <(VendorMatch, RealVendor)>[];

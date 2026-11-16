@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"wedding-collect","appId":"1:475227017389:android:0c494c3492b015f85a3624","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"wedding-collect","configurations":{"android":"1:475227017389:android:0c494c3492b015f85a3624","web":"1:475227017389:web:ef6192ad19c627c65a3624"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "wedding-collect",
+          "appId": "1:475227017389:android:0c494c3492b015f85a3624",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "wedding-collect",
+          "configurations": {
+            "android": "1:475227017389:android:0c494c3492b015f85a3624",
+            "web": "1:475227017389:web:ef6192ad19c627c65a3624"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

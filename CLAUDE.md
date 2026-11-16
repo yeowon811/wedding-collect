@@ -102,7 +102,11 @@
     - 평가: `test/eval/` 질문 42개, 결과 `docs/ai-eval/` (질문 이해: 규칙 29/42 → Gemini·앱 42/42, 1.5초 / 답변 문장: 숫자·표시어 검사 통과 4/15 → 15/15)
     - 정책 판정(`policy_matcher.dart`)은 나이 범위(20대 등)·무주택 여부도 반영
 - 후기 (2026-11-15 추가): **시연용 업체에만** 있음. `lib/data/repositories/review_repository.dart`가 업체 ID 고정 시드로 생성 (별점 분포는 업체 평점·후기 수와 정확히 일치, 최근 30개 표시). 업체 상세에 요약(평균·분포·키워드)+최근 3개, 전체 보기(정렬·별점 필터), 상담/계약한 업체만 후기 쓰기. **실제 업체에는 가짜 후기를 만들지 않음** (안내 문구만 표시)
-- 공유 상태: `lib/data/app_state.dart` (메모리에만 저장, 앱 끄면 초기화)
+- 공유 상태: `lib/data/app_state.dart`
+- **회원가입·로그인 (2026-11-17):** Firebase 이메일/비밀번호 인증 + Firestore `users/{uid}` 문서에 내 정보 자동 저장(변경 0.8초 후). `lib/data/account_service.dart`(AccountMode: unavailable/signedOut/guest/signedIn), `user_data_codec.dart`(저장 형식, 이메일은 저장 안 함), `lib/features/auth/login_screen.dart`(로그인·회원가입·비밀번호 재설정·**로그인 없이 둘러보기**, 가입 시 개인정보 동의), 각 탭 오른쪽 위 계정 버튼(저장 시각·로그아웃). 로그아웃하면 상태 초기화
+  - 보안 규칙 `firestore.rules`(본인 문서만 읽기·쓰기), 배포: `firebase deploy --only firestore:rules --project wedding-collect`
+  - 콘솔 준비: Authentication 이메일/비밀번호 사용 설정, Firestore 데이터베이스(asia-northeast3) 생성
+  - Firebase가 없는 테스트 환경에서는 로그인 화면 없이 바로 앱(unavailable). 시연 링크(?tab= 등)로 열면 둘러보기로 시작
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

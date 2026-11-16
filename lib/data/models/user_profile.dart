@@ -45,33 +45,37 @@ class UserProfile {
   String get stageLabel {
     if (stage == null) return '결혼 단계 미입력';
     if (stage == MarriageStage.married && marriedYears != null) {
-      return marriedYears! >= 8 ? '신혼부부(혼인 7년 넘음)' : '신혼부부(혼인 $marriedYears년 이내)';
+      return marriedYears! >= 8
+          ? '신혼부부(혼인 7년 넘음)'
+          : '신혼부부(혼인 $marriedYears년 이내)';
     }
     return stage!.label;
   }
 
   /// "서울 · 만 29세 · 예비부부" 같은 요약 (값이 있는 것만)
   String get summary => [
-        if (sido != null) sido!,
-        if (age != null) ageLabel,
-        if (stage != null) stageLabel,
-        if (guests != null) '하객 $guests명',
-        if (budget != null) '예산 $budget만원',
-      ].join(' · ');
+    if (sido != null) sido!,
+    if (age != null) ageLabel,
+    if (stage != null) stageLabel,
+    if (guests != null) '하객 $guests명',
+    if (budget != null) '예산 $budget만원',
+  ].join(' · ');
 
   /// 대화에서 새로 알게 된 값으로 덮어쓴다 (null인 값은 그대로 둠)
   UserProfile merge(UserProfile o) => UserProfile(
-        sido: o.sido ?? sido,
-        age: o.age ?? age,
-        ageMax: o.age != null ? o.ageMax : ageMax,
-        stage: o.stage ?? stage,
-        marriedYears: o.marriedYears ?? marriedYears,
-        weddingDate: o.weddingDate ?? weddingDate,
-        weddingUndecided: o.weddingDate != null ? false : (o.weddingUndecided || weddingUndecided),
-        guests: o.guests ?? guests,
-        budget: o.budget ?? budget,
-        homeless: o.homeless ?? homeless,
-      );
+    sido: o.sido ?? sido,
+    age: o.age ?? age,
+    ageMax: o.age != null ? o.ageMax : ageMax,
+    stage: o.stage ?? stage,
+    marriedYears: o.marriedYears ?? marriedYears,
+    weddingDate: o.weddingDate ?? weddingDate,
+    weddingUndecided: o.weddingDate != null
+        ? false
+        : (o.weddingUndecided || weddingUndecided),
+    guests: o.guests ?? guests,
+    budget: o.budget ?? budget,
+    homeless: o.homeless ?? homeless,
+  );
 
   UserProfile copyWith({
     String? sido,
@@ -86,17 +90,16 @@ class UserProfile {
     int? budget,
     bool? homeless,
     bool clearHomeless = false,
-  }) =>
-      UserProfile(
-        sido: sido ?? this.sido,
-        age: age ?? this.age,
-        ageMax: clearAgeMax ? null : (ageMax ?? this.ageMax),
-        stage: stage ?? this.stage,
-        marriedYears: marriedYears ?? this.marriedYears,
-        weddingDate: weddingDate ?? this.weddingDate,
-        weddingUndecided: weddingUndecided ?? this.weddingUndecided,
-        guests: guests ?? this.guests,
-        budget: budget ?? this.budget,
-        homeless: clearHomeless ? null : (homeless ?? this.homeless),
-      );
+  }) => UserProfile(
+    sido: sido ?? this.sido,
+    age: age ?? this.age,
+    ageMax: clearAgeMax ? null : (ageMax ?? this.ageMax),
+    stage: stage ?? this.stage,
+    marriedYears: marriedYears ?? this.marriedYears,
+    weddingDate: weddingDate ?? this.weddingDate,
+    weddingUndecided: weddingUndecided ?? this.weddingUndecided,
+    guests: guests ?? this.guests,
+    budget: budget ?? this.budget,
+    homeless: clearHomeless ? null : (homeless ?? this.homeless),
+  );
 }

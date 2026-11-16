@@ -48,8 +48,68 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 저장된 내 정보를 한 번에 적용 (로그인 후 불러오기). null인 항목은 기본값 유지.
+  void replaceAll({
+    required UserProfile profile,
+    required bool profileDone,
+    required WeddingPlan plan,
+    List<PlanItem>? items,
+    List<ChecklistTask>? tasks,
+    Set<String> doneTasks = const {},
+    List<Consultation> consultations = const [],
+    Map<VendorCategory, (DemoVendor, int)> contracts = const {},
+    List<Review> myReviews = const [],
+  }) {
+    this.profile = profile;
+    this.profileDone = profileDone;
+    profileSkipped = false;
+    this.plan = plan;
+    if (items != null) {
+      this.items
+        ..clear()
+        ..addAll(items);
+    }
+    if (tasks != null) {
+      this.tasks
+        ..clear()
+        ..addAll(tasks)
+        ..sort((a, b) => b.dMinus.compareTo(a.dMinus));
+    }
+    this.doneTasks
+      ..clear()
+      ..addAll(doneTasks);
+    this.consultations
+      ..clear()
+      ..addAll(consultations);
+    this.contracts
+      ..clear()
+      ..addAll(contracts);
+    this.myReviews
+      ..clear()
+      ..addAll(myReviews);
+    compare.clear();
+    notifyListeners();
+  }
+
+  /// 처음 상태로 (로그아웃할 때)
+  void resetAll() {
+    replaceAll(
+      profile: const UserProfile(),
+      profileDone: false,
+      plan: WeddingPlan(
+        weddingDate: DateTime.now().add(const Duration(days: 240)),
+      ),
+      items: [
+        for (final c in VendorCategory.planItems)
+          PlanItem(id: c.name, name: c.label, category: c),
+      ],
+      tasks: [...kChecklistTasks],
+    );
+  }
+
   final List<Consultation> consultations = [];
-  final Map<VendorCategory, (DemoVendor, int)> contracts = {}; // 시연용 업체 계약: 업체, 금액(만원)
+  final Map<VendorCategory, (DemoVendor, int)> contracts =
+      {}; // 시연용 업체 계약: 업체, 금액(만원)
   final List<DemoVendor> compare = [];
   final List<Review> myReviews = [];
 
@@ -62,22 +122,30 @@ class AppState extends ChangeNotifier {
 
   /// 준비 항목: 기본 11개로 시작하고 사용자가 추가·수정·삭제한다
   final List<PlanItem> items = [
-    for (final c in VendorCategory.planItems) PlanItem(id: c.name, name: c.label, category: c),
+    for (final c in VendorCategory.planItems)
+      PlanItem(id: c.name, name: c.label, category: c),
   ];
   int _seq = 0;
 
-  PlanItem? itemFor(VendorCategory c) => items.where((i) => i.category == c).firstOrNull;
+  PlanItem? itemFor(VendorCategory c) =>
+      items.where((i) => i.category == c).firstOrNull;
 
-  ItemStatus statusOf(VendorCategory c) => itemFor(c)?.status ?? ItemStatus.todo;
+  ItemStatus statusOf(VendorCategory c) =>
+      itemFor(c)?.status ?? ItemStatus.todo;
 
   void setStatus(VendorCategory c, ItemStatus s) {
     final item = itemFor(c);
     if (item != null) updateItem(item, status: s);
   }
 
-  PlanItem addItem(String name, {ItemStatus status = ItemStatus.todo, int? amount, String? vendorName}) {
+  PlanItem addItem(
+    String name, {
+    ItemStatus status = ItemStatus.todo,
+    int? amount,
+    String? vendorName,
+  }) {
     final item = PlanItem(
-      id: 'custom${_seq++}',
+      id: 'custom${DateTime.now().microsecondsSinceEpoch}${_seq++}',
       name: name,
       status: status,
       amount: amount,
@@ -101,10 +169,12 @@ class AppState extends ChangeNotifier {
     if (status != null) item.status = status;
     if (amount != null) item.amount = amount;
     if (clearAmount) item.amount = null;
-    if (vendorName != null && vendorName.trim().isNotEmpty) item.vendorName = vendorName.trim();
+    if (vendorName != null && vendorName.trim().isNotEmpty)
+      item.vendorName = vendorName.trim();
     if (clearVendor) item.vendorName = null;
     // 계약 전 단계로 되돌리면 시연용 업체 계약 표시도 푼다
-    if (status != null && !status.isDone && item.category != null) contracts.remove(item.category);
+    if (status != null && !status.isDone && item.category != null)
+      contracts.remove(item.category);
     notifyListeners();
   }
 
@@ -123,18 +193,21 @@ class AppState extends ChangeNotifier {
   }
 
   /// 계약·결제 완료 항목의 금액 합계 (만원)
-  int get confirmedTotal =>
-      items.where((i) => i.status.isDone).fold(0, (sum, i) => sum + (i.amount ?? 0));
+  int get confirmedTotal => items
+      .where((i) => i.status.isDone)
+      .fold(0, (sum, i) => sum + (i.amount ?? 0));
 
   /// 아직 계약 전이지만 금액을 적어 둔 항목의 합계 (예상, 만원)
-  int get plannedTotal =>
-      items.where((i) => !i.status.isDone).fold(0, (sum, i) => sum + (i.amount ?? 0));
+  int get plannedTotal => items
+      .where((i) => !i.status.isDone)
+      .fold(0, (sum, i) => sum + (i.amount ?? 0));
 
   // ───────────────────────── 상담·계약 (시연용 업체) ─────────────────────────
 
   /// 후기는 상담을 신청했거나 계약한 업체에만 쓸 수 있다
   bool canReview(DemoVendor v) =>
-      consultations.any((c) => c.vendor.id == v.id) || contracts[v.category]?.$1.id == v.id;
+      consultations.any((c) => c.vendor.id == v.id) ||
+      contracts[v.category]?.$1.id == v.id;
 
   void addReview(Review r) {
     myReviews.add(r);
@@ -146,7 +219,8 @@ class AppState extends ChangeNotifier {
       ..add(c)
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     final item = itemFor(c.vendor.category);
-    if (item != null && item.status == ItemStatus.todo) item.status = ItemStatus.consulting;
+    if (item != null && item.status == ItemStatus.todo)
+      item.status = ItemStatus.consulting;
     notifyListeners();
   }
 
@@ -161,7 +235,11 @@ class AppState extends ChangeNotifier {
     final name = v.name.replaceFirst('[시연] ', '');
     var item = itemFor(v.category);
     if (item == null) {
-      item = PlanItem(id: v.category.name, name: v.category.label, category: v.category);
+      item = PlanItem(
+        id: v.category.name,
+        name: v.category.label,
+        category: v.category,
+      );
       items.add(item);
     }
     item
@@ -180,7 +258,8 @@ class AppState extends ChangeNotifier {
 
   /// 직접 체크했거나, 연결된 준비 항목이 계약·결제 완료면 끝난 일
   bool isTaskDone(ChecklistTask t) =>
-      doneTasks.contains(t.id) || (t.category != null && statusOf(t.category!).isDone);
+      doneTasks.contains(t.id) ||
+      (t.category != null && statusOf(t.category!).isDone);
 
   void toggleTask(String id) {
     doneTasks.contains(id) ? doneTasks.remove(id) : doneTasks.add(id);
@@ -188,7 +267,11 @@ class AppState extends ChangeNotifier {
   }
 
   ChecklistTask addTask(String title, int dMinus) {
-    final t = ChecklistTask('u${_seq++}', dMinus, title.trim());
+    final t = ChecklistTask(
+      'u${DateTime.now().microsecondsSinceEpoch}${_seq++}',
+      dMinus,
+      title.trim(),
+    );
     tasks
       ..add(t)
       ..sort((a, b) => b.dMinus.compareTo(a.dMinus));
@@ -218,7 +301,8 @@ class AppState extends ChangeNotifier {
     if (inCompare(v)) {
       compare.removeWhere((e) => e.id == v.id);
     } else {
-      if (compare.isNotEmpty && compare.first.category != v.category) compare.clear();
+      if (compare.isNotEmpty && compare.first.category != v.category)
+        compare.clear();
       if (compare.length >= 3) compare.removeAt(0);
       compare.add(v);
     }

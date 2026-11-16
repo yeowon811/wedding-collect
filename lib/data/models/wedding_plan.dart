@@ -16,21 +16,27 @@ class WeddingPlan {
 
   int get dDay {
     final today = DateTime.now();
-    return DateTime(weddingDate.year, weddingDate.month, weddingDate.day)
-        .difference(DateTime(today.year, today.month, today.day))
-        .inDays;
+    return DateTime(
+      weddingDate.year,
+      weddingDate.month,
+      weddingDate.day,
+    ).difference(DateTime(today.year, today.month, today.day)).inDays;
   }
 
   /// 항목별 추천 예산(만원)
   int budgetFor(VendorCategory c) => budget * c.budgetShare ~/ 100;
 
-  WeddingPlan copyWith({DateTime? weddingDate, String? sido, int? budget, int? guests}) =>
-      WeddingPlan(
-        weddingDate: weddingDate ?? this.weddingDate,
-        sido: sido ?? this.sido,
-        budget: budget ?? this.budget,
-        guests: guests ?? this.guests,
-      );
+  WeddingPlan copyWith({
+    DateTime? weddingDate,
+    String? sido,
+    int? budget,
+    int? guests,
+  }) => WeddingPlan(
+    weddingDate: weddingDate ?? this.weddingDate,
+    sido: sido ?? this.sido,
+    budget: budget ?? this.budget,
+    guests: guests ?? this.guests,
+  );
 }
 
 /// 준비 항목의 진행 상태
@@ -81,7 +87,13 @@ class Consultation {
 
 /// 예식일 기준 할 일 템플릿
 class ChecklistTask {
-  const ChecklistTask(this.id, this.dMinus, this.title, {this.category, this.tab});
+  const ChecklistTask(
+    this.id,
+    this.dMinus,
+    this.title, {
+    this.category,
+    this.tab,
+  });
 
   final String id;
   final int dMinus; // 예식 며칠 전까지

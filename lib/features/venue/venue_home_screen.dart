@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
@@ -31,6 +32,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     _search.dispose();
     super.dispose();
   }
+
   String? _sido; // null = 전체
   String? _sigungu; // null = 시도 전체
 
@@ -39,7 +41,10 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     return all.where((v) {
       if (_sido != null && v.sido != _sido) return false;
       if (_sigungu != null && v.sigungu != _sigungu) return false;
-      if (q.isNotEmpty && !v.name.contains(q) && !v.address.contains(q) && !v.region.contains(q)) {
+      if (q.isNotEmpty &&
+          !v.name.contains(q) &&
+          !v.address.contains(q) &&
+          !v.region.contains(q)) {
         return false;
       }
       return true;
@@ -47,9 +52,9 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   }
 
   void _selectSido(String? sido) => setState(() {
-        _sido = sido;
-        _sigungu = null; // 시도가 바뀌면 시군구 선택은 초기화
-      });
+    _sido = sido;
+    _sigungu = null; // 시도가 바뀌면 시군구 선택은 초기화
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +77,8 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _aiBanner()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
-                if (_sido != null) SliverToBoxAdapter(child: _sigunguChips(all)),
+                if (_sido != null)
+                  SliverToBoxAdapter(child: _sigunguChips(all)),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
                   SliverToBoxAdapter(child: _empty())
@@ -104,14 +110,21 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '공공예식장',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              color: AppColors.textPrimary,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '공공예식장',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const AccountButton(),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -159,14 +172,23 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                     children: [
                       Text(
                         '내 조건으로 추천받기',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        summary.isEmpty ? '지역·하객 수·예산을 알려주면 AI가 골라 드려요' : summary,
+                        summary.isEmpty
+                            ? '지역·하객 수·예산을 알려주면 AI가 골라 드려요'
+                            : summary,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, color: AppColors.textBody),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textBody,
+                        ),
                       ),
                     ],
                   ),
@@ -177,8 +199,13 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, 40),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   child: const Text('AI 상담'),
                 ),
@@ -196,7 +223,8 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     for (final v in all) {
       counts[v.sido] = (counts[v.sido] ?? 0) + 1;
     }
-    final sidos = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final sidos = counts.keys.toList()
+      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
 
     return SizedBox(
       height: 62,
@@ -206,7 +234,11 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         children: [
           _choice('전체', _sido == null, () => _selectSido(null)),
           for (final s in sidos)
-            _choice('$s ${counts[s]}', _sido == s, () => _selectSido(_sido == s ? null : s)),
+            _choice(
+              '$s ${counts[s]}',
+              _sido == s,
+              () => _selectSido(_sido == s ? null : s),
+            ),
         ],
       ),
     );
@@ -228,17 +260,26 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text('$_sido 시·군·구 ${names.length}곳',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(
+              '$_sido 시·군·구 ${names.length}곳',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
           ),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
-              _subChip('전체', _sigungu == null, () => setState(() => _sigungu = null)),
+              _subChip(
+                '전체',
+                _sigungu == null,
+                () => setState(() => _sigungu = null),
+              ),
               for (final g in names)
-                _subChip('$g ${counts[g]}', _sigungu == g,
-                    () => setState(() => _sigungu = _sigungu == g ? null : g)),
+                _subChip(
+                  '$g ${counts[g]}',
+                  _sigungu == g,
+                  () => setState(() => _sigungu = _sigungu == g ? null : g),
+                ),
             ],
           ),
         ],
@@ -268,7 +309,10 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
       backgroundColor: Colors.white,
       selectedColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      side: BorderSide(color: selected ? AppColors.ink : AppColors.border, width: selected ? 1.5 : 1),
+      side: BorderSide(
+        color: selected ? AppColors.ink : AppColors.border,
+        width: selected ? 1.5 : 1,
+      ),
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
@@ -279,7 +323,10 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   /// 결과가 없을 때: 원인에 맞는 다음 행동을 제안한다
   Widget _empty() {
-    final where = [if (_sido != null) _sido!, if (_sigungu != null) _sigungu!].join(' ');
+    final where = [
+      if (_sido != null) _sido!,
+      if (_sigungu != null) _sigungu!,
+    ].join(' ');
     final q = _query.trim();
     return EmptyState(
       title: q.isNotEmpty ? "'$q' 검색 결과가 없어요" : '$where에는 등록된 공공예식장이 없어요',
@@ -292,7 +339,8 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             _search.clear();
             setState(() => _query = '');
           }),
-        if (_sigungu != null) EmptyAction('$_sido 전체 보기', () => setState(() => _sigungu = null)),
+        if (_sigungu != null)
+          EmptyAction('$_sido 전체 보기', () => setState(() => _sigungu = null)),
         if (_sido != null) EmptyAction('전국 보기', () => _selectSido(null)),
         EmptyAction('AI 상담에서 물어보기', () => MainShell.goTo(4)),
       ],
@@ -300,14 +348,21 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   }
 
   Widget _resultBar(int count) {
-    final where = [if (_sido != null) _sido!, if (_sigungu != null) _sigungu!].join(' ');
+    final where = [
+      if (_sido != null) _sido!,
+      if (_sigungu != null) _sigungu!,
+    ].join(' ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
       child: Row(
         children: [
           Text(
             where.isEmpty ? '전체 $count곳' : '$where $count곳',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.textPrimary),
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: AppColors.textPrimary,
+            ),
           ),
           const Spacer(),
           if (_sido != null)

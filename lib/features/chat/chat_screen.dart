@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
@@ -97,6 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
           appBar: AppBar(
             title: const Text('AI 상담'),
             actions: [
+              const AccountButton(),
               if (!setup)
                 IconButton(
                   tooltip: '내 정보',

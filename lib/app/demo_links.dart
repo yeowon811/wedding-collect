@@ -18,6 +18,9 @@ class DemoLinks {
 
   static Map<String, String> get _q => Uri.base.queryParameters;
 
+  /// 시연·캡처용 주소로 열었는지 (로그인 화면 없이 둘러보기로 시작)
+  static bool get isDemoLink => const ['demo', 'tab', 'venue', 'vendor', 'policy'].any(_q.containsKey);
+
   /// 앱 시작 전에 적용 (내 정보)
   static void applyProfile() {
     if (_q['demo'] != '1') return;

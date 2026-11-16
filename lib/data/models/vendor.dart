@@ -27,27 +27,37 @@ enum VendorCategory {
   final int budgetShare;
 
   static const planItems = [
-    dress, makeup, studio, snap, video, meal, invitation, props, suit, hanbok, parentMakeup,
+    dress,
+    makeup,
+    studio,
+    snap,
+    video,
+    meal,
+    invitation,
+    props,
+    suit,
+    hanbok,
+    parentMakeup,
   ];
   static const realGroups = [directing, catering, photo, host];
 
   static VendorCategory fromCode(String code) => switch (code) {
-        'DRESS' => dress,
-        'MEAL' => meal,
-        'STUDIO' => studio,
-        'SNAP' => snap,
-        'INVITATION' => invitation,
-        'PROPS' => props,
-        'VIDEO' => video,
-        'SUIT' => suit,
-        'HANBOK' => hanbok,
-        'PARENT_MAKEUP' => parentMakeup,
-        'MAKEUP' => makeup,
-        'CATERING' => catering,
-        'PHOTO' => photo,
-        'HOST' => host,
-        _ => directing,
-      };
+    'DRESS' => dress,
+    'MEAL' => meal,
+    'STUDIO' => studio,
+    'SNAP' => snap,
+    'INVITATION' => invitation,
+    'PROPS' => props,
+    'VIDEO' => video,
+    'SUIT' => suit,
+    'HANBOK' => hanbok,
+    'PARENT_MAKEUP' => parentMakeup,
+    'MAKEUP' => makeup,
+    'CATERING' => catering,
+    'PHOTO' => photo,
+    'HOST' => host,
+    _ => directing,
+  };
 }
 
 /// 실제 연계업체 (가격 정보 없음)
@@ -81,18 +91,18 @@ class RealVendor {
   bool get isOfficial => official.startsWith('공식');
 
   factory RealVendor.fromJson(Map<String, dynamic> j) => RealVendor(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        category: VendorCategory.fromCode(j['category'] as String),
-        categoryText: j['categoryText'] as String,
-        official: j['official'] as String,
-        sido: j['sido'] as String,
-        sigungu: j['sigungu'] as String,
-        address: j['address'] as String,
-        phone: j['phone'] as String,
-        url: j['url'] as String,
-        services: j['services'] as String,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    category: VendorCategory.fromCode(j['category'] as String),
+    categoryText: j['categoryText'] as String,
+    official: j['official'] as String,
+    sido: j['sido'] as String,
+    sigungu: j['sigungu'] as String,
+    address: j['address'] as String,
+    phone: j['phone'] as String,
+    url: j['url'] as String,
+    services: j['services'] as String,
+  );
 }
 
 /// 시연용 가상 업체 (가격·패키지·상담 예약 흐름 시연에만 사용)
@@ -141,19 +151,19 @@ class DemoVendor {
   }
 
   factory DemoVendor.fromJson(Map<String, dynamic> j) => DemoVendor(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        category: VendorCategory.fromCode(j['category'] as String),
-        sido: j['sido'] as String,
-        priceMin: (j['priceMin'] as num).toInt(),
-        priceMax: (j['priceMax'] as num).toInt(),
-        priceUnit: j['priceUnit'] as String,
-        packageItems: (j['packageItems'] as List).cast<String>(),
-        styles: (j['styles'] as List).cast<String>(),
-        rating: (j['rating'] as num).toDouble(),
-        reviewCount: (j['reviewCount'] as num).toInt(),
-        publicVenueOk: j['publicVenueOk'] as bool,
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    category: VendorCategory.fromCode(j['category'] as String),
+    sido: j['sido'] as String,
+    priceMin: (j['priceMin'] as num).toInt(),
+    priceMax: (j['priceMax'] as num).toInt(),
+    priceUnit: j['priceUnit'] as String,
+    packageItems: (j['packageItems'] as List).cast<String>(),
+    styles: (j['styles'] as List).cast<String>(),
+    rating: (j['rating'] as num).toDouble(),
+    reviewCount: (j['reviewCount'] as num).toInt(),
+    publicVenueOk: j['publicVenueOk'] as bool,
+  );
 }
 
 /// 예식장 근처 실제 업체 매칭
@@ -173,10 +183,10 @@ class VendorMatch {
   final String linkType; // 공식전담 / 공식협력 / 거리기반
 
   factory VendorMatch.fromJson(Map<String, dynamic> j) => VendorMatch(
-        vendorId: j['vendorId'] as String,
-        category: VendorCategory.fromCode(j['category'] as String),
-        rank: (j['rank'] as num).toInt(),
-        distanceKm: (j['distanceKm'] as num).toDouble(),
-        linkType: j['linkType'] as String,
-      );
+    vendorId: j['vendorId'] as String,
+    category: VendorCategory.fromCode(j['category'] as String),
+    rank: (j['rank'] as num).toInt(),
+    distanceKm: (j['distanceKm'] as num).toDouble(),
+    linkType: j['linkType'] as String,
+  );
 }

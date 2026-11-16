@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/inputs.dart';
@@ -17,7 +18,7 @@ class ChecklistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppState.instance;
     return Scaffold(
-      appBar: AppBar(title: const Text('준비 체크리스트')),
+      appBar: AppBar(title: const Text('준비 체크리스트'), actions: const [AccountButton()]),
       body: ListenableBuilder(
         listenable: state,
         builder: (context, _) => ListView(

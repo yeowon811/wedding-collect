@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/skeleton.dart';
@@ -48,6 +49,7 @@ class _VendorScreenState extends State<VendorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('업체 찾기'),
+        actions: const [AccountButton()],
       ),
       body: FutureBuilder(
         future: _future,

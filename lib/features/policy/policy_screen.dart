@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
@@ -42,6 +43,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('맞춤 지원 정책'),
+        actions: const [AccountButton()],
       ),
       body: FutureBuilder<List<Policy>>(
         future: _future,

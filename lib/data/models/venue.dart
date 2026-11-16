@@ -9,12 +9,12 @@ enum BookingType {
   final String label;
 
   static BookingType fromCode(String code) => switch (code) {
-        'ONLINE' => BookingType.online,
-        'FORM' => BookingType.form,
-        'PHONE_VISIT' => BookingType.phoneVisit,
-        'CENTER' => BookingType.center,
-        _ => BookingType.online,
-      };
+    'ONLINE' => BookingType.online,
+    'FORM' => BookingType.form,
+    'PHONE_VISIT' => BookingType.phoneVisit,
+    'CENTER' => BookingType.center,
+    _ => BookingType.online,
+  };
 }
 
 /// 공공예식장 1곳
@@ -133,7 +133,8 @@ class Venue {
 
   /// 목록 카드 대표 사진: 실제 사진을 먼저, 없으면 AI 생성 이미지
   String? get coverImage =>
-      images.where((u) => !aiImages.contains(u)).firstOrNull ?? images.firstOrNull;
+      images.where((u) => !aiImages.contains(u)).firstOrNull ??
+      images.firstOrNull;
 
   /// 하객 [guests]명을 수용할 수 있는지. 정원을 모르면 null
   bool? fits(int guests) => capacity == null ? null : capacity! >= guests;
@@ -145,7 +146,8 @@ class Venue {
   }
 
   String get feeLabel {
-    if (rentalFee == null) return feeText != null ? '대관료 유료 · 상세 참고' : '대관료 확인 필요';
+    if (rentalFee == null)
+      return feeText != null ? '대관료 유료 · 상세 참고' : '대관료 확인 필요';
     if (rentalFee == 0) return '대관료 무료';
     return '기본요금 ${_won(rentalFee!)}';
   }
@@ -159,55 +161,55 @@ class Venue {
   String get region => sigungu.isEmpty ? sido : '$sido $sigungu';
 
   factory Venue.fromJson(Map<String, dynamic> j) => Venue(
-        id: j['id'] as String,
-        sido: j['sido'] as String,
-        sidoFull: j['sidoFull'] as String,
-        sigungu: j['sigungu'] as String,
-        name: j['name'] as String,
-        address: j['address'] as String,
-        lat: (j['lat'] as num).toDouble(),
-        lng: (j['lng'] as num).toDouble(),
-        isLimited: j['status'] == 'LIMITED',
-        statusText: j['statusText'] as String,
-        bookingType: BookingType.fromCode(j['bookingType'] as String),
-        bookingMethod: j['bookingMethod'] as String,
-        bookingContact: j['bookingContact'] as String,
-        bookingUrl: j['bookingUrl'] as String,
-        detailUrl: j['detailUrl'] as String,
-        bookingSteps: j['bookingSteps'] as String,
-        source: j['source'] as String,
-        capacity: (j['capacity'] as num?)?.toInt(),
-        rentalFee: (j['rentalFee'] as num?)?.toInt(),
-        collectSource: j['collectSource'] as String?,
-        collectStatus: j['collectStatus'] as String?,
-        capacityMin: (j['capacityMin'] as num?)?.toInt(),
-        capacityText: j['capacityText'] as String?,
-        feeText: j['feeText'] as String?,
-        feeDetail: j['feeDetail'] as String?,
-        hoursWeekday: j['hoursWeekday'] as String?,
-        hoursSaturday: j['hoursSaturday'] as String?,
-        hoursHoliday: j['hoursHoliday'] as String?,
-        applyPeriod: j['applyPeriod'] as String?,
-        operatingPeriod: j['operatingPeriod'] as String?,
-        approval: j['approval'] as String?,
-        prepTime: j['prepTime'] as String?,
-        target: j['target'] as String?,
-        indoorOutdoor: j['indoorOutdoor'] as String?,
-        parking: j['parking'] as String?,
-        area: j['area'] as String?,
-        reception: j['reception'] as String?,
-        availableDates2026: j['availableDates2026'] as String?,
-        unavailableDates2026: j['unavailableDates2026'] as String?,
-        availableDates2027: j['availableDates2027'] as String?,
-        partnerVendors: ((j['partnerVendors'] as List?) ?? const []).cast<String>(),
-        extraInfo: j['extraInfo'] as String?,
-        hoursText: j['hoursText'] as String?,
-        reservationInfo: j['reservationInfo'] as String?,
-        selection: j['selection'] as String?,
-        inquiry: j['inquiry'] as String?,
-        programInfo: j['programInfo'] as String?,
-        images: ((j['images'] as List?) ?? const []).cast<String>(),
-        aiImages: ((j['aiImages'] as List?) ?? const []).cast<String>().toSet(),
-        dataNotes: ((j['dataNotes'] as List?) ?? const []).cast<String>(),
-      );
+    id: j['id'] as String,
+    sido: j['sido'] as String,
+    sidoFull: j['sidoFull'] as String,
+    sigungu: j['sigungu'] as String,
+    name: j['name'] as String,
+    address: j['address'] as String,
+    lat: (j['lat'] as num).toDouble(),
+    lng: (j['lng'] as num).toDouble(),
+    isLimited: j['status'] == 'LIMITED',
+    statusText: j['statusText'] as String,
+    bookingType: BookingType.fromCode(j['bookingType'] as String),
+    bookingMethod: j['bookingMethod'] as String,
+    bookingContact: j['bookingContact'] as String,
+    bookingUrl: j['bookingUrl'] as String,
+    detailUrl: j['detailUrl'] as String,
+    bookingSteps: j['bookingSteps'] as String,
+    source: j['source'] as String,
+    capacity: (j['capacity'] as num?)?.toInt(),
+    rentalFee: (j['rentalFee'] as num?)?.toInt(),
+    collectSource: j['collectSource'] as String?,
+    collectStatus: j['collectStatus'] as String?,
+    capacityMin: (j['capacityMin'] as num?)?.toInt(),
+    capacityText: j['capacityText'] as String?,
+    feeText: j['feeText'] as String?,
+    feeDetail: j['feeDetail'] as String?,
+    hoursWeekday: j['hoursWeekday'] as String?,
+    hoursSaturday: j['hoursSaturday'] as String?,
+    hoursHoliday: j['hoursHoliday'] as String?,
+    applyPeriod: j['applyPeriod'] as String?,
+    operatingPeriod: j['operatingPeriod'] as String?,
+    approval: j['approval'] as String?,
+    prepTime: j['prepTime'] as String?,
+    target: j['target'] as String?,
+    indoorOutdoor: j['indoorOutdoor'] as String?,
+    parking: j['parking'] as String?,
+    area: j['area'] as String?,
+    reception: j['reception'] as String?,
+    availableDates2026: j['availableDates2026'] as String?,
+    unavailableDates2026: j['unavailableDates2026'] as String?,
+    availableDates2027: j['availableDates2027'] as String?,
+    partnerVendors: ((j['partnerVendors'] as List?) ?? const []).cast<String>(),
+    extraInfo: j['extraInfo'] as String?,
+    hoursText: j['hoursText'] as String?,
+    reservationInfo: j['reservationInfo'] as String?,
+    selection: j['selection'] as String?,
+    inquiry: j['inquiry'] as String?,
+    programInfo: j['programInfo'] as String?,
+    images: ((j['images'] as List?) ?? const []).cast<String>(),
+    aiImages: ((j['aiImages'] as List?) ?? const []).cast<String>().toSet(),
+    dataNotes: ((j['dataNotes'] as List?) ?? const []).cast<String>(),
+  );
 }

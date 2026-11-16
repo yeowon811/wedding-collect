@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 계정별 내 정보: 본인만 읽고 쓸 수 있다
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 그 외 문서는 모두 막는다
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

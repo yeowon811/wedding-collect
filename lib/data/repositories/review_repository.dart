@@ -17,10 +17,12 @@ class ReviewRepository {
   static final _distCache = <String, Map<int, int>>{};
   static final _reviewCache = <String, List<Review>>{};
 
-  static int _seed(String id) => id.codeUnits.fold(17, (a, b) => (a * 31 + b) & 0x7fffffff);
+  static int _seed(String id) =>
+      id.codeUnits.fold(17, (a, b) => (a * 31 + b) & 0x7fffffff);
 
   /// 평균이 [DemoVendor.rating]이 되도록 별점별 인원을 나눈다.
-  static Map<int, int> _distribution(DemoVendor v) => _distCache.putIfAbsent(v.id, () {
+  static Map<int, int> _distribution(DemoVendor v) =>
+      _distCache.putIfAbsent(v.id, () {
         final rnd = Random(_seed(v.id));
         final n = v.reviewCount;
         final c = {5: n, 4: 0, 3: 0, 2: 0, 1: 0};
@@ -53,7 +55,9 @@ class ReviewRepository {
   /// 최근 후기 (내가 쓴 후기가 맨 앞)
   static List<Review> reviewsFor(DemoVendor v) {
     final generated = _reviewCache.putIfAbsent(v.id, () => _generate(v));
-    final mine = AppState.instance.myReviews.where((r) => r.vendorId == v.id).toList();
+    final mine = AppState.instance.myReviews
+        .where((r) => r.vendorId == v.id)
+        .toList();
     return [...mine.reversed, ...generated];
   }
 
@@ -72,7 +76,8 @@ class ReviewRepository {
         tagCount[t] = (tagCount[t] ?? 0) + 1;
       }
     }
-    final top = tagCount.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top = tagCount.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return ReviewSummary(
       average: count == 0 ? 0 : (sum / count * 10).round() / 10,
@@ -114,25 +119,37 @@ class ReviewRepository {
         if (rnd.nextBool()) _pick(rnd, band == 'bad' ? _badTags : _goodTags),
       }.toList();
 
-      list.add(Review(
-        id: '${v.id}-R$i',
-        vendorId: v.id,
-        author: '${_pick(rnd, _nicknames)}**${rnd.nextInt(90) + 10}',
-        rating: rating,
-        date: now.subtract(Duration(days: 3 + i * 9 + rnd.nextInt(9))),
-        text: texts.join(' '),
-        tags: tags,
-        context: '${_pick(rnd, _weddingTypes)} · 하객 ${(rnd.nextInt(20) + 4) * 10}명',
-        helpful: rnd.nextInt(rating >= 4 ? 40 : 15),
-      ));
+      list.add(
+        Review(
+          id: '${v.id}-R$i',
+          vendorId: v.id,
+          author: '${_pick(rnd, _nicknames)}**${rnd.nextInt(90) + 10}',
+          rating: rating,
+          date: now.subtract(Duration(days: 3 + i * 9 + rnd.nextInt(9))),
+          text: texts.join(' '),
+          tags: tags,
+          context:
+              '${_pick(rnd, _weddingTypes)} · 하객 ${(rnd.nextInt(20) + 4) * 10}명',
+          helpful: rnd.nextInt(rating >= 4 ? 40 : 15),
+        ),
+      );
     }
     return list;
   }
 
-  static String _pick(Random r, List<String> l) => l.isEmpty ? '' : l[r.nextInt(l.length)];
+  static String _pick(Random r, List<String> l) =>
+      l.isEmpty ? '' : l[r.nextInt(l.length)];
 
   static const _nicknames = [
-    '봄신부', '예비신랑', '가을웨딩', '소소부부', '행복한예신', '준비중커플', '결혼준비러', '초여름신부', '작은결혼식',
+    '봄신부',
+    '예비신랑',
+    '가을웨딩',
+    '소소부부',
+    '행복한예신',
+    '준비중커플',
+    '결혼준비러',
+    '초여름신부',
+    '작은결혼식',
   ];
   static const _weddingTypes = ['공공예식장', '야외 예식', '작은결혼식', '공원 예식', '청사 예식장'];
 
@@ -158,7 +175,12 @@ class ReviewRepository {
     '추가 비용 안내가 늦게 와서 당황했어요.',
   ];
   static const _goodTags = [
-    '친절해요', '가격이 합리적이에요', '결과물이 좋아요', '일정 조율이 쉬워요', '추가금이 없어요', '꼼꼼해요',
+    '친절해요',
+    '가격이 합리적이에요',
+    '결과물이 좋아요',
+    '일정 조율이 쉬워요',
+    '추가금이 없어요',
+    '꼼꼼해요',
     '공공예식장 경험이 많아요',
   ];
   static const _badTags = ['연락이 느려요', '옵션 추가금이 있어요', '선택지가 적어요', '변경이 어려워요'];
