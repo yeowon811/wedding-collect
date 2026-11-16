@@ -5,6 +5,7 @@ import '../../core/theme/theme_controller.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
+import 'agent/gemini_client.dart';
 import 'chat_agent.dart';
 import 'profile_setup_view.dart';
 
@@ -19,7 +20,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   // 시안을 바꿔 화면이 새로 만들어져도 대화가 남도록 보관
   static final List<ChatMessage> _messages = [];
-  static ChatAgent _agent = ConsultAgent();
+  static ChatAgent _agent = ConsultAgent(llm: GeminiClient.instance);
 
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -32,7 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
   /// 테스트에서 대화를 처음부터 시작할 때 사용
   static void resetConversation() {
     _messages.clear();
-    _agent = ConsultAgent();
+    _agent = ConsultAgent(llm: GeminiClient.instance);
   }
 
   @override
@@ -66,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// 상담 시작 (내 정보가 있으면 첫 추천)
   void _begin() {
-    _agent = ConsultAgent();
+    _agent = ConsultAgent(llm: GeminiClient.instance);
     _run(_agent.start);
   }
 
@@ -169,7 +170,7 @@ class _ChatScreenState extends State<ChatScreen> {
           width: double.infinity,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
           child: Text(
-            '현재: ${_agent.name} · 앱에 등록된 데이터로만 답해요',
+            '현재: ${_agent.name} · 숫자·자격은 앱 데이터로만 답해요 · 이름·연락처는 적지 마세요',
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
           ),
         ),
@@ -285,6 +286,15 @@ class _Bubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: InfoBadge(label: '정보 확인', icon: Icons.help_outline, color: AppColors.primaryDark),
+              ),
+            if (m.aiWritten)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: InfoBadge(
+                  label: 'Gemini가 앱 데이터로 작성',
+                  icon: Icons.auto_awesome,
+                  color: AppColors.primaryDark,
+                ),
               ),
             if (m.basis != null && m.basis!.isNotEmpty)
               Padding(

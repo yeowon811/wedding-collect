@@ -6,12 +6,14 @@ import '../../../data/app_state.dart';
 import '../../../data/models/policy.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
+import '../../../data/models/wedding_plan.dart';
 import '../../policy/policy_detail_screen.dart';
 import '../../policy/policy_matcher.dart';
 import '../../vendor/demo_vendor_detail_screen.dart';
 import '../../venue/venue_detail_screen.dart';
 import '../chat_agent.dart';
 import 'consult_tools.dart';
+import 'gemini_client.dart';
 import 'understanding.dart';
 
 /// 상담 에이전트 (대화 관리자)
@@ -19,12 +21,17 @@ import 'understanding.dart';
 /// ① 질문 이해 ([Understander]) → ② 내 정보·대화 기억과 합치기 → ③ 답에 꼭 필요한 정보가
 /// 빠졌으면 하나씩 되묻기 → ④ 도구([ConsultTools])로 데이터 조회 → ⑤ 근거·출처와 함께 답변
 class ConsultAgent implements ChatAgent {
-  ConsultAgent({Understander? understander}) : _nlu = understander ?? RuleUnderstander();
+  ConsultAgent({Understander? understander, GeminiClient? llm})
+      : _nlu = understander ?? RuleUnderstander(),
+        _llm = llm;
 
   final Understander _nlu;
+  final GeminiClient? _llm; // null이면 규칙 기반으로만 동작
 
   @override
-  String get name => '앱 데이터 상담 (규칙 기반)';
+  String get name => _llm != null ? 'Gemini AI 상담' : '앱 데이터 상담 (규칙 기반)';
+
+  String _question = ''; // 지금 답하고 있는 원래 질문 (⑤ 답변 문장에 사용)
 
   AppState get _app => AppState.instance;
 
@@ -51,14 +58,10 @@ class ConsultAgent implements ChatAgent {
         quickReplies: _starterReplies,
       );
     }
-    final rec = await _answer(const Understanding(intent: ConsultIntent.recommend));
-    return ChatMessage(
-      fromUser: false,
-      text: '입력해 주신 정보로 먼저 정리해 봤어요.\n\n${rec.text}',
-      cards: rec.cards,
-      sources: rec.sources,
-      basis: rec.basis,
-      quickReplies: rec.quickReplies,
+    _question = '내 정보에 맞게 예식장·정책·예산·할 일을 한 번에 추천해줘';
+    final rec = await _polish(await _answer(const Understanding(intent: ConsultIntent.recommend)));
+    return rec.copyWith(
+      text: rec.aiWritten ? rec.text : '입력해 주신 정보로 먼저 정리해 봤어요.\n\n${rec.text}',
     );
   }
 
@@ -67,10 +70,11 @@ class ConsultAgent implements ChatAgent {
     final text = question.trim();
     if (_asking != null && _pending != null) {
       if (_isDontKnow(text)) return _skipCurrent();
-      final u = _nlu.parse(text, expecting: _asking);
-      if (u.intent != ConsultIntent.help && u.intent != _pending!.intent) {
+      final (:u, :isAnswer) = await _understand(text, expecting: _asking);
+      if (!isAnswer && u.intent != ConsultIntent.help && u.intent != _pending!.intent) {
         // 되묻는 중에 다른 질문을 하면 새 질문으로 처리한다
         _clearPending();
+        _question = text;
         return _process(u);
       }
       _known = _known.merge(u.facts);
@@ -79,8 +83,42 @@ class ConsultAgent implements ChatAgent {
       }
       return _process(_pending!);
     }
-    return _process(_nlu.parse(text));
+    _question = text;
+    return _process((await _understand(text)).u);
   }
+
+  /// ① 질문 이해: Gemini가 있으면 Gemini, 실패하거나 없으면 규칙.
+  /// 규칙으로 뽑은 값도 함께 써서, Gemini가 놓친 값은 규칙 결과로 채운다.
+  Future<({Understanding u, bool isAnswer})> _understand(String text, {Slot? expecting}) async {
+    final rule = _nlu.parse(text, expecting: expecting);
+    final ai = await _llm?.understand(text, expecting: expecting);
+    if (ai == null) return (u: rule, isAnswer: false);
+    return (
+      isAnswer: ai.isAnswer,
+      u: Understanding(
+        intent: ai.u.intent,
+        facts: rule.facts.merge(ai.u.facts),
+        topic: ai.u.topic ?? (ai.u.intent == ConsultIntent.policy ? rule.topic : null),
+        item: ai.u.item ?? (ai.u.intent == ConsultIntent.vendor ? rule.item : null),
+      ),
+    );
+  }
+
+  /// ⑤ 답변 문장: 앱이 만든 답변(데이터 결과)을 Gemini가 질문에 맞게 다시 쓴다.
+  /// 원문에 없는 숫자가 나오면 Gemini 문장을 버리고 원래 문장을 쓴다.
+  Future<ChatMessage> _polish(ChatMessage m) async {
+    final llm = _llm;
+    if (llm == null || m.isQuestion) return m;
+    final text = await llm.rewrite(question: _question, draft: draftOf(m));
+    return text == null ? m : m.copyWith(text: text, aiWritten: true);
+  }
+
+  /// Gemini에 넘기는 "조회 결과": 기준 + 앱이 만든 답변 + 출처 (카드·버튼은 앱이 직접 붙임)
+  static String draftOf(ChatMessage m) => [
+        if (m.basis != null) '기준: ${m.basis}',
+        m.text,
+        if (m.sources.isNotEmpty) '출처: ${m.sources.join(', ')}',
+      ].join('\n');
 
   @override
   Future<ChatMessage> choose(QuickReply r) async {
@@ -113,7 +151,20 @@ class ConsultAgent implements ChatAgent {
       return _ask(missing.first, u, remaining: missing.length);
     }
     _clearPending();
-    return _answer(u);
+    if (u.intent == ConsultIntent.help) return _helpAnswer();
+    return _polish(await _answer(u));
+  }
+
+  /// 데이터로 답할 수 없는 질문: Gemini가 일반 안내를 하고, 물어볼 수 있는 것을 보여준다
+  Future<ChatMessage> _helpAnswer() async {
+    final text = _question.isEmpty ? null : await _llm?.chat(_question);
+    if (text == null) return _help();
+    return ChatMessage(
+      fromUser: false,
+      text: text,
+      aiWritten: true,
+      quickReplies: _starterReplies,
+    );
   }
 
   void _clearPending() {
@@ -431,14 +482,19 @@ class ConsultAgent implements ChatAgent {
   ChatMessage _scheduleAnswer() {
     final tasks = ConsultTools.nextTasks();
     final date = _known.weddingDate;
+    final daysLeft = date?.difference(DateTime.now()).inDays;
+    // 권장 시기(예식 D-N)가 이미 지난 일: 남은 날보다 D-N이 크면 늦은 것
+    bool late(ChecklistTask t) => daysLeft != null && t.dMinus > daysLeft;
+    final lateCount = tasks.where(late).length;
     final head = date == null
         ? '예식일이 아직 정해지지 않았다면, 날짜·지역·예산을 먼저 정하는 게 시작이에요.'
-        : '예식일 ${formatDate(date)}까지 ${date.difference(DateTime.now()).inDays}일 남았어요.';
+        : '예식일 ${formatDate(date)}까지 $daysLeft일 남았어요.'
+            '${lateCount > 0 ? ' 권장 시기가 지난 일이 $lateCount개 있으니 먼저 챙겨 주세요.' : ''}';
     return ChatMessage(
       fromUser: false,
       basis: date == null ? '예식일 미정' : '예식일 ${formatDate(date)}',
       text: '$head 지금 먼저 할 일이에요.\n'
-          '${tasks.map((t) => '• D-${t.dMinus} ${t.title}').join('\n')}\n\n'
+          '${tasks.map((t) => late(t) ? '• ${t.title} (권장 D-${t.dMinus}, 시기 지남)' : '• D-${t.dMinus} ${t.title}').join('\n')}\n\n'
           '체크리스트 탭에서 전체 순서와 진행 상태를 볼 수 있어요.',
       sources: const ['예식일 기준 체크리스트 템플릿'],
       quickReplies: _withSave(const [

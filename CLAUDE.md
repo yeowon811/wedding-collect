@@ -90,7 +90,9 @@
   - 체크리스트: 결혼 정보(예식일·지역·총예산·하객 수, D-day), 예산(계약 합계), 11개 항목 상태, 내 상담 일정, 예식일 기준 할 일 20개(계약 완료 시 자동 체크)
   - AI 상담 (2026-11-16 구조 개편, 상세: `docs/ai-architecture.md`): ⓪ 내 정보 입력(`profile_setup_view.dart`, `UserProfile`) → 시작 시 전체 추천 → ① 질문 이해(`agent/understanding.dart`, 지금은 `RuleUnderstander`) → ② 내 정보+대화 기억 합치기 → ③ 목적별 필수 정보가 없으면 하나씩 되묻기(선택 버튼 + "잘 모르겠어요") → ④ `agent/consult_tools.dart`로 데이터 조회 → ⑤ 기준·근거·출처·다음 질문 버튼과 답변(`agent/consult_agent.dart`)
     - 사용자 요구: 상담 전에 내 정보 입력, 시작하면 추천, "20대 청년이 신혼생활에 받을 수 있는 정책?" 같은 질문은 지역 등 빠진 정보를 되물어 가며 답변
-    - **생성형 AI(Claude 등) 연결은 아직 안 함** → ① 질문 이해와 ⑤ 답변 문장만 LLM으로 바꿀 예정. API 키 보호 방식(중계 서버 여부) 결정 필요
+    - **Gemini 연결 (2026-11-16):** Firebase AI Logic(Gemini Developer API, 무료), 프로젝트 `wedding-collect`, 모델 `gemini-3.5-flash-lite`. ① 질문 이해(JSON)와 ⑤ 답변 문장만 Gemini, 실패하면 규칙 기반. 답변 숫자가 조회 결과에 없으면 Gemini 문장을 버림. 코드 `agent/gemini_client.dart`, 설정 `lib/firebase_options.dart`(`flutterfire configure --project=wedding-collect --platforms=android,web`로 다시 만들 수 있음)
+    - **실행할 때 `--dart-define-from-file=secrets.json` 필수** (App Check 디버그 토큰, 저장소 제외. 없으면 Gemini 호출이 거절되고 규칙 기반으로만 동작). 토큰은 콘솔 App Check 웹·안드로이드 앱에 등록됨
+    - 평가: `test/eval/` 질문 42개, 결과 `docs/ai-eval/` (질문 이해: 규칙 29/42 → Gemini·앱 42/42, 1.5초 / 답변 문장: 숫자·표시어 검사 통과 4/15 → 15/15)
     - 정책 판정(`policy_matcher.dart`)은 나이 범위(20대 등)·무주택 여부도 반영
 - 후기 (2026-11-15 추가): **시연용 업체에만** 있음. `lib/data/repositories/review_repository.dart`가 업체 ID 고정 시드로 생성 (별점 분포는 업체 평점·후기 수와 정확히 일치, 최근 30개 표시). 업체 상세에 요약(평균·분포·키워드)+최근 3개, 전체 보기(정렬·별점 필터), 상담/계약한 업체만 후기 쓰기. **실제 업체에는 가짜 후기를 만들지 않음** (안내 문구만 표시)
 - 공유 상태: `lib/data/app_state.dart` (메모리에만 저장, 앱 끄면 초기화)

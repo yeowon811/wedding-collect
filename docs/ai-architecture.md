@@ -13,7 +13,7 @@
                     └───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| 단계 | 파일 | 하는 일 | 지금 | 생성형 AI 연결 후 |
+| 단계 | 파일 | 하는 일 | 규칙 기반 (대체 경로) | Gemini 연결 후 (기본) |
 |---|---|---|---|---|
 | ⓪ 내 정보 | `features/chat/profile_setup_view.dart`, `data/models/user_profile.dart` | 상담 전에 지역·나이·결혼 단계·예식일·하객·예산·주택 보유 입력. 비워 둬도 됨 | 같음 | 같음 |
 | ① 질문 이해 | `features/chat/agent/understanding.dart` | 질문에서 **목적**(정책·예식장·업체·예산·일정·추천)과 **조건**(지역, "20대"→만 20~29세, 하객 수, 예산, 무주택 등), **분야**("신혼생활"→주거) 추출 | 규칙(키워드·정규식) | **LLM이 같은 구조(JSON)로 추출** |
@@ -59,25 +59,25 @@
         [결혼 장려금도 보기] [공공예식장 추천] [이 정보를 내 정보에 저장]
 ```
 
-## 생성형 AI(LLM) 연결 계획
+## 생성형 AI 연결 (Gemini, 2026-11-16 적용)
 
-바꾸는 곳은 **① 질문 이해**와 **⑤ 답변 문장**뿐이고, ②③④는 그대로 둔다. 그래서 LLM이 틀려도 숫자·자격은 바뀌지 않는다.
+- **연결 방식:** Firebase AI Logic → Gemini Developer API (무료 Spark 요금제). Firebase 프로젝트 `wedding-collect`, 모델 `gemini-3.5-flash-lite`
+  - API 키는 앱 코드에 없고 Firebase가 관리 (중계 서버 역할). 설정 파일: `lib/firebase_options.dart`, `android/app/google-services.json`
+  - 코드: `lib/features/chat/agent/gemini_client.dart`, 앱 시작 때 `GeminiClient.init()` (`lib/main.dart`)
+- **바꾼 곳은 ① 질문 이해와 ⑤ 답변 문장뿐.** ②③④는 그대로라 Gemini가 틀려도 숫자·자격은 바뀌지 않는다.
 
-1. **① 질문 이해 → LLM**: 질문을 보내고 아래 형식으로만 답하게 한다 (`Understander`를 구현한 `LlmUnderstander`).
-   ```json
-   {"intent": "policy", "topic": "housing", "item": null,
-    "facts": {"sido": null, "age": 20, "ageMax": 29, "stage": null, "guests": null, "budget": null, "homeless": null}}
-   ```
-   - 형식이 틀리거나 응답이 없으면 규칙 기반 `RuleUnderstander`로 대신 처리한다 (장애 대응).
-2. **④ 도구 호출**: LLM에 도구 목록을 주고 호출하게 할 수도 있다.
-   | 도구 | 입력 | 출력 |
-   |---|---|---|
-   | `search_venues` | sido, guests | 예식장 ID·이름·정원·요금·예약방식 |
-   | `match_policies` | sido, age, ageMax, stage, marriedYears, homeless, topic | 정책 ID·이름·해당 이유·확인할 조건 |
-   | `search_vendors` | item, sido, budget, guests | 시연용 업체 ID·가격대·평점 |
-   | `budget_plan` | budget | 항목별 금액 |
-   | `next_tasks` | weddingDate | 할 일 목록 |
-3. **⑤ 답변 문장 → LLM**: 도구 결과(JSON)만 주고 "결과에 없는 숫자·정책·업체는 말하지 말 것, 출처를 붙일 것"으로 설명하게 한다. 카드·출처·버튼은 앱이 직접 붙인다.
+| 단계 | Gemini가 하는 일 | 안전장치 |
+|---|---|---|
+| ① 질문 이해 | 질문을 정해진 JSON(목적·분야·항목·조건)으로 변환. 되묻는 중이면 짧은 답을 그 항목 값으로 읽음(`intent: answer`) | 응답 형식 고정(responseSchema), 시도·나이·하객·예산 범위 검사 후 벗어나면 버림. 규칙 기반 결과와 합쳐 놓친 값을 채움 |
+| ⑤ 답변 문장 | 앱이 데이터로 만든 답변(기준·결과·출처)을 질문에 맞게 자연스럽게 다시 씀 | **숫자 검사**(답변의 숫자가 모두 조회 결과에 있어야 함)와 **표시어 검사**("시연용"·"가상"·"예비부부"·"신혼부부"·"기관"을 조회 결과에 없는데 붙이면 안 됨). 하나라도 걸리면 Gemini 문장을 버리고 원래 문장 사용. 카드·출처·버튼은 앱이 직접 붙임 |
+| 일반 질문 | 데이터로 답할 수 없는 질문에 2~4줄 일반 안내 + 물어볼 수 있는 것 안내 | 숫자가 들어가면 버리고 기본 안내 사용 |
+
+- **장애 대응:** Firebase 연결 실패·네트워크 오류·사용량 초과·12초 초과·형식 오류 → 그 단계만 규칙 기반으로 처리. 상담은 끊기지 않음
+- **표시:** Gemini가 쓴 답변에는 "Gemini가 앱 데이터로 작성" 배지, 상단에 현재 상담 방식 표시
+- **테스트:** `test/gemini_guard_test.dart` (JSON 검사, 범위 밖 값 버림, 개인정보 가림, 숫자 검사)
+- **App Check:** 디버그 토큰(`secrets.json`, 저장소 제외)으로 활성화. 실행·빌드 때 `--dart-define-from-file=secrets.json` 필요. 토큰은 Firebase 콘솔 App Check > 앱(웹·안드로이드) > 디버그 토큰에 등록
+- **생각(thinking) 최소:** 두 모델 모두 `ThinkingLevel.minimal` (응답 시간 최대 12초 → 2.3초)
+- **평가:** 질문 42개로 규칙 기반 vs Gemini 비교 → [docs/ai-eval/README.md](ai-eval/README.md). 질문 이해 정확도 규칙 69% → 앱 실제 100%, 답변 문장 검사 통과 4/15 → 15/15
 
 ## 신뢰성·개인정보 원칙 (심사: AI 오류·불확실성 대응)
 
@@ -85,4 +85,5 @@
 - 모르는 값은 지어내지 않고 **되묻거나 "확인 필요"**로 표시한다. 범위로만 아는 나이는 "정확한 나이 확인"으로 남긴다.
 - 모든 답변에 **기준(어떤 조건으로 찾았는지)과 출처**를 붙인다.
 - 외부 AI로는 **조건(지역·나이대·결혼 단계 등)과 후보 ID·요약만** 보낸다. 이름·연락처·업체 휴대폰 번호는 보내지 않는다.
-- API 키는 앱에 넣지 않고 중계 서버에 둔다 (연결 시).
+- API 키는 앱에 넣지 않는다 (Firebase AI Logic이 보관).
+- 보내기 전에 전화번호·이메일·주민번호 형태를 `[전화번호]` 등으로 가리고, 입력창 위에 "이름·연락처는 적지 마세요"를 표시한다. Gemini 무료 등급은 입력이 서비스 개선에 쓰일 수 있어 조건만 보낸다.

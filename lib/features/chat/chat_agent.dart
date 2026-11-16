@@ -39,6 +39,7 @@ class ChatMessage {
     this.quickReplies = const [],
     this.basis,
     this.isQuestion = false,
+    this.aiWritten = false,
   });
 
   final bool fromUser;
@@ -48,12 +49,24 @@ class ChatMessage {
   final List<QuickReply> quickReplies;
   final String? basis; // 어떤 조건으로 찾았는지 (예: 서울 · 만 20~29세 · 신혼부부)
   final bool isQuestion; // 정보를 되묻는 메시지인지
+  final bool aiWritten; // 생성형 AI(Gemini)가 앱 데이터로 문장을 쓴 답변인지
+
+  ChatMessage copyWith({String? text, bool? aiWritten}) => ChatMessage(
+        fromUser: fromUser,
+        text: text ?? this.text,
+        cards: cards,
+        sources: sources,
+        quickReplies: quickReplies,
+        basis: basis,
+        isQuestion: isQuestion,
+        aiWritten: aiWritten ?? this.aiWritten,
+      );
 }
 
 /// 상담 에이전트 인터페이스.
 ///
-/// 지금은 규칙 기반 [ConsultAgent]를 쓰고, 생성형 AI를 붙일 때는 "질문 이해" 단계만
-/// LLM으로 바꾸면 된다 (docs/ai-architecture.md 참고).
+/// [ConsultAgent]가 구현한다. Gemini가 연결되면 ① 질문 이해와 ⑤ 답변 문장을 Gemini가 맡고,
+/// 연결이 안 되거나 실패하면 규칙 기반으로 이어간다 (docs/ai-architecture.md 참고).
 ///
 /// 원칙: 가격·자격·예약 가능 여부는 반드시 앱 데이터(도구 결과)에서만 가져오고,
 /// AI는 정리·설명만 한다. 외부로는 조건과 후보 ID·요약만 보내고 연락처·개인정보는 보내지 않는다.
