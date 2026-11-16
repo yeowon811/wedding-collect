@@ -33,14 +33,37 @@ class WeddingPlan {
       );
 }
 
-/// 11개 준비 항목의 진행 상태
+/// 준비 항목의 진행 상태
 enum ItemStatus {
   todo('미정'),
   consulting('상담 중'),
-  contracted('계약 완료');
+  contracted('계약 완료'),
+  paid('결제 완료');
 
   const ItemStatus(this.label);
   final String label;
+
+  /// 계약 이후 단계면 "완료"로 센다
+  bool get isDone => this == contracted || this == paid;
+}
+
+/// 준비 항목 하나 (기본 11개 + 사용자가 추가한 항목). 이름·상태·금액·업체를 직접 고칠 수 있다.
+class PlanItem {
+  PlanItem({
+    required this.id,
+    required this.name,
+    this.category,
+    this.status = ItemStatus.todo,
+    this.amount,
+    this.vendorName,
+  });
+
+  final String id;
+  String name;
+  final VendorCategory? category; // 기본 항목이면 업체 분류와 연결 (직접 추가한 항목은 null)
+  ItemStatus status;
+  int? amount; // 계약·지출 금액 (만원). 모르면 null
+  String? vendorName; // 계약한 업체 이름 (선택)
 }
 
 /// 시연용 업체 상담 예약

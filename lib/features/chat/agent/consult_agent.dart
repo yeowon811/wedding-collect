@@ -544,7 +544,7 @@ class ConsultAgent implements ChatAgent {
 
   ChatMessage _scheduleAnswer() {
     final tasks = ConsultTools.nextTasks();
-    _lookupNote = '예식일 기준 체크리스트 ${kChecklistTasks.length}개 중 아직 안 한 일을 순서대로';
+    _lookupNote = '예식일 기준 체크리스트 ${_app.tasks.length}개 중 아직 안 한 일을 순서대로';
     final date = _known.weddingDate;
     final daysLeft = date?.difference(DateTime.now()).inDays;
     // 권장 시기(예식 D-N)가 이미 지난 일: 남은 날보다 D-N이 크면 늦은 것

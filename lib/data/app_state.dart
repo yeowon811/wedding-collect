@@ -5,7 +5,7 @@ import 'models/user_profile.dart';
 import 'models/vendor.dart';
 import 'models/wedding_plan.dart';
 
-/// 탭끼리 같이 쓰는 사용자 상태 (결혼 정보, 상담 예약, 진행 상태, 비교 목록).
+/// 탭끼리 같이 쓰는 사용자 상태 (결혼 정보, 준비 항목, 할 일, 상담 예약, 비교 목록).
 /// 지금은 메모리에만 저장한다 (앱을 끄면 초기화). 시연용 가상 데이터만 담는다.
 class AppState extends ChangeNotifier {
   AppState._();
@@ -49,11 +49,88 @@ class AppState extends ChangeNotifier {
   }
 
   final List<Consultation> consultations = [];
-  final Map<VendorCategory, ItemStatus> itemStatus = {};
-  final Map<VendorCategory, (DemoVendor, int)> contracts = {}; // 업체, 계약 금액(만원)
-  final Set<String> doneTasks = {};
+  final Map<VendorCategory, (DemoVendor, int)> contracts = {}; // 시연용 업체 계약: 업체, 금액(만원)
   final List<DemoVendor> compare = [];
   final List<Review> myReviews = [];
+
+  void updatePlan(WeddingPlan p) {
+    plan = p;
+    notifyListeners();
+  }
+
+  // ───────────────────────── 준비 항목 ─────────────────────────
+
+  /// 준비 항목: 기본 11개로 시작하고 사용자가 추가·수정·삭제한다
+  final List<PlanItem> items = [
+    for (final c in VendorCategory.planItems) PlanItem(id: c.name, name: c.label, category: c),
+  ];
+  int _seq = 0;
+
+  PlanItem? itemFor(VendorCategory c) => items.where((i) => i.category == c).firstOrNull;
+
+  ItemStatus statusOf(VendorCategory c) => itemFor(c)?.status ?? ItemStatus.todo;
+
+  void setStatus(VendorCategory c, ItemStatus s) {
+    final item = itemFor(c);
+    if (item != null) updateItem(item, status: s);
+  }
+
+  PlanItem addItem(String name, {ItemStatus status = ItemStatus.todo, int? amount, String? vendorName}) {
+    final item = PlanItem(
+      id: 'custom${_seq++}',
+      name: name,
+      status: status,
+      amount: amount,
+      vendorName: vendorName,
+    );
+    items.add(item);
+    notifyListeners();
+    return item;
+  }
+
+  void updateItem(
+    PlanItem item, {
+    String? name,
+    ItemStatus? status,
+    int? amount,
+    bool clearAmount = false,
+    String? vendorName,
+    bool clearVendor = false,
+  }) {
+    if (name != null && name.trim().isNotEmpty) item.name = name.trim();
+    if (status != null) item.status = status;
+    if (amount != null) item.amount = amount;
+    if (clearAmount) item.amount = null;
+    if (vendorName != null && vendorName.trim().isNotEmpty) item.vendorName = vendorName.trim();
+    if (clearVendor) item.vendorName = null;
+    // 계약 전 단계로 되돌리면 시연용 업체 계약 표시도 푼다
+    if (status != null && !status.isDone && item.category != null) contracts.remove(item.category);
+    notifyListeners();
+  }
+
+  /// 삭제한 위치를 돌려준다 (되돌리기용)
+  int removeItem(PlanItem item) {
+    final index = items.indexOf(item);
+    items.remove(item);
+    if (item.category != null) contracts.remove(item.category);
+    notifyListeners();
+    return index;
+  }
+
+  void restoreItem(PlanItem item, int index) {
+    items.insert(index.clamp(0, items.length), item);
+    notifyListeners();
+  }
+
+  /// 계약·결제 완료 항목의 금액 합계 (만원)
+  int get confirmedTotal =>
+      items.where((i) => i.status.isDone).fold(0, (sum, i) => sum + (i.amount ?? 0));
+
+  /// 아직 계약 전이지만 금액을 적어 둔 항목의 합계 (예상, 만원)
+  int get plannedTotal =>
+      items.where((i) => !i.status.isDone).fold(0, (sum, i) => sum + (i.amount ?? 0));
+
+  // ───────────────────────── 상담·계약 (시연용 업체) ─────────────────────────
 
   /// 후기는 상담을 신청했거나 계약한 업체에만 쓸 수 있다
   bool canReview(DemoVendor v) =>
@@ -64,26 +141,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updatePlan(WeddingPlan p) {
-    plan = p;
-    notifyListeners();
-  }
-
-  ItemStatus statusOf(VendorCategory c) => itemStatus[c] ?? ItemStatus.todo;
-
-  void setStatus(VendorCategory c, ItemStatus s) {
-    itemStatus[c] = s;
-    if (s != ItemStatus.contracted) contracts.remove(c);
-    notifyListeners();
-  }
-
   void addConsultation(Consultation c) {
     consultations
       ..add(c)
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
-    if (statusOf(c.vendor.category) == ItemStatus.todo) {
-      itemStatus[c.vendor.category] = ItemStatus.consulting;
-    }
+    final item = itemFor(c.vendor.category);
+    if (item != null && item.status == ItemStatus.todo) item.status = ItemStatus.consulting;
     notifyListeners();
   }
 
@@ -92,18 +155,61 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 시연용 업체와 계약: 해당 준비 항목을 계약 완료로, 금액·업체 이름을 채운다 (항목을 지웠으면 다시 만든다)
   void contract(DemoVendor v) {
-    itemStatus[v.category] = ItemStatus.contracted;
-    contracts[v.category] = (v, v.estimate(guests: plan.guests));
+    final price = v.estimate(guests: plan.guests);
+    final name = v.name.replaceFirst('[시연] ', '');
+    var item = itemFor(v.category);
+    if (item == null) {
+      item = PlanItem(id: v.category.name, name: v.category.label, category: v.category);
+      items.add(item);
+    }
+    item
+      ..status = ItemStatus.contracted
+      ..amount = price
+      ..vendorName = name;
+    contracts[v.category] = (v, price);
     notifyListeners();
   }
 
-  int get contractedTotal => contracts.values.fold(0, (sum, e) => sum + e.$2);
+  // ───────────────────────── 예식일 기준 할 일 ─────────────────────────
+
+  /// 할 일: 기본 20개로 시작하고 사용자가 추가·삭제한다. 예식일에 가까운 순서(D-값 큰 순).
+  final List<ChecklistTask> tasks = [...kChecklistTasks];
+  final Set<String> doneTasks = {};
+
+  /// 직접 체크했거나, 연결된 준비 항목이 계약·결제 완료면 끝난 일
+  bool isTaskDone(ChecklistTask t) =>
+      doneTasks.contains(t.id) || (t.category != null && statusOf(t.category!).isDone);
 
   void toggleTask(String id) {
     doneTasks.contains(id) ? doneTasks.remove(id) : doneTasks.add(id);
     notifyListeners();
   }
+
+  ChecklistTask addTask(String title, int dMinus) {
+    final t = ChecklistTask('u${_seq++}', dMinus, title.trim());
+    tasks
+      ..add(t)
+      ..sort((a, b) => b.dMinus.compareTo(a.dMinus));
+    notifyListeners();
+    return t;
+  }
+
+  void removeTask(ChecklistTask t) {
+    tasks.remove(t);
+    doneTasks.remove(t.id);
+    notifyListeners();
+  }
+
+  void restoreTask(ChecklistTask t) {
+    tasks
+      ..add(t)
+      ..sort((a, b) => b.dMinus.compareTo(a.dMinus));
+    notifyListeners();
+  }
+
+  // ───────────────────────── 업체 비교 ─────────────────────────
 
   bool inCompare(DemoVendor v) => compare.any((e) => e.id == v.id);
 

@@ -56,8 +56,6 @@ class ConsultTools {
   /// 아직 안 한 할 일 (예식일 기준 순서)
   static List<ChecklistTask> nextTasks({int count = 4}) {
     final s = AppState.instance;
-    bool done(ChecklistTask t) =>
-        s.doneTasks.contains(t.id) || (t.category != null && s.statusOf(t.category!) == ItemStatus.contracted);
-    return kChecklistTasks.where((t) => !done(t)).take(count).toList();
+    return s.tasks.where((t) => !s.isTaskDone(t)).take(count).toList();
   }
 }
