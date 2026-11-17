@@ -14,11 +14,16 @@ class VendorRepository {
       jsonDecode(await rootBundle.loadString('assets/data/$name'))
           as List<dynamic>;
 
-  Future<List<RealVendor>> realVendors() async =>
-      _real ??= (await _json('vendors.json'))
-          .cast<Map<String, dynamic>>()
-          .map(RealVendor.fromJson)
-          .toList(growable: false);
+  Future<List<RealVendor>> realVendors() async {
+    if (_real != null) return _real!;
+    // 대표 이미지: tools/collect_vendor_images.py가 업체 홈페이지에서 찾은 주소
+    final images = (jsonDecode(await rootBundle.loadString('assets/data/vendor_images.json'))
+        as Map<String, dynamic>)['images'] as Map<String, dynamic>;
+    return _real = (await _json('vendors.json'))
+        .cast<Map<String, dynamic>>()
+        .map((j) => RealVendor.fromJson(j).withImage((images[j['id']] as Map?)?['image'] as String?))
+        .toList(growable: false);
+  }
 
   Future<List<DemoVendor>> demoVendors() async =>
       _demo ??= (await _json('demo_vendors.json'))

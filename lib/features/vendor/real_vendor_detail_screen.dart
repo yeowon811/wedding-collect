@@ -5,6 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../core/widgets/inputs.dart';
 import '../../data/models/vendor.dart';
+import '../venue/widgets/venue_image.dart';
+import 'widgets/vendor_cards.dart';
 
 /// 실제 연계업체 상세: 공개된 정보와 연락 수단만 보여준다 (가격 없음)
 class RealVendorDetailScreen extends StatelessWidget {
@@ -46,12 +48,34 @@ class RealVendorDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Wrap(spacing: 6, children: [
-            InfoBadge(label: v.categoryText, color: AppColors.primaryDark),
-            InfoBadge(
-              label: v.official,
-              color: v.isOfficial ? AppColors.success : AppColors.textSecondary,
+          if (v.image != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Stack(fit: StackFit.expand, children: [
+                  ColoredBox(color: AppColors.fill, child: VenueImage(url: v.image!)),
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(10)),
+                      child: Text('사진: ${Uri.parse(v.url).host.replaceFirst('www.', '')}',
+                          style: const TextStyle(color: Colors.white, fontSize: 11)),
+                    ),
+                  ),
+                ]),
+              ),
             ),
+            const SizedBox(height: 16),
+          ],
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            InfoBadge(label: v.categoryText, color: AppColors.primaryDark),
+            v.isOfficial
+                ? OfficialMark(label: v.official)
+                : InfoBadge(label: v.official, color: AppColors.textSecondary),
           ]),
           const SizedBox(height: 10),
           Text(v.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),

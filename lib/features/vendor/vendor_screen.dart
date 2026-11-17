@@ -14,9 +14,7 @@ import 'demo_vendor_detail_screen.dart';
 import 'real_vendor_detail_screen.dart';
 import 'widgets/vendor_cards.dart';
 
-enum VendorMode { demo, real }
-
-/// 업체 찾기: 지역 → 항목 → 목록. 시연용(가격 비교·상담)과 실제 연계업체를 나눠 보여준다.
+/// 업체 찾기: 지역 → 항목 → 한 목록. 실제 연계업체(공식전담 먼저)와 시연용 업체(가격·후기·상담)를 함께 보여준다.
 class VendorScreen extends StatefulWidget {
   const VendorScreen({super.key});
 
@@ -25,7 +23,6 @@ class VendorScreen extends StatefulWidget {
 }
 
 class _VendorScreenState extends State<VendorScreen> {
-  static VendorMode _savedMode = VendorMode.demo;
   static String? _savedSido;
   static VendorCategory? _savedCategory;
 
@@ -33,14 +30,12 @@ class _VendorScreenState extends State<VendorScreen> {
     return (await Repos.vendor.demoVendors(), await Repos.vendor.realVendors());
   }();
 
-  VendorMode _mode = _savedMode;
   String _sido = _savedSido ?? AppState.instance.plan.sido;
   VendorCategory? _category = _savedCategory;
   String _sort = 'rating'; // rating / price
 
   void _set(void Function() f) => setState(() {
         f();
-        _savedMode = _mode;
         _savedSido = _sido;
         _savedCategory = _category;
       });
@@ -60,42 +55,13 @@ class _VendorScreenState extends State<VendorScreen> {
           final (demo, real) = snap.data!;
           return Column(
             children: [
-              _modeSwitch(),
               _sidoChips(),
               _categoryChips(),
-              Expanded(
-                child: _mode == VendorMode.demo ? _demoList(demo) : _realList(real),
-              ),
+              Expanded(child: _list(demo, real)),
               _compareBar(),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _modeSwitch() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: SegmentedButton<VendorMode>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(
-            value: VendorMode.demo,
-            icon: Icon(Icons.price_change_outlined),
-            label: Text('가격 비교 (시연용)'),
-          ),
-          ButtonSegment(
-            value: VendorMode.real,
-            icon: Icon(Icons.verified_outlined),
-            label: Text('실제 연계 업체'),
-          ),
-        ],
-        selected: {_mode},
-        onSelectionChanged: (s) => _set(() {
-          _mode = s.first;
-          _category = null;
-        }),
       ),
     );
   }
@@ -123,7 +89,7 @@ class _VendorScreenState extends State<VendorScreen> {
   }
 
   Widget _categoryChips() {
-    final cats = _mode == VendorMode.demo ? VendorCategory.planItems : VendorCategory.realGroups;
+    const cats = VendorCategory.vendorChips;
     return SizedBox(
       height: 46,
       child: ListView(
@@ -155,15 +121,23 @@ class _VendorScreenState extends State<VendorScreen> {
     );
   }
 
-  Widget _demoList(List<DemoVendor> all) {
-    final list = all
+  Widget _list(List<DemoVendor> allDemo, List<RealVendor> allReal) {
+    final demo = allDemo
         .where((v) => v.sido == _sido && (_category == null || v.category == _category))
         .toList();
     if (_sort == 'price') {
-      list.sort((a, b) => a.priceMin.compareTo(b.priceMin));
+      demo.sort((a, b) => a.priceMin.compareTo(b.priceMin));
     } else {
-      list.sort((a, b) => b.rating.compareTo(a.rating));
+      demo.sort((a, b) => b.rating.compareTo(a.rating));
     }
+    // 실제 연계업체: 공식전담 먼저, 그다음 대표 사진이 있는 곳
+    int rank(RealVendor v) => (v.isOfficial ? 2 : 0) + (v.image != null ? 1 : 0);
+    final real = allReal
+        .where((v) => sidoMatches(v.sido, _sido) && (_category == null || _category!.coversReal(v.category)))
+        .toList()
+      ..sort((a, b) => rank(b) - rank(a));
+    final total = demo.length + real.length;
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
@@ -171,7 +145,7 @@ class _VendorScreenState extends State<VendorScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
           child: Row(
             children: [
-              Text('$_sido ${_category?.label ?? '전체'} ${list.length}곳',
+              Text('$_sido ${_category?.label ?? '전체'} $total곳',
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
               DropdownButton<String>(
@@ -189,12 +163,28 @@ class _VendorScreenState extends State<VendorScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: Text(
-            '시연용 가상 업체예요 (가격·평점 임의 생성)',
+            real.isEmpty
+                ? '시연용 가상 업체예요 (가격·평점 임의 생성)'
+                : '실제 연계 업체 ${real.length}곳 먼저 · [시연] 업체는 가격·평점을 임의로 만든 가상 업체예요',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ),
+        if (total == 0)
+          EmptyState(
+            icon: Icons.storefront_outlined,
+            title: '$_sido에는 이 항목 업체가 없어요',
+            message: '다른 항목이나 가까운 지역을 골라 보세요.',
+            actions: [EmptyAction('전체 항목 보기', () => _set(() => _category = null))],
+          ),
         TileGrid(children: [
-          for (final v in list)
+          for (final v in real)
+            RealVendorTile(
+              vendor: v,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => RealVendorDetailScreen(vendor: v)),
+              ),
+            ),
+          for (final v in demo)
             DemoVendorCard(
               vendor: v,
               onTap: () => Navigator.of(context).push(
@@ -206,52 +196,12 @@ class _VendorScreenState extends State<VendorScreen> {
     );
   }
 
-  Widget _realList(List<RealVendor> all) {
-    final list = all
-        .where((v) => sidoMatches(v.sido, _sido) && (_category == null || v.category == _category))
-        .toList()
-      ..sort((a, b) => (b.isOfficial ? 1 : 0) - (a.isOfficial ? 1 : 0));
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-          child: Text('$_sido 실제 연계 업체 ${list.length}곳',
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-          child: Text(
-            '공공예식장과 연계된 실제 업체예요. 가격은 공개 정보가 없어 표시하지 않아요.',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-          ),
-        ),
-        if (list.isEmpty)
-          EmptyState(
-            icon: Icons.storefront_outlined,
-            title: '$_sido에는 등록된 실제 연계 업체가 없어요',
-            message: '위에서 가까운 지역을 고르거나, 시연용 가격 비교로 업체를 살펴보세요.',
-            actions: [
-              EmptyAction('가격 비교(시연용) 보기', () => _set(() => _mode = VendorMode.demo)),
-            ],
-          ),
-        for (final v in list)
-          RealVendorCard(
-            vendor: v,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => RealVendorDetailScreen(vendor: v)),
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _compareBar() {
     final state = AppState.instance;
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) {
-        if (state.compare.isEmpty || _mode != VendorMode.demo) return const SizedBox.shrink();
+        if (state.compare.isEmpty) return const SizedBox.shrink();
         return SafeArea(
           top: false,
           child: Container(

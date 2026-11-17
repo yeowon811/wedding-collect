@@ -4,6 +4,7 @@ import 'package:wedding_collect/app/app.dart';
 import 'package:wedding_collect/app/main_shell.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
+import 'package:wedding_collect/features/vendor/widgets/vendor_cards.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/repositories/review_repository.dart';
 import 'package:wedding_collect/data/models/policy.dart';
@@ -155,10 +156,11 @@ void main() {
     await back(tester);
     await tester.pumpAndSettle();
 
-    // 실제 업체 모드
-    await tester.tap(find.text('실제 연계 업체'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('실제 연계 업체'), findsWidgets);
+    // 실제 연계업체도 같은 목록에 (서울: 공식전담 체크 표시)
+    final list0 = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.byType(RealVendorTile).first, -300, scrollable: list0);
+    expect(find.byType(RealVendorTile), findsWidgets);
+    expect(find.text('공식전담(서울시)'), findsWidgets);
 
     // 체크리스트에 상담 일정·계약 반영
     await tab('체크리스트');
@@ -228,10 +230,16 @@ void main() {
       expect(v.aiImages.every(v.images.contains), isTrue, reason: v.id);
     }
     expect((await Repos.policy.loadAll()).length, 177);
-    expect((await Repos.vendor.realVendors()).length, 103);
+    final real = await Repos.vendor.realVendors();
+    expect(real.length, 103);
     final demo = await Repos.vendor.demoVendors();
     expect(demo.length, 561);
     expect(demo.every((v) => v.name.startsWith('[시연]')), isTrue);
+    // 실제 업체 대표 사진: 홈페이지에서 가져온 https 주소, 검수에서 뺀 곳(V001 등)은 없음
+    final withImage = real.where((v) => v.image != null).toList();
+    expect(withImage.length, 54);
+    expect(withImage.every((v) => v.image!.startsWith('https://')), isTrue);
+    expect(real.firstWhere((v) => v.id == 'V001').image, isNull);
     expect(demo.map((v) => v.category).toSet().length, VendorCategory.planItems.length);
     expect((await Repos.vendor.nearbyFor('H001')).isNotEmpty, isTrue);
 

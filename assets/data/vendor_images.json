@@ -1,0 +1,524 @@
+{
+ "meta": {
+  "collectedAt": "2026-11-17",
+  "method": "업체 홈페이지 대표 이미지(og:image) 주소만 기록, 파일은 복사하지 않음",
+  "review": "사람이 눈으로 검수해 안내·광고·깨진 이미지 11장 제외"
+ },
+ "images": {
+  "V001": {
+   "image": null,
+   "source": "https://dowepa.com/",
+   "note": "검수 제외: 사이트 템플릿 안내 이미지"
+  },
+  "V002": {
+   "image": null,
+   "source": "https://www.instagram.com/deulkkot.wed",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V003": {
+   "image": null,
+   "source": "https://linktr.ee/scverawed",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V004": {
+   "image": null,
+   "source": "https://thegooday.co.kr/",
+   "note": "접속 실패 (URLError)"
+  },
+  "V005": {
+   "image": null,
+   "source": "https://www.instagram.com/eu_style_wedding",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V006": {
+   "image": "https://cdn.imweb.me/upload/S202311305d45f3922c8ac/4d6318cbc2b8a.png",
+   "source": "http://www.bonoche.com/",
+   "note": "og:image"
+  },
+  "V007": {
+   "image": "https://cdn.imweb.me/upload/S202311305d45f3922c8ac/4d6318cbc2b8a.png",
+   "source": "http://www.bonoche.com/",
+   "note": "og:image"
+  },
+  "V008": {
+   "image": "https://cdn.imweb.me/upload/S202408061c42b2e8510f0/202daae12b4d7.png",
+   "source": "https://ludiaproject.com/",
+   "note": "og:image"
+  },
+  "V009": {
+   "image": null,
+   "source": "https://mi-green.co.kr/",
+   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+  },
+  "V010": {
+   "image": "https://cdn.imweb.me/upload/S2025112763ec0a6853970/e5f2640e99a48.png",
+   "source": "https://yisoeur.co.kr/",
+   "note": "og:image"
+  },
+  "V011": {
+   "image": "https://cdn.imweb.me/upload/S2026020843411bce7ae63/9c4dfddee0e7a.png",
+   "source": "https://www.bodadirecting.com/",
+   "note": "og:image"
+  },
+  "V012": {
+   "image": null,
+   "source": "http://greenwed.org/",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V013": {
+   "image": null,
+   "source": "https://www.instagram.com/dadawedding_official/",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V014": {
+   "image": null,
+   "source": "https://www.iriswedding.co.kr",
+   "note": "접속 실패 (URLError)"
+  },
+  "V015": {
+   "image": null,
+   "source": "https://www.jbride.co.kr",
+   "note": "검수 제외: 이미지가 열리지 않음"
+  },
+  "V016": {
+   "image": null,
+   "source": "https://www.dybf.co.kr/",
+   "note": "검수 제외: 이벤트 광고 배너"
+  },
+  "V017": {
+   "image": "https://incheon.wedding/wp-content/uploads/2019/01/iwc-wedding-prepare-bg-07.jpg",
+   "source": "https://incheon.wedding",
+   "note": "og:image"
+  },
+  "V018": {
+   "image": "https://cdn.imweb.me/upload/S202106082fc79df3c94ff/fb002f56184c2.png",
+   "source": "https://mariheen.imweb.me",
+   "note": "og:image"
+  },
+  "V019": {
+   "image": "https://ateliergardenstudio.com/uploads/2026/10/47c4af76-a4d6-464a-ab83-61b5f3c702c2.jpg",
+   "source": "https://ateliergardenstudio.com",
+   "note": "본문 첫 사진"
+  },
+  "V020": {
+   "image": null,
+   "source": "http://bemyday.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V021": {
+   "image": "https://cdn.imweb.me/upload/S20220416b73baf166c8e0/8c8327c48fff6.png",
+   "source": "https://thelounge.gift",
+   "note": "og:image"
+  },
+  "V022": {
+   "image": "https://cdn.imweb.me/upload/S201808195b79788c38ccd/be231abff5f39.png",
+   "source": "https://blicksnap.kr",
+   "note": "og:image"
+  },
+  "V023": {
+   "image": "https://cdn.imweb.me/upload/S20260922a54bcdc0f5c5c/b6e185f0a843d.png",
+   "source": "https://kkotgilsnap.com",
+   "note": "og:image"
+  },
+  "V024": {
+   "image": "https://cdn.imweb.me/upload/S20221126a9a7a44a296d6/df6bd8829b9c0.png",
+   "source": "https://ogamstudio.co.kr",
+   "note": "og:image"
+  },
+  "V025": {
+   "image": "https://opwd.co.kr/img/og.png?v=1c94cf44",
+   "source": "https://opwd.co.kr",
+   "note": "og:image"
+  },
+  "V026": {
+   "image": "https://cdn.imweb.me/upload/S202006087ba43b9c1f95f/9d881054c036d.png",
+   "source": "https://www.cocographer.com",
+   "note": "og:image"
+  },
+  "V027": {
+   "image": null,
+   "source": "https://dasonisnap.com",
+   "note": "검수 제외: 이미지가 열리지 않음"
+  },
+  "V028": {
+   "image": "https://fabstudio.co.kr/web/upload/NNEditor/20171213/01%20(13)_shop1_180056.jpg",
+   "source": "https://www.fabstudio.co.kr",
+   "note": "og:image"
+  },
+  "V029": {
+   "image": null,
+   "source": "https://pf.kakao.com/_xdxoJxjK",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V030": {
+   "image": "https://cdn.imweb.me/upload/S20250130ad70f0706c958/d0374fc022ae3.png",
+   "source": "http://www.photostudio.kr",
+   "note": "og:image"
+  },
+  "V031": {
+   "image": "https://cdn.imweb.me/upload/S202503034a3c79ff89f26/8577f4d2d5156.png",
+   "source": "https://lovestorypohang.com",
+   "note": "og:image"
+  },
+  "V032": {
+   "image": "https://cdn.imweb.me/upload/S201803205ab0a90d78110/5ab35300e9126.png",
+   "source": "https://storyboxstudio.net",
+   "note": "og:image"
+  },
+  "V033": {
+   "image": "https://cdn.imweb.me/upload/S20210509e7691f51c87d1/0793d930f608a.png",
+   "source": "https://makeustudio.com",
+   "note": "og:image"
+  },
+  "V034": {
+   "image": "https://img1.daumcdn.net/thumb/R800x0/?scode=mtistory2&fname=https%3A%2F%2Ftistory1.daumcdn.net%2Ftistory%2F6651278%2Fattach%2F9f3001e1f72f4baf83dd31ebdf9a1dbb",
+   "source": "https://soonbeak-le-amour.com",
+   "note": "og:image"
+  },
+  "V035": {
+   "image": "https://cdn.imweb.me/upload/S202505294079e0309d27f/f1f488447dc56.png",
+   "source": "https://hyunsnap.com",
+   "note": "og:image"
+  },
+  "V036": {
+   "image": "https://cdn.imweb.me/upload/S20250212a9e35e71a4945/bd5a40effd967.png",
+   "source": "https://sonjakga.co.kr",
+   "note": "og:image"
+  },
+  "V037": {
+   "image": "https://cdn.imweb.me/upload/S20250322da6f46df0dca3/247b4f450bb02.png",
+   "source": "https://liebenfamily-sc.com",
+   "note": "og:image"
+  },
+  "V038": {
+   "image": null,
+   "source": "http://w-snap.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V039": {
+   "image": "https://cdn.imweb.me/upload/S201903195c9053ecaccfe/d4a152bbc360f.png",
+   "source": "https://uneunal.co.kr",
+   "note": "og:image"
+  },
+  "V040": {
+   "image": "https://cdn.imweb.me/upload/S20240911e72af56c2e003/ad992d73a79f0.png",
+   "source": "https://wstudio.imweb.me",
+   "note": "og:image"
+  },
+  "V041": {
+   "image": "https://cdn.imweb.me/upload/S202506177496cf35b2558/2c08fe3a09c39.png",
+   "source": "http://lovestorychuncheon.com",
+   "note": "og:image"
+  },
+  "V042": {
+   "image": null,
+   "source": "https://www.ongi-studio.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V043": {
+   "image": null,
+   "source": "https://www.instagram.com/bridalhui/",
+   "note": "대표 이미지를 가져올 수 없는 페이지(SNS·링크 모음)"
+  },
+  "V044": {
+   "image": "https://cdn.imweb.me/upload/S201802165a8666d7e8482/5b0bd0d209d39.png",
+   "source": "http://www.sallybride.co.kr",
+   "note": "og:image"
+  },
+  "V045": {
+   "image": null,
+   "source": "http://www.charleswedding.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V046": {
+   "image": "https://sinbuyachangwon.com/img/og.jpg",
+   "source": "https://sinbuyachangwon.com",
+   "note": "og:image"
+  },
+  "V047": {
+   "image": null,
+   "source": "https://dwcwedding.com",
+   "note": "접속 실패 (HTTPError)"
+  },
+  "V048": {
+   "image": null,
+   "source": "https://wexpo.kr",
+   "note": "검수 제외: 박람회 광고 배너"
+  },
+  "V049": {
+   "image": "https://www.stanford-hotel.com/upload/contents/e0bbb1ceb4b7175ac179c4b01eea425d.jpg",
+   "source": "https://www.stanford-hotel.com",
+   "note": "본문 첫 사진"
+  },
+  "V050": {
+   "image": "https://jmwedding.co.kr/assets/lp/hero.jpg",
+   "source": "https://jmwedding.co.kr",
+   "note": "og:image"
+  },
+  "V051": {
+   "image": null,
+   "source": "https://proposelove.com",
+   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+  },
+  "V052": {
+   "image": null,
+   "source": "https://proposelove.com",
+   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+  },
+  "V053": {
+   "image": "https://www.jwoowedding.com/img/int/1.jpg",
+   "source": "https://www.jwoowedding.com",
+   "note": "본문 첫 사진"
+  },
+  "V054": {
+   "image": null,
+   "source": "http://www.soowedding.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V055": {
+   "image": null,
+   "source": "http://blueweddingplan.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V056": {
+   "image": null,
+   "source": "http://jbwed.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V057": {
+   "image": "https://cdn.imweb.me/upload/S20250403566e371922ac5/a788d19af4c40.png",
+   "source": "https://gunsanstaywedding.com",
+   "note": "og:image"
+  },
+  "V058": {
+   "image": null,
+   "source": "http://www.wjwedding.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V059": {
+   "image": null,
+   "source": "https://www.skyconvention.co.kr",
+   "note": "검수 제외: 영업시간 안내 공지"
+  },
+  "V060": {
+   "image": "https://cdn.imweb.me/upload/S202303212428c84b8cd70/41ef2e54f0eea.png",
+   "source": "https://saintconvention.com",
+   "note": "og:image"
+  },
+  "V061": {
+   "image": "https://www.koreabuffet.co.kr/ogimage.jpg",
+   "source": "https://www.koreabuffet.co.kr",
+   "note": "og:image"
+  },
+  "V062": {
+   "image": "https://cdn.imweb.me/upload/S202104019d86ba2efb0eb/e39e60aec36fc.png",
+   "source": "https://amourconte.co.kr",
+   "note": "og:image"
+  },
+  "V063": {
+   "image": "https://www.hkwedding.co.kr/myimage.jpg",
+   "source": "https://hkwedding.co.kr/",
+   "note": "og:image"
+  },
+  "V064": {
+   "image": "https://cdn.imweb.me/upload/S20241106479125556a956/ccfc2ff989708.png",
+   "source": "https://foodbell.co.kr",
+   "note": "og:image"
+  },
+  "V065": {
+   "image": "https://whitebuffet.cafe24.com/web/upload/share-image-1-5549bcd950fec694297edce90e1cf909.jpg",
+   "source": "https://whitebuffet.cafe24.com",
+   "note": "og:image"
+  },
+  "V066": {
+   "image": null,
+   "source": "http://verygoodbuffet.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V067": {
+   "image": "https://www.gotheparty.com/img/ka_preview.png",
+   "source": "https://www.gotheparty.com",
+   "note": "og:image"
+  },
+  "V068": {
+   "image": null,
+   "source": "http://domma.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V069": {
+   "image": null,
+   "source": "http://alpsbuff.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V070": {
+   "image": null,
+   "source": "https://sunglimfood.com",
+   "note": "검수 제외: 홍보 문구 배너"
+  },
+  "V071": {
+   "image": "https://cdn.imweb.me/upload/S201901115c380a0bbfabf/9ab7fd9afb92f.png",
+   "source": "http://canacatering.kr",
+   "note": "og:image"
+  },
+  "V072": {
+   "image": null,
+   "source": "http://www.dwbuffet.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V073": {
+   "image": "https://ssgfood.com/wp-content/uploads/kboard_attached/3/202611/6aeae284a032e3813788.jpg",
+   "source": "https://ssgfood.com",
+   "note": "본문 첫 사진"
+  },
+  "V074": {
+   "image": null,
+   "source": "http://www.buffe119.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V075": {
+   "image": null,
+   "source": "http://www.bnsfood.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V076": {
+   "image": null,
+   "source": "http://dowoncatering.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V077": {
+   "image": "https://thehomecatering.co.kr/wp-content/uploads/2026/08/hero_optimized.webp",
+   "source": "https://thehomecatering.co.kr",
+   "note": "본문 첫 사진"
+  },
+  "V078": {
+   "image": null,
+   "source": "http://www.orangechef.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V079": {
+   "image": "https://cdn.imweb.me/thumbnail/20260422/cc4325edd89de.jpg",
+   "source": "http://vhlcs.co.kr",
+   "note": "본문 첫 사진"
+  },
+  "V080": {
+   "image": null,
+   "source": "http://www.manchan.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V081": {
+   "image": null,
+   "source": "http://worldbufe.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V082": {
+   "image": null,
+   "source": "http://daegabuffet.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V083": {
+   "image": null,
+   "source": "http://chefandparty.at-mobile.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V084": {
+   "image": "https://lamerwedding.kr/img/og/home.jpg",
+   "source": "https://lamerwedding.kr",
+   "note": "og:image"
+  },
+  "V085": {
+   "image": null,
+   "source": "https://www.xn--hy1b54vswon8a.com/",
+   "note": "검수 제외: 홍보 문구 배너"
+  },
+  "V086": {
+   "image": "https://ssgfood.com/wp-content/uploads/kboard_attached/3/202611/6aeae284a032e3813788.jpg",
+   "source": "https://ssgfood.com",
+   "note": "본문 첫 사진"
+  },
+  "V087": {
+   "image": null,
+   "source": "http://gyeong.co.kr/",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V088": {
+   "image": null,
+   "source": "http://ninecollection.kr/xe/main/",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V089": {
+   "image": "https://cdn.imweb.me/upload/S20260130127a04fb56b6c/859ebb40d4dce.png",
+   "source": "https://guest4u.kr",
+   "note": "og:image"
+  },
+  "V090": {
+   "image": "https://haramevent.kr/images/editorial-2026/host-stage-og.jpg",
+   "source": "https://haramevent.kr",
+   "note": "og:image"
+  },
+  "V091": {
+   "image": "https://cdn.imweb.me/upload/S20260403f47e4525e6a99/54d73018a075e.png",
+   "source": "https://99company.co.kr",
+   "note": "og:image"
+  },
+  "V092": {
+   "image": null,
+   "source": "https://rudawedding.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V093": {
+   "image": null,
+   "source": "http://www.gajawedding.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V094": {
+   "image": "https://cdn.imweb.me/upload/S20240626efe2a834b5cff/54d5ba6dfc66f.png",
+   "source": "https://aramdaum.com",
+   "note": "og:image"
+  },
+  "V095": {
+   "image": "https://cdn.imweb.me/upload/S20260130127a04fb56b6c/859ebb40d4dce.png",
+   "source": "https://guest4u.kr",
+   "note": "og:image"
+  },
+  "V096": {
+   "image": null,
+   "source": "http://cmscompany.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V097": {
+   "image": "https://cdn.imweb.me/upload/S20260130127a04fb56b6c/859ebb40d4dce.png",
+   "source": "https://guest4u.kr",
+   "note": "og:image"
+  },
+  "V098": {
+   "image": null,
+   "source": "https://goldenmemorymc.modoo.at/",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V099": {
+   "image": "https://storage.googleapis.com/cr-resource/image/0e24431ed386bc665b3c4f3cd3f7ff0d/bouncewedding/650/2f61c097e45853503200aac754e46e3c.png?_1794879589",
+   "source": "https://bouncewedding.co.kr",
+   "note": "og:image"
+  },
+  "V100": {
+   "image": "https://cdn.imweb.me/upload/S202506074c5d18fd9c404/d2b1641c6946a.png",
+   "source": "https://gamdongmc.kr",
+   "note": "og:image"
+  },
+  "V101": {
+   "image": "https://cdn.imweb.me/upload/S20260130127a04fb56b6c/859ebb40d4dce.png",
+   "source": "https://guest4u.kr",
+   "note": "og:image"
+  },
+  "V102": {
+   "image": null,
+   "source": "http://www.gajawedding.com",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  },
+  "V103": {
+   "image": null,
+   "source": "http://www.wjwedding.co.kr",
+   "note": "홈페이지에 쓸 만한 사진이 없음"
+  }
+ }
+}

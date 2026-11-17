@@ -41,6 +41,18 @@ enum VendorCategory {
   ];
   static const realGroups = [directing, catering, photo, host];
 
+  /// 업체 탭 항목 칩: 준비 항목 11개 + 실제 업체만 있는 사회·진행
+  static const vendorChips = [...planItems, host];
+
+  /// 이 칩을 골랐을 때 함께 보여줄 실제 연계업체 분류
+  bool coversReal(VendorCategory real) => switch (real) {
+        directing => this == dress || this == makeup || this == studio,
+        photo => this == studio || this == snap || this == video,
+        catering => this == meal,
+        host => this == host,
+        _ => false,
+      };
+
   static VendorCategory fromCode(String code) => switch (code) {
     'DRESS' => dress,
     'MEAL' => meal,
@@ -74,12 +86,14 @@ class RealVendor {
     required this.phone,
     required this.url,
     required this.services,
+    this.image,
   });
 
   final String id;
   final String name;
   final VendorCategory category;
   final String categoryText;
+  final String? image; // 업체 홈페이지 대표 이미지 주소 (파일은 복사하지 않음, 출처 = url)
   final String official; // 예: 공식전담(서울시), 외부연계업체
   final String sido;
   final String sigungu;
@@ -89,6 +103,21 @@ class RealVendor {
   final String services;
 
   bool get isOfficial => official.startsWith('공식');
+
+  RealVendor withImage(String? image) => RealVendor(
+        id: id,
+        name: name,
+        category: category,
+        categoryText: categoryText,
+        official: official,
+        sido: sido,
+        sigungu: sigungu,
+        address: address,
+        phone: phone,
+        url: url,
+        services: services,
+        image: image,
+      );
 
   factory RealVendor.fromJson(Map<String, dynamic> j) => RealVendor(
     id: j['id'] as String,

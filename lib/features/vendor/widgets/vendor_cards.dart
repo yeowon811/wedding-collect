@@ -5,6 +5,7 @@ import '../../../core/widgets/info_badge.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/vendor.dart';
 import '../../../data/repositories/review_repository.dart';
+import '../../venue/widgets/venue_image.dart';
 
 /// 시연용 업체 카드: 가격대, 평점, 패키지, 비교 담기
 class DemoVendorCard extends StatelessWidget {
@@ -96,7 +97,116 @@ class DemoVendorCard extends StatelessWidget {
   }
 }
 
-/// 실제 연계업체 카드: 가격 없이 위치·연락처·공식 연계 여부
+/// 실제 연계업체 격자 카드: 시연용 카드와 같은 틀, 가격 대신 "가격 문의", 공식전담이면 체크 표시
+class RealVendorTile extends StatelessWidget {
+  const RealVendorTile({super.key, required this.vendor, required this.onTap});
+
+  final RealVendor vendor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = vendor;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Stack(children: [
+              Positioned.fill(
+                child: v.image == null
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(12)),
+                        child: Center(child: Icon(v.category.icon, size: 36, color: AppColors.textHint)),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: ColoredBox(color: AppColors.fill, child: VenueImage(url: v.image!)),
+                      ),
+              ),
+              Positioned(
+                left: 8,
+                bottom: 8,
+                right: 8,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: v.isOfficial ? OfficialMark(label: v.official) : const _PlainMark('실제 업체'),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 8),
+          Text('${v.categoryText} · ${v.sido}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(height: 2),
+          SizedBox(
+            height: 40,
+            child: Text(v.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4, color: AppColors.textPrimary)),
+          ),
+          const SizedBox(height: 6),
+          Text('가격 문의',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+          const SizedBox(height: 2),
+          Text(v.sigungu.isEmpty ? v.sido : v.sigungu,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 공식전담 업체 체크 표시: ✓ 공식전담(서울시)
+class OfficialMark extends StatelessWidget {
+  const OfficialMark({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(5, 3, 7, 3),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.verified, size: 13, color: AppColors.primary),
+        const SizedBox(width: 3),
+        Flexible(
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _PlainMark extends StatelessWidget {
+  const _PlainMark(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+      child: Text(label,
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+    );
+  }
+}
+
+/// 실제 연계업체 목록형 카드 (예식장 상세의 근처 업체): 가격 없이 위치·연락처·공식 연계 여부
 class RealVendorCard extends StatelessWidget {
   const RealVendorCard({super.key, required this.vendor, required this.onTap, this.distanceKm});
 
@@ -119,11 +229,9 @@ class RealVendorCard extends StatelessWidget {
               Text(v.categoryText,
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const Spacer(),
-              InfoBadge(
-                label: v.isOfficial ? v.official : '실제 업체',
-                icon: v.isOfficial ? Icons.verified : null,
-                color: v.isOfficial ? AppColors.success : AppColors.textSecondary,
-              ),
+              v.isOfficial
+                  ? OfficialMark(label: v.official)
+                  : InfoBadge(label: '실제 업체', color: AppColors.textSecondary),
             ],
           ),
           const SizedBox(height: 8),
