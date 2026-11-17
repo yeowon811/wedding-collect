@@ -180,7 +180,7 @@ class AppState extends ChangeNotifier {
         for (final c in VendorCategory.planItems)
           PlanItem(id: c.name, name: c.label, category: c),
       ],
-      tasks: [...kChecklistTasks],
+      tasks: const [],
     );
   }
 
@@ -336,7 +336,17 @@ class AppState extends ChangeNotifier {
   // ───────────────────────── 예식일 기준 할 일 ─────────────────────────
 
   /// 할 일: 기본 20개로 시작하고 사용자가 추가·삭제한다. 예식일에 가까운 순서(D-값 큰 순).
-  final List<ChecklistTask> tasks = [...kChecklistTasks];
+  /// 예식일 기준 할 일. 비어서 시작하고, 사용자가 추가하거나 추천 목록을 불러온다
+  final List<ChecklistTask> tasks = [];
+
+  /// 추천 할 일 20개 불러오기 (이미 있는 것은 건너뜀)
+  void loadRecommendedTasks() {
+    final have = {for (final t in tasks) t.id};
+    tasks
+      ..addAll(kChecklistTasks.where((t) => !have.contains(t.id)))
+      ..sort((a, b) => b.dMinus.compareTo(a.dMinus));
+    notifyListeners();
+  }
   final Set<String> doneTasks = {};
 
   /// 직접 체크했거나, 연결된 준비 항목이 계약·결제 완료면 끝난 일

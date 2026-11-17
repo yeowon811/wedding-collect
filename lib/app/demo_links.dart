@@ -37,6 +37,7 @@ class DemoLinks {
       budget: 3000,
       homeless: true,
     ));
+    AppState.instance.loadRecommendedTasks();
   }
 
   /// 첫 화면이 뜬 뒤 상세 화면 열기

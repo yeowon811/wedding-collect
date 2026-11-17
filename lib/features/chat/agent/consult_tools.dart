@@ -53,6 +53,8 @@ class ConsultTools {
   /// 아직 안 한 할 일 (예식일 기준 순서)
   static List<ChecklistTask> nextTasks({int count = 4}) {
     final s = AppState.instance;
-    return s.tasks.where((t) => !s.isTaskDone(t)).take(count).toList();
+    // 내 할 일이 비어 있으면 추천 할 일 목록(템플릿) 기준으로 안내
+    final source = s.tasks.isEmpty ? kChecklistTasks : s.tasks;
+    return source.where((t) => !s.isTaskDone(t)).take(count).toList();
   }
 }

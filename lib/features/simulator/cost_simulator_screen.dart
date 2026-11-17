@@ -76,7 +76,7 @@ class _CostSimulatorScreenState extends State<CostSimulatorScreen> {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
-                  _Summary(result: r, budget: _app.plan.budget),
+                  _Summary(result: r, budget: _app.plan.hasBudget ? _app.plan.budget : 0),
                   const SizedBox(height: 16),
                   _Advice(result: r),
                   const SizedBox(height: 24),

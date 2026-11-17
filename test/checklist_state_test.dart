@@ -7,6 +7,20 @@ import 'package:wedding_collect/data/models/wedding_plan.dart';
 void main() {
   final s = AppState.instance;
 
+  test('처음에는 결혼 정보·할 일이 비어 있고, 입력해야 채워진다', () {
+    s.resetAll();
+    expect(s.plan.entered, isEmpty);
+    expect(s.tasks, isEmpty);
+    expect(s.items.length, 11); // 준비 항목 목록은 그대로
+    s.updatePlan(s.plan.copyWith(budget: 2500));
+    expect(s.plan.hasBudget, isTrue);
+    expect(s.plan.hasDate, isFalse);
+    s.loadRecommendedTasks();
+    expect(s.tasks.length, kChecklistTasks.length);
+    s.loadRecommendedTasks(); // 두 번 불러와도 겹치지 않는다
+    expect(s.tasks.length, kChecklistTasks.length);
+  });
+
   test('준비 항목을 추가·수정·삭제하고 되돌릴 수 있다', () {
     expect(s.items.length, 11);
     final trip = s.addItem('신혼여행', amount: 400);

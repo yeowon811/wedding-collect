@@ -1,18 +1,28 @@
 import 'vendor.dart';
 
-/// 사용자가 입력하는 결혼 기본 정보 (가상 데이터, 기기 안에서만 사용)
+/// 사용자가 입력하는 결혼 기본 정보 (가상 데이터).
+/// 값은 계산용 기본값을 갖지만, 체크리스트는 사용자가 직접 입력한 값([entered])만 보여준다.
 class WeddingPlan {
   const WeddingPlan({
     required this.weddingDate,
     this.sido = '서울',
     this.budget = 3000,
     this.guests = 120,
+    this.entered = const {},
   });
 
   final DateTime weddingDate;
   final String sido;
   final int budget; // 총예산, 만원
   final int guests; // 예상 하객 수
+
+  /// 사용자가 입력한 항목: 'date', 'sido', 'budget', 'guests'
+  final Set<String> entered;
+
+  bool get hasDate => entered.contains('date');
+  bool get hasSido => entered.contains('sido');
+  bool get hasBudget => entered.contains('budget');
+  bool get hasGuests => entered.contains('guests');
 
   int get dDay {
     final today = DateTime.now();
@@ -33,6 +43,14 @@ class WeddingPlan {
     sido: sido ?? this.sido,
     budget: budget ?? this.budget,
     guests: guests ?? this.guests,
+    // 값을 넣은 항목은 '입력함'으로 표시
+    entered: {
+      ...entered,
+      if (weddingDate != null) 'date',
+      if (sido != null) 'sido',
+      if (budget != null) 'budget',
+      if (guests != null) 'guests',
+    },
   );
 }
 

@@ -40,6 +40,7 @@ class UserDataCodec {
       'sido': s.plan.sido,
       'budget': s.plan.budget,
       'guests': s.plan.guests,
+      'entered': s.plan.entered.toList(),
     },
     'items': [
       for (final i in s.items)
@@ -183,6 +184,15 @@ class UserDataCodec {
       sido: pl['sido'] as String? ?? s.plan.sido,
       budget: _int(pl['budget']) ?? s.plan.budget,
       guests: _int(pl['guests']) ?? s.plan.guests,
+      // 예전 저장본(입력 여부 없음)은 저장된 값을 모두 입력한 것으로 본다
+      entered: pl['entered'] is List
+          ? (pl['entered'] as List).cast<String>().toSet()
+          : {
+              if (pl['weddingDate'] != null) 'date',
+              if (pl['sido'] != null) 'sido',
+              if (pl['budget'] != null) 'budget',
+              if (pl['guests'] != null) 'guests',
+            },
     );
 
     final items = [

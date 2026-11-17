@@ -27,13 +27,15 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
   Map<DateTime, List<_Event>> _events() {
     final map = <DateTime, List<_Event>>{};
     void add(DateTime d, _Event e) => map.putIfAbsent(_day(d), () => []).add(e);
-    for (final t in _app.tasks) {
-      add(_due(t), _Event.task(t));
+    if (_app.plan.hasDate) {
+      for (final t in _app.tasks) {
+        add(_due(t), _Event.task(t));
+      }
+      add(_app.plan.weddingDate, const _Event.wedding());
     }
     for (final c in _app.consultations) {
       add(c.dateTime, _Event.consult(c));
     }
-    add(_app.plan.weddingDate, const _Event.wedding());
     return map;
   }
 
@@ -53,6 +55,14 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             children: [
+              if (!_app.plan.hasDate)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(12)),
+                  child: Text('예식일을 입력하지 않아 할 일 날짜를 계산할 수 없어요. 체크리스트에서 예식일을 먼저 입력해 주세요.',
+                      style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.warning)),
+                ),
               _monthHeader(),
               _Legend(),
               const SizedBox(height: 8),
@@ -242,6 +252,11 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
 
   /// 고른 날짜를 마감일로 할 일 추가 (예식일 며칠 전인지로 저장)
   Future<void> _addTask(BuildContext context) async {
+    if (!_app.plan.hasDate) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('예식일을 먼저 입력해 주세요')));
+      return;
+    }
     final dMinus = _day(_app.plan.weddingDate).difference(_selected).inDays;
     if (dMinus < 0) {
       ScaffoldMessenger.of(context)
