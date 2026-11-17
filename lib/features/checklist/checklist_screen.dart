@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../simulator/cost_simulator_screen.dart';
+import 'task_calendar_screen.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
@@ -646,7 +647,11 @@ class _TimelineCard extends StatelessWidget {
 
     return _Section(
       title: '예식일 기준 할 일',
-      trailing: Text('$done/${tasks.length}', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+      trailing: TextButton.icon(
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TaskCalendarScreen())),
+        icon: const Icon(Icons.calendar_month_outlined, size: 18),
+        label: Text('캘린더 · $done/${tasks.length}'),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -5,6 +5,7 @@ import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/grid.dart';
+import '../../core/widgets/inputs.dart';
 import '../favorites/favorites_screen.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/app_state.dart';
@@ -79,8 +80,6 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _aiBanner()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
-                if (_sido != null)
-                  SliverToBoxAdapter(child: _sigunguChips(all)),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
                   SliverToBoxAdapter(child: _empty())
@@ -249,88 +248,60 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
           _choice('전체', _sido == null, () => _selectSido(null)),
           for (final s in sidos)
             _choice(
-              '$s ${counts[s]}',
+              // 고른 시군구가 있으면 칩에 함께 표시: "서울 · 강남구 ▾"
+              _sido == s && _sigungu != null ? '$s · $_sigungu' : '$s ${counts[s]}',
               _sido == s,
-              () => _selectSido(_sido == s ? null : s),
+              () => _pickRegion(all, s),
+              hasMenu: true,
             ),
         ],
       ),
     );
   }
 
-  /// 선택한 시도 안의 시군구 (가나다순). 시군구가 하나뿐인 지역(세종 등)은 보여주지 않는다.
-  Widget _sigunguChips(List<Venue> all) {
+  /// 시도 칩을 누르면: 시군구가 2곳 이상이면 선택창(고르고 확인), 아니면 바로 적용
+  Future<void> _pickRegion(List<Venue> all, String sido) async {
     final counts = <String, int>{};
-    for (final v in all.where((v) => v.sido == _sido && v.sigungu.isNotEmpty)) {
+    for (final v in all.where((v) => v.sido == sido && v.sigungu.isNotEmpty)) {
       counts[v.sigungu] = (counts[v.sigungu] ?? 0) + 1;
     }
-    if (counts.length < 2) return const SizedBox.shrink();
-    final names = counts.keys.toList()..sort();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              '$_sido 시·군·구 ${names.length}곳',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _subChip(
-                '전체',
-                _sigungu == null,
-                () => setState(() => _sigungu = null),
-              ),
-              for (final g in names)
-                _subChip(
-                  '$g ${counts[g]}',
-                  _sigungu == g,
-                  () => setState(() => _sigungu = _sigungu == g ? null : g),
-                ),
-            ],
-          ),
-        ],
+    if (counts.length < 2) {
+      _selectSido(sido);
+      return;
+    }
+    final total = all.where((v) => v.sido == sido).length;
+    final picked = await showModalBottomSheet<(String?,)>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _RegionSheet(
+        sido: sido,
+        total: total,
+        counts: counts,
+        initial: _sido == sido ? _sigungu : null,
       ),
     );
+    if (picked == null || !mounted) return; // 닫기·취소
+    setState(() {
+      _sido = sido;
+      _sigungu = picked.$1;
+    });
   }
 
   /// 시도 칩: 회색 알약, 선택되면 검정
-  Widget _choice(String label, bool selected, VoidCallback onTap) {
+  Widget _choice(String label, bool selected, VoidCallback onTap, {bool hasMenu = false}) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label),
+        label: hasMenu && selected
+            ? Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(label),
+                const SizedBox(width: 2),
+                const Icon(Icons.expand_more, size: 18, color: Colors.white),
+              ])
+            : Text(label),
         selected: selected,
         onSelected: (_) => onTap(),
-      ),
-    );
-  }
-
-  /// 시군구 칩: 흰 바탕 + 테두리, 선택되면 진한 테두리 (시도 칩보다 한 단계 낮은 선택)
-  Widget _subChip(String label, bool selected, VoidCallback onTap) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      visualDensity: VisualDensity.compact,
-      backgroundColor: Colors.white,
-      selectedColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      side: BorderSide(
-        color: selected ? AppColors.ink : AppColors.border,
-        width: selected ? 1.5 : 1,
-      ),
-      labelStyle: TextStyle(
-        fontSize: 13,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        color: selected ? AppColors.ink : AppColors.textBody,
       ),
     );
   }
@@ -385,6 +356,92 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
               child: const Text('지역 초기화'),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// 시군구 선택창: 하나 고르고 [확인]. 결과는 (시군구 또는 null=시도 전체,)
+class _RegionSheet extends StatefulWidget {
+  const _RegionSheet({required this.sido, required this.total, required this.counts, this.initial});
+
+  final String sido;
+  final int total;
+  final Map<String, int> counts;
+  final String? initial;
+
+  @override
+  State<_RegionSheet> createState() => _RegionSheetState();
+}
+
+class _RegionSheetState extends State<_RegionSheet> {
+  late String? _picked = widget.initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = widget.counts.keys.toList()..sort();
+    Widget option(String? value, String label, int n) {
+      final on = _picked == value;
+      return InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => setState(() => _picked = value),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? AppColors.ink : AppColors.fill,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: label),
+              TextSpan(text: ' $n', style: TextStyle(color: on ? Colors.white70 : AppColors.textSecondary)),
+            ]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+              color: on ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Text('${widget.sido} 시·군·구 선택',
+                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+          ),
+          Flexible(
+            child: GridView.count(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.4,
+              children: [
+                option(null, '${widget.sido} 전체', widget.total),
+                for (final g in names) option(g, g, widget.counts[g]!),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: ActionPair(
+              secondary: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+              primary: FilledButton(
+                onPressed: () => Navigator.pop(context, (_picked,)),
+                child: const Text('확인'),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }

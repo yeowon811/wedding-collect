@@ -78,18 +78,21 @@ void main() {
     expect(find.byType(FilterChip), findsNothing); // 예약방식·조건 버튼은 없앰
     await tester.tap(find.widgetWithText(ChoiceChip, '서울 74'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('서울 시·군·구'), findsOneWidget);
-    final gangnam = find.byWidgetPredicate(
-        (w) => w is ChoiceChip && (w.label as Text).data!.startsWith('강남구 '));
-    await tester.tap(gangnam);
+    // 선택창: 시군구를 고르고 [확인]
+    expect(find.text('서울 시·군·구 선택'), findsOneWidget);
+    await tester.tap(find.textContaining('강남구'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('확인'));
+    await tester.pumpAndSettle();
+    expect(find.text('서울 시·군·구 선택'), findsNothing);
     expect(find.textContaining('서울 강남구'), findsWidgets);
+    expect(find.text('서울 · 강남구'), findsOneWidget); // 칩에 고른 시군구 표시
     for (final card in tester.widgetList<VenueCard>(find.byType(VenueCard))) {
       expect(card.venue.sigungu, '강남구');
     }
     await tester.tap(find.text('지역 초기화'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('서울 시·군·구'), findsNothing);
+    expect(find.text('서울 · 강남구'), findsNothing);
 
     // 업체: 드레스 2곳 비교
     await tab('업체');
@@ -169,6 +172,15 @@ void main() {
     await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), 200, scrollable: list);
+
+    // 할 일 캘린더: 달력과 이번 달 일정 (상담 신청한 날이 들어 있다)
+    await tester.ensureVisible(find.textContaining('캘린더 ·'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('캘린더 ·'));
+    await tester.pumpAndSettle();
+    expect(find.text('할 일 캘린더'), findsOneWidget);
+    expect(find.textContaining('월 일정'), findsOneWidget);
+    await back(tester);
 
     expect(tester.takeException(), isNull);
   });

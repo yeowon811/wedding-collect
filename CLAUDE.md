@@ -122,6 +122,8 @@
   - **업체 상세 추가 옵션:** `AddOnPicker` 체크하면 '옵션 포함 예상' 금액·내 예산 비교가 바뀜
   - **비용 시뮬레이터:** `lib/features/simulator/cost_simulator_screen.dart` (체크리스트 예산 카드 '결혼 비용 시뮬레이션', AI 예산 답변 버튼 action `open_simulator`, 시연 링크 `?page=simulator`). 22개 항목 켜고 끄기 → 공공·실속 vs 일반 웨딩(평균가+숨은 추가금) 총액·절감액·총예산 비교, 비용 컨설팅(절감 큰 항목 3개·숨은 추가금), 하객 수(식대·답례품 비례), 지자체 지원금 −100만원 토글. 선택은 AppState.simSelected/simVoucher로 계정 저장
 - **찜 (2026-11-17):** 예식장·업체·정책 카드와 상세 화면에 하트(`core/widgets/favorite_button.dart`, ref = `venue:`/`vendor:`(시연)/`real:`(실제)/`policy:`), 예식장·정책·업체 탭 상단 하트 → `features/favorites/favorites_screen.dart`(종류별 모아 보기, 시연 링크 `?page=favorites`). AppState.favorites로 계정 저장
+- **할 일 캘린더 (2026-11-17):** 체크리스트 '예식일 기준 할 일' 오른쪽 [캘린더 · n/N] → `features/checklist/task_calendar_screen.dart`. 월 달력(일요일 시작)에 할 일 마감일(예식일 − D)·상담 일정·예식일을 색 점으로 표시(할 일 파랑·시기 지남 주황·완료 회색·상담 초록·예식일 분홍), 날짜를 누르면 그날 일정 + 체크, '이 날 할 일 추가'(D-값으로 저장), 아래 이번 달 일정 목록. 시연 링크 `?page=calendar`
+- **예식장 지역 선택 (2026-11-17):** 시도 칩을 누르면 시군구 선택창(3열 격자, '서울 전체' 포함) → [확인]. 목록 위에 펼쳐지던 시군구 칩은 없앰. 고른 시군구는 칩에 '서울 · 강남구 ▾'로 표시, 다시 누르면 선택창. 시군구가 1곳뿐인 시도는 바로 적용
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`
