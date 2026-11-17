@@ -282,3 +282,98 @@ class ChoiceRow<T> extends StatelessWidget {
     ]);
   }
 }
+
+/// 숫자 입력칸 + [확인]. 확인(또는 키보드 완료)을 눌러야 값이 바뀐다. 범위를 벗어나면 안내.
+class NumberConfirmField extends StatefulWidget {
+  const NumberConfirmField({
+    super.key,
+    required this.value,
+    required this.unit,
+    required this.onConfirmed,
+    this.min = 1,
+    this.max = 100000,
+    this.hint,
+    this.preview,
+  });
+
+  final int? value;
+  final String unit; // 명, 만원
+  final ValueChanged<int> onConfirmed;
+  final int min;
+  final int max;
+  final String? hint; // 예: 예: 150
+  final String Function(int)? preview; // 입력 중 아래에 보여줄 읽기 쉬운 값 (예: 3,000만원)
+
+  @override
+  State<NumberConfirmField> createState() => _NumberConfirmFieldState();
+}
+
+class _NumberConfirmFieldState extends State<NumberConfirmField> {
+  late final _c = TextEditingController(text: widget.value?.toString() ?? '');
+  String? _error;
+
+  @override
+  void didUpdateWidget(NumberConfirmField old) {
+    super.didUpdateWidget(old);
+    // 바깥에서 값이 바뀌면(다른 화면에서 수정 등) 입력칸도 맞춘다
+    if (old.value != widget.value && int.tryParse(_c.text) != widget.value) {
+      _c.text = widget.value?.toString() ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  int? get _typed => int.tryParse(_c.text);
+
+  void _confirm() {
+    final v = _typed;
+    if (v == null) return setState(() => _error = '숫자를 입력해 주세요');
+    if (v < widget.min || v > widget.max) {
+      return setState(() => _error = '${widget.min}~${widget.max}${widget.unit} 사이로 입력해 주세요');
+    }
+    setState(() => _error = null);
+    FocusScope.of(context).unfocus();
+    widget.onConfirmed(v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final typed = _typed;
+    final saved = typed != null && typed == widget.value;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: TextField(
+            controller: _c,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            textInputAction: TextInputAction.done,
+            onChanged: (_) => setState(() => _error = null),
+            onSubmitted: (_) => _confirm(),
+            decoration: InputDecoration(hintText: widget.hint, suffixText: widget.unit, errorText: _error),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 52,
+          child: FilledButton(
+            onPressed: typed == null || saved ? null : _confirm,
+            child: Text(saved ? '저장됨' : '확인'),
+          ),
+        ),
+      ]),
+      if (typed != null && widget.preview != null && _error == null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            saved ? '${widget.preview!(typed)}으로 저장했어요' : '${widget.preview!(typed)} · 확인을 눌러 저장',
+            style: TextStyle(fontSize: 13, color: saved ? AppColors.success : AppColors.textSecondary),
+          ),
+        ),
+    ]);
+  }
+}

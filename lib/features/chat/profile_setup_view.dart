@@ -60,17 +60,22 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               const SizedBox(height: 28),
               FormSection(
                 title: '거주 지역',
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final s in kSidoList)
-                      ChoiceChip(
-                        label: Text(s),
-                        selected: p.sido == s,
-                        onSelected: (_) => _set(p.copyWith(sido: s)),
-                      ),
-                  ],
+                // 입력칸 + 드롭다운: 글자를 치면 목록이 좁혀지고, 고르면 바로 적용
+                child: LayoutBuilder(
+                  builder: (context, box) => DropdownMenu<String>(
+                    key: ValueKey(p.sido),
+                    width: box.maxWidth,
+                    initialSelection: p.sido,
+                    hintText: '지역을 입력하거나 고르세요 (예: 서울)',
+                    enableFilter: true,
+                    requestFocusOnTap: true,
+                    menuHeight: 320,
+                    leadingIcon: const Icon(Icons.place_outlined),
+                    dropdownMenuEntries: [for (final s in kSidoList) DropdownMenuEntry(value: s, label: s)],
+                    onSelected: (s) {
+                      if (s != null) _set(p.copyWith(sido: s));
+                    },
+                  ),
                 ),
               ),
               FormSection(
@@ -147,28 +152,26 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               ),
               FormSection(
                 title: '하객 수',
-                child: PresetPicker(
+                child: NumberConfirmField(
                   value: p.guests,
-                  presets: const [50, 100, 150, 200, 300],
-                  format: (v) => '$v명',
                   unit: '명',
                   min: 10,
                   max: 2000,
-                  label: '하객 수',
-                  onChanged: (v) => _set(p.copyWith(guests: v)),
+                  hint: '예: 150',
+                  preview: (v) => '하객 $v명',
+                  onConfirmed: (v) => _set(p.copyWith(guests: v)),
                 ),
               ),
               FormSection(
                 title: '총예산',
-                child: PresetPicker(
+                child: NumberConfirmField(
                   value: p.budget,
-                  presets: const [1000, 2000, 3000, 5000, 7000],
-                  format: formatManwon,
                   unit: '만원',
                   min: 100,
                   max: 100000,
-                  label: '총예산 (만원)',
-                  onChanged: (v) => _set(p.copyWith(budget: v)),
+                  hint: '예: 3000',
+                  preview: (v) => '총예산 ${formatManwon(v)}',
+                  onConfirmed: (v) => _set(p.copyWith(budget: v)),
                 ),
               ),
               FormSection(
