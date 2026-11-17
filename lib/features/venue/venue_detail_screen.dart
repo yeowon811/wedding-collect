@@ -130,7 +130,7 @@ class VenueDetailScreen extends StatelessWidget {
           listenable: AppState.instance,
           builder: (context, _) {
             final app = AppState.instance;
-            final chosen = app.chosenVenueId == v.id;
+            final chosen = app.isFavorite('venue:${v.id}');
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: SizedBox(
@@ -138,17 +138,17 @@ class VenueDetailScreen extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     if (chosen) {
-                      app.clearVenue();
+                      app.toggleFavorite('venue:${v.id}');
                     } else {
                       app.chooseVenue(v);
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('체크리스트 예식장 항목에 넣었어요 (대관료·정원 확인)'),
+                        content: Text('체크리스트 예식장 항목에 담았어요'),
                         duration: Duration(seconds: 2),
                       ));
                     }
                   },
                   icon: Icon(chosen ? Icons.check_circle : Icons.add_task, size: 18),
-                  label: Text(chosen ? '체크리스트에 추가됨 (누르면 취소)' : '체크리스트에 추가'),
+                  label: Text(chosen ? '체크리스트에 추가됨 (누르면 빼기)' : '체크리스트에 추가'),
                 ),
               ),
             );

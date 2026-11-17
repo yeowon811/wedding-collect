@@ -14,7 +14,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/inputs.dart';
 import '../../core/utils/region.dart';
-import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import '../../data/models/wedding_plan.dart';
 
@@ -418,15 +417,26 @@ class _ItemStatusCard extends StatelessWidget {
   }
 
   Widget _row(BuildContext context, PlanItem item) {
-    final sub = [
-      if (item.vendorName != null) item.vendorName!,
-      item.amount != null ? formatManwon(item.amount!) : '금액 미입력',
-    ].join(' · ');
-    final cands = Candidates.forItem(item, state);
-    final venue = item.id == AppState.venueItemId && state.chosenVenueId != null
-        ? Repos.venue.cached?.where((v) => v.id == state.chosenVenueId).firstOrNull
+    final places = Candidates.forItem(item, state);
+    final done = state.contractedPlace(item);
+    final venue = item.id == AppState.venueItemId && done != null && done.ref.startsWith('venue:')
+        ? Repos.venue.cached?.where((v) => 'venue:${v.id}' == done.ref).firstOrNull
         : null;
     final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
+    // 한 줄 요약: 계약한 곳 → 이름·금액 / 담은 곳 → 단계별 개수 / 없으면 직접 적은 값 또는 안내
+    final String sub;
+    if (done != null) {
+      sub = '${done.name} · ${item.amount == null ? '금액 미입력' : (item.amount == 0 ? '대관료 무료' : formatManwon(item.amount!))}';
+    } else if (places.isNotEmpty) {
+      final consulting = places.where((c) => state.statusOfPlace(c.ref) == ItemStatus.consulting).length;
+      final cand = places.length - consulting;
+      sub = [if (consulting > 0) '상담 $consulting곳', if (cand > 0) '후보 $cand곳'].join(' · ');
+    } else if (item.vendorName != null || item.amount != null) {
+      sub = [if (item.vendorName != null) item.vendorName!, if (item.amount != null) formatManwon(item.amount!)].join(' · ');
+    } else {
+      sub = '아직 담은 곳 없음';
+    }
+    final empty = places.isEmpty && item.vendorName == null && item.amount == null;
     return InkWell(
       onTap: () => showItemDetail(context, state, item),
       borderRadius: BorderRadius.circular(10),
@@ -445,25 +455,19 @@ class _ItemStatusCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 13, color: item.amount == null ? AppColors.textHint : AppColors.textSecondary)),
-                  if (venue != null)
+                          fontSize: 13,
+                          fontWeight: done != null ? FontWeight.w600 : FontWeight.w400,
+                          color: empty ? AppColors.textHint : (done != null ? AppColors.textPrimary : AppColors.textSecondary))),
+                  if (venue != null && fits != null)
                     Text(
-                      '${venue.capacityLabel}${fits == null ? '' : (fits ? ' · 하객 ${state.plan.guests}명 수용 가능' : ' · 하객 ${state.plan.guests}명은 정원 초과')}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: fits == false ? AppColors.warning : AppColors.success),
-                    ),
-                  if (cands.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text('담은 곳 · ${Candidates.summary(cands).replaceFirst('후보 ', '')}',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      fits ? '하객 ${state.plan.guests}명 수용 가능' : '하객 ${state.plan.guests}명은 정원 초과',
+                      style: TextStyle(fontSize: 12, color: fits ? AppColors.success : AppColors.warning),
                     ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            _StatusPill(status: item.status),
+            StageBar(status: item.status),
             Icon(Icons.chevron_right, color: AppColors.textHint),
           ],
         ),
@@ -472,10 +476,119 @@ class _ItemStatusCard extends StatelessWidget {
   }
 }
 
-/// 준비 항목 상세: 담은 곳(정한 곳·후보)을 먼저 크게, 그 아래 진행 상태·금액
+/// 진행 단계 막대: ●●○○ 계약 (후보·상담·계약·결제 4칸)
+class StageBar extends StatelessWidget {
+  const StageBar({super.key, required this.status, this.showLabel = true});
+
+  final ItemStatus status;
+  final bool showLabel;
+
+  static int stepOf(ItemStatus s) => switch (s) {
+        ItemStatus.todo => 0,
+        ItemStatus.candidate => 1,
+        ItemStatus.consulting => 2,
+        ItemStatus.contracted => 3,
+        ItemStatus.paid => 4,
+      };
+
+  static Color colorOf(ItemStatus s) => switch (s) {
+        ItemStatus.todo => AppColors.textHint,
+        ItemStatus.candidate => AppColors.primary,
+        ItemStatus.consulting => AppColors.warning,
+        ItemStatus.contracted || ItemStatus.paid => AppColors.success,
+      };
+
+  static String labelOf(ItemStatus s) => s == ItemStatus.contracted ? '계약' : s.label;
+
+  @override
+  Widget build(BuildContext context) {
+    final step = stepOf(status);
+    final color = colorOf(status);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (var i = 1; i <= 4; i++)
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(right: 3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: i <= step ? color : Colors.transparent,
+            border: Border.all(color: i <= step ? color : AppColors.border, width: 1.5),
+          ),
+        ),
+      if (showLabel)
+        SizedBox(
+          width: 52,
+          child: Text(labelOf(status),
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+        ),
+    ]);
+  }
+}
+
+/// 준비 항목 상세: 담은 곳마다 상태를 바꾸고, 계약하면 그 한 곳만 크게 (나머지는 접힘)
 void showItemDetail(BuildContext context, AppState state, PlanItem item) {
   final nav = Navigator.of(context);
-  void open(String ref) => nav.push(MaterialPageRoute(builder: (_) => ChatCardLink(ref: ref)));
+  void open(String ref) {
+    if (ref.startsWith('manual:')) return; // 직접 추가한 곳은 상세 화면이 없다
+    nav.push(MaterialPageRoute(builder: (_) => ChatCardLink(ref: ref)));
+  }
+
+  Future<int?> askAmount(BuildContext ctx, String title, int? current) async {
+    final c = TextEditingController(text: current?.toString() ?? '');
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (d) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(suffixText: '만원', hintText: '예: 180'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('확인')),
+        ],
+      ),
+    );
+    return ok == true ? int.tryParse(c.text) : null;
+  }
+
+  Future<void> addManual(BuildContext ctx) async {
+    final name = TextEditingController();
+    final amount = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: ctx,
+      builder: (d) => AlertDialog(
+        title: Text('${item.name}에 직접 추가'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '업체·장소 이름', hintText: '예: ○○ 웨딩홀'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: amount,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(labelText: '금액 (선택)', suffixText: '만원'),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('추가')),
+        ],
+      ),
+    );
+    if (ok == true && name.text.trim().isNotEmpty) {
+      state.addManualPlace(item, name.text, int.tryParse(amount.text));
+    }
+  }
+
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -484,52 +597,66 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
       listenable: state,
       builder: (ctx, _) {
         final isVenue = item.id == AppState.venueItemId;
-        final cands = Candidates.forItem(item, state);
-        // 정한 곳: 체크리스트에 추가한 예식장 / 계약 완료 표시한 업체
-        final chosenRef = isVenue
-            ? (state.chosenVenueId == null ? null : 'venue:${state.chosenVenueId}')
-            : (item.category != null && state.contracts[item.category] != null
-                ? 'vendor:${state.contracts[item.category]!.$1.id}'
-                : null);
-        final others = [for (final c in cands) if (c.ref != chosenRef) c];
-        final venue = isVenue && state.chosenVenueId != null
-            ? Repos.venue.cached?.where((v) => v.id == state.chosenVenueId).firstOrNull
-            : null;
-        final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
+        final places = Candidates.forItem(item, state);
+        final done = state.contractedPlace(item);
+        final others = [for (final c in places) if (c.ref != done?.ref) c];
 
-        Widget card({required String title, required String sub, required String price, String? badge,
-            Color? border, VoidCallback? onTap, Widget? trailing}) {
+        // 담은 곳 카드: 이름·설명·가격 + 상태 칩 (후보·상담 중·계약·결제 완료)
+        Widget placeCard(CandidateInfo c) {
+          final st = state.statusOfPlace(c.ref);
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Material(
               color: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: border ?? AppColors.border, width: border == null ? 1 : 1.5),
-              ),
+                  borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppColors.border)),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: onTap,
+                onTap: c.ref.startsWith('manual:') ? null : () => open(c.ref),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-                  child: Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (badge != null)
-                          Text(badge,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                        Text(title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 2),
-                        Text(sub, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                        const SizedBox(height: 4),
-                        Text(price, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                      ]),
-                    ),
-                    ?trailing,
-                    if (onTap != null) Icon(Icons.chevron_right, color: AppColors.textHint),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(c.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 2),
+                          Text('${c.sub} · ${c.priceText}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        ]),
+                      ),
+                      if (c.ref.startsWith('manual:'))
+                        IconButton(
+                          tooltip: '빼기',
+                          onPressed: () => state.removeManualPlace(item, c.ref),
+                          icon: Icon(Icons.close, color: AppColors.textHint),
+                        )
+                      else ...[
+                        FavoriteButton(ref: c.ref, size: 22),
+                        Icon(Icons.chevron_right, color: AppColors.textHint),
+                      ],
+                    ]),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      for (final s in const [
+                        ItemStatus.candidate,
+                        ItemStatus.consulting,
+                        ItemStatus.contracted,
+                        ItemStatus.paid,
+                      ])
+                        ChoiceChip(
+                          label: Text(StageBar.labelOf(s)),
+                          selected: st == s,
+                          showCheckmark: false,
+                          visualDensity: VisualDensity.compact,
+                          onSelected: (_) => state.setPlaceStatus(item, c.ref, s),
+                        ),
+                    ]),
                   ]),
                 ),
               ),
@@ -537,54 +664,125 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
           );
         }
 
+        // 계약한 곳: 크게 한 곳만
+        Widget doneCard(CandidateInfo c) {
+          final st = state.statusOfPlace(c.ref);
+          final paid = st == ItemStatus.paid;
+          final date = state.placeDate[c.ref];
+          final venue = isVenue && c.ref.startsWith('venue:')
+              ? Repos.venue.cached?.where((v) => 'venue:${v.id}' == c.ref).firstOrNull
+              : null;
+          final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
+          return Container(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            decoration: BoxDecoration(
+              color: AppColors.successSoft,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.success, width: 1.5),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                const SizedBox(width: 6),
+                Text(paid ? '결제 완료' : '계약',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.success)),
+                const Spacer(),
+                if (!c.ref.startsWith('manual:'))
+                  TextButton(onPressed: () => open(c.ref), child: const Text('상세 보기')),
+              ]),
+              const SizedBox(height: 4),
+              Text(c.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(
+                [
+                  item.amount == null ? '금액 미입력' : (item.amount == 0 ? '대관료 무료' : formatManwon(item.amount!)),
+                  if (date != null) '${paid ? '' : '계약일 '}${formatDateWithDay(date)}',
+                ].join(' · '),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textBody),
+              ),
+              if (fits != null)
+                Text(fits ? '하객 ${state.plan.guests}명 수용 가능' : '하객 ${state.plan.guests}명은 정원 초과',
+                    style: TextStyle(fontSize: 13, color: fits ? AppColors.success : AppColors.warning)),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () =>
+                        state.setPlaceStatus(item, c.ref, paid ? ItemStatus.contracted : ItemStatus.paid),
+                    child: Text(paid ? '결제 취소' : '결제 완료로'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => state.setPlaceStatus(item, c.ref, ItemStatus.consulting),
+                    child: const Text('계약 취소'),
+                  ),
+                ),
+              ]),
+              Center(
+                child: TextButton(
+                  onPressed: () async {
+                    final v = await askAmount(ctx, '계약 금액', item.amount);
+                    if (v != null) state.setPlaceAmount(item, c.ref, v);
+                  },
+                  child: const Text('금액 수정'),
+                ),
+              ),
+            ]),
+          );
+        }
+
         return SafeArea(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.85),
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.88),
             child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 0, 20, 20), children: [
               Row(children: [
                 Expanded(
                   child: Text(item.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
                 ),
-                _StatusPill(status: item.status),
+                StageBar(status: item.status),
               ]),
               const SizedBox(height: 16),
-              Text('담은 곳', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              if (chosenRef != null && item.vendorName != null)
-                card(
-                  badge: isVenue ? '체크리스트에 추가한 예식장' : '계약한 업체',
-                  title: item.vendorName!,
-                  sub: venue == null
-                      ? item.status.label
-                      : '${venue.capacityLabel}${fits == null ? '' : (fits ? ' · 하객 ${state.plan.guests}명 수용 가능' : ' · 하객 ${state.plan.guests}명은 정원 초과')}',
-                  price: item.amount == null ? '금액 미입력' : (item.amount == 0 ? '대관료 무료' : formatManwon(item.amount!)),
-                  border: AppColors.primary,
-                  onTap: () => open(chosenRef),
-                ),
-              for (final c in others)
-                card(
-                  badge: '찜한 후보',
-                  title: c.name,
-                  sub: c.sub,
-                  price: c.priceText,
-                  onTap: () => open(c.ref),
-                  trailing: FavoriteButton(ref: c.ref, size: 22),
-                ),
-              if (chosenRef == null && others.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(14)),
-                  child: Text(
-                    '아직 담은 곳이 없어요.\n${isVenue ? '예식장' : '업체'} 화면에서 [체크리스트에 추가]나 하트를 누르면 여기에 모여요.',
-                    style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
+              if (done != null) ...[
+                doneCard(done),
+                if (others.isNotEmpty)
+                  Theme(
+                    data: Theme.of(ctx).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: Text('다른 후보 ${others.length}곳 보기',
+                          style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                      children: [for (final c in others) placeCard(c)],
+                    ),
+                  ),
+              ] else ...[
+                Text('담은 곳 ${places.length}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                for (final c in places) placeCard(c),
+                if (places.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(14)),
+                    child: Text(
+                      '아직 담은 곳이 없어요.\n${isVenue ? '예식장' : '업체'} 화면에서 [체크리스트에 추가]를 누르거나, 아래 [+ 추가]로 직접 넣어 주세요.',
+                      style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => addManual(ctx),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('추가'),
                   ),
                 ),
-              if (isVenue || item.category != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: SizedBox(
-                    width: double.infinity,
+                if (isVenue || item.category != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
@@ -596,29 +794,19 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
                         }
                       },
                       icon: const Icon(Icons.search, size: 18),
-                      label: Text(isVenue ? '예식장 찾아보기' : '${item.name} 업체 찾아보기'),
+                      label: const Text('찾아보기'),
                     ),
                   ),
-                ),
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 8),
-              Text('진행 상태 · 금액', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              Text(
-                '${item.status.label} · ${item.amount == null ? '금액 미입력' : formatManwon(item.amount!)}'
-                '${item.vendorName == null ? '' : ' · ${item.vendorName}'}',
-                style: TextStyle(fontSize: 14, color: AppColors.textBody),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
+                ],
+              ]),
+              const SizedBox(height: 4),
+              Center(
+                child: TextButton(
                   onPressed: () {
                     Navigator.pop(ctx);
                     showItemEditor(context, state, item: item);
                   },
-                  child: const Text('상태·금액 수정'),
+                  child: Text('항목 이름 변경·삭제', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ),
               ),
             ]),
@@ -627,24 +815,6 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
       },
     ),
   );
-}
-
-/// 상태 표시: 미정(회색) / 후보(파랑) / 상담 중(주황) / 계약 완료·결제 완료(초록)
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.status});
-
-  final ItemStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (fg, bg) = switch (status) {
-      ItemStatus.todo => (AppColors.textSecondary, AppColors.fill),
-      ItemStatus.candidate => (AppColors.primary, AppColors.primarySoft),
-      ItemStatus.consulting => (AppColors.warning, AppColors.warningSoft),
-      ItemStatus.contracted || ItemStatus.paid => (AppColors.success, AppColors.successSoft),
-    };
-    return InfoBadge(label: status.label, color: fg, background: bg);
-  }
 }
 
 /// 준비 항목 추가·수정 창. [item]이 없으면 새로 추가한다.

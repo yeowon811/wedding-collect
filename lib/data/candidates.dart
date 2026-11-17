@@ -22,8 +22,17 @@ class Candidates {
     if (item.id == AppState.venueItemId) {
       final venues = Repos.venue.cached ?? const [];
       return [
+        for (final m in s.manualPlaces)
+          if (m.itemId == item.id)
+            CandidateInfo(
+              ref: 'manual:${m.id}',
+              name: m.name,
+              sub: '직접 추가',
+              price: m.amount,
+              priceText: m.amount == null ? '금액 미입력' : '${m.amount}만원',
+            ),
         for (final v in venues)
-          if (fav.contains('venue:${v.id}') || s.chosenVenueId == v.id)
+          if (fav.contains('venue:${v.id}'))
             CandidateInfo(
               ref: 'venue:${v.id}',
               name: v.name,
@@ -33,10 +42,22 @@ class Candidates {
             ),
       ];
     }
+    final manual = [
+      for (final m in s.manualPlaces)
+        if (m.itemId == item.id)
+          CandidateInfo(
+            ref: 'manual:${m.id}',
+            name: m.name,
+            sub: '직접 추가',
+            price: m.amount,
+            priceText: m.amount == null ? '금액 미입력' : '${m.amount}만원',
+          ),
+    ];
     final c = item.category;
-    if (c == null) return const [];
+    if (c == null) return manual;
     final guests = s.plan.guests;
     return [
+      ...manual,
       for (final v in Repos.vendor.demoCached ?? const [])
         if (v.category == c && fav.contains('vendor:${v.id}'))
           CandidateInfo(

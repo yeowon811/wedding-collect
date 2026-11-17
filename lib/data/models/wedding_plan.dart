@@ -140,3 +140,13 @@ const kChecklistTasks = [
   ChecklistTask('t19', 7, '준비물·업체 도착 시간 최종 점검'),
   ChecklistTask('t20', 1, '당일 일정표 가족·업체와 공유'),
 ];
+
+/// 준비 항목에 직접 추가한 곳 (앱에 없는 업체·예식장)
+class ManualPlace {
+  ManualPlace({required this.id, required this.itemId, required this.name, this.amount});
+
+  final String id;
+  final String itemId;
+  String name;
+  int? amount; // 만원
+}

@@ -7,6 +7,7 @@ import 'models/user_profile.dart';
 import 'models/venue.dart';
 import 'models/vendor.dart';
 import 'models/wedding_plan.dart';
+import 'repositories/repositories.dart';
 
 /// 탭끼리 같이 쓰는 사용자 상태 (결혼 정보, 준비 항목, 할 일, 상담 예약, 비교 목록).
 /// 지금은 메모리에만 저장한다 (앱을 끄면 초기화). 시연용 가상 데이터만 담는다.
@@ -67,7 +68,11 @@ class AppState extends ChangeNotifier {
     Set<String> favorites = const {},
     Set<String>? simSelected,
     bool simVoucher = false,
-    String? chosenVenueId,
+    String? chosenVenueId, // 예전 저장본 (예식장 '정하기') → 담은 곳 '상담 중'으로 옮김
+    Map<String, ItemStatus> placeStatus = const {},
+    Map<String, int> placeAmount = const {},
+    Map<String, DateTime> placeDate = const {},
+    List<ManualPlace> manualPlaces = const [],
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -108,7 +113,22 @@ class AppState extends ChangeNotifier {
       ..addAll(favorites);
     this.simSelected = simSelected == null ? null : {...simSelected};
     this.simVoucher = simVoucher;
-    this.chosenVenueId = chosenVenueId;
+    this.placeStatus
+      ..clear()
+      ..addAll(placeStatus);
+    this.placeAmount
+      ..clear()
+      ..addAll(placeAmount);
+    this.placeDate
+      ..clear()
+      ..addAll(placeDate);
+    this.manualPlaces
+      ..clear()
+      ..addAll(manualPlaces);
+    if (chosenVenueId != null) {
+      this.favorites.add('venue:$chosenVenueId');
+      this.placeStatus.putIfAbsent('venue:$chosenVenueId', () => ItemStatus.consulting);
+    }
     notifyListeners();
   }
 
@@ -121,27 +141,158 @@ class AppState extends ChangeNotifier {
 
   void toggleFavorite(String ref) {
     final adding = !favorites.contains(ref);
-    adding ? favorites.add(ref) : favorites.remove(ref);
-    if (adding && ref.startsWith('venue:')) ensureVenueItem(); // 예식장을 찜하면 체크리스트에 '예식장' 항목
+    if (adding) {
+      favorites.add(ref);
+      if (ref.startsWith('venue:')) ensureVenueItem(); // 예식장을 담으면 체크리스트에 '예식장' 항목
+    } else {
+      final affected = _itemsHolding(ref);
+      favorites.remove(ref);
+      _forgetPlace(ref);
+      for (final (item, name) in affected) {
+        _afterPlaceRemoved(item, name);
+      }
+    }
     syncCandidateStatus();
     notifyListeners();
   }
 
-  /// 찜 = 후보: 후보가 생기면 '미정' → '후보', 모두 빼면 '후보' → '미정'
+  /// 이 곳을 담고 있는 항목과 그 곳의 이름
+  List<(PlanItem, String)> _itemsHolding(String ref) => [
+        for (final item in items)
+          for (final c in Candidates.forItem(item, this))
+            if (c.ref == ref) (item, c.name),
+      ];
+
+  /// 담은 곳을 뺀 뒤: 남은 곳이 없으면 '미정'으로, 그 곳에서 들어온 이름·금액은 지운다
+  void _afterPlaceRemoved(PlanItem item, String name) {
+    if (item.vendorName == name) {
+      item
+        ..vendorName = null
+        ..amount = null;
+    }
+    if (Candidates.forItem(item, this).isEmpty) item.status = ItemStatus.todo;
+  }
+
+  void _forgetPlace(String ref) {
+    placeStatus.remove(ref);
+    placeAmount.remove(ref);
+    placeDate.remove(ref);
+  }
+
+  /// 모든 준비 항목의 상태를 담은 곳 기준으로 다시 맞춘다
   void syncCandidateStatus() {
     for (final item in items) {
-      final has = Candidates.forItem(item, this).isNotEmpty;
-      if (has && item.status == ItemStatus.todo) item.status = ItemStatus.candidate;
-      if (!has && item.status == ItemStatus.candidate) item.status = ItemStatus.todo;
+      recomputeItem(item);
     }
   }
+
+  // ───────────────────────── 담은 곳 (항목별 업체·예식장) ─────────────────────────
+
+  /// 담은 곳마다의 진행 상태 (없으면 '후보'), 계약 금액(직접 고친 것), 계약일
+  final Map<String, ItemStatus> placeStatus = {};
+  final Map<String, int> placeAmount = {};
+  final Map<String, DateTime> placeDate = {};
+
+  /// 직접 추가한 곳 (앱에 없는 업체·예식장)
+  final List<ManualPlace> manualPlaces = [];
+
+  ItemStatus statusOfPlace(String ref) => placeStatus[ref] ?? ItemStatus.candidate;
+
+  /// 담은 곳의 상태 바꾸기. 계약은 항목마다 한 곳: 다른 곳이 계약이었으면 '상담 중'으로
+  void setPlaceStatus(PlanItem item, String ref, ItemStatus status) {
+    if (status.isDone) {
+      for (final c in Candidates.forItem(item, this)) {
+        if (c.ref != ref && statusOfPlace(c.ref).isDone) {
+          placeStatus[c.ref] = ItemStatus.consulting;
+          placeDate.remove(c.ref);
+        }
+      }
+      placeDate[ref] ??= DateTime.now();
+    } else {
+      placeDate.remove(ref);
+    }
+    placeStatus[ref] = status;
+    recomputeItem(item);
+    notifyListeners();
+  }
+
+  /// 계약한 곳의 금액 고치기 (만원)
+  void setPlaceAmount(PlanItem item, String ref, int? amount) {
+    amount == null ? placeAmount.remove(ref) : placeAmount[ref] = amount;
+    recomputeItem(item);
+    notifyListeners();
+  }
+
+  /// 앱에 없는 곳을 직접 추가
+  ManualPlace addManualPlace(PlanItem item, String name, int? amount) {
+    final m = ManualPlace(
+        id: 'm${DateTime.now().microsecondsSinceEpoch}${_seq++}', itemId: item.id, name: name.trim(), amount: amount);
+    manualPlaces.add(m);
+    recomputeItem(item);
+    notifyListeners();
+    return m;
+  }
+
+  void removeManualPlace(PlanItem item, String ref) {
+    final affected = _itemsHolding(ref);
+    manualPlaces.removeWhere((m) => 'manual:${m.id}' == ref);
+    _forgetPlace(ref);
+    for (final (i, name) in affected) {
+      _afterPlaceRemoved(i, name);
+    }
+    recomputeItem(item);
+    notifyListeners();
+  }
+
+  /// 항목 상태 = 담은 곳 중 가장 앞선 단계. 계약(결제)한 곳이 있으면 그 이름·금액이 항목에 들어간다.
+  /// 담은 곳이 없으면 직접 입력한 상태·금액을 그대로 둔다.
+  void recomputeItem(PlanItem item) {
+    final places = Candidates.forItem(item, this);
+    if (places.isEmpty) {
+      if (item.status == ItemStatus.candidate) item.status = ItemStatus.todo;
+      return;
+    }
+    var best = ItemStatus.candidate;
+    for (final c in places) {
+      final st = statusOfPlace(c.ref);
+      if (st.index > best.index) best = st;
+    }
+    item.status = best;
+    final done = places.where((c) => statusOfPlace(c.ref).isDone).firstOrNull;
+    if (done != null) {
+      item
+        ..vendorName = done.name
+        ..amount = placeAmount[done.ref] ?? done.price;
+    } else if (places.any((c) => c.name == item.vendorName)) {
+      item
+        ..vendorName = null
+        ..amount = null;
+    }
+    // 시연 업체 계약 표시(후기 쓰기·계약 취소 버튼)도 맞춘다
+    final cat = item.category;
+    if (cat != null) {
+      final demo = done != null && done.ref.startsWith('vendor:')
+          ? Repos.vendor.demoCached?.where((v) => 'vendor:${v.id}' == done.ref).firstOrNull
+          : null;
+      demo == null ? contracts.remove(cat) : contracts[cat] = (demo, item.amount ?? 0);
+    }
+  }
+
+  /// 계약(결제)한 곳 (없으면 null)
+  CandidateInfo? contractedPlace(PlanItem item) =>
+      Candidates.forItem(item, this).where((c) => statusOfPlace(c.ref).isDone).firstOrNull;
 
   // ───────────────────────── 예식장 (준비 항목) ─────────────────────────
 
   static const venueItemId = 'venue';
 
-  /// 예식장 상세 [체크리스트에 추가]로 고른 예식장
-  String? chosenVenueId;
+  /// 계약(결제)한 예식장 (없으면 null)
+  String? get chosenVenueId {
+    for (final ref in favorites) {
+      if (ref.startsWith('venue:') && statusOfPlace(ref).isDone) return ref.substring(6);
+    }
+    return null;
+  }
 
   /// 체크리스트 맨 위 '예식장' 항목 (없으면 만든다)
   PlanItem ensureVenueItem() {
@@ -153,29 +304,13 @@ class AppState extends ChangeNotifier {
     return item;
   }
 
-  /// 예식장 상세의 [체크리스트에 추가]: 예식장 항목에 이름·대관료를 넣고, 지역을 입력 안 했으면 채운다
+  /// 예식장 상세의 [체크리스트에 추가]: 예식장 항목에 담고(후보), 지역을 입력 안 했으면 채운다
   void chooseVenue(Venue v) {
-    chosenVenueId = v.id;
     favorites.add('venue:${v.id}');
-    final item = ensureVenueItem()
-      ..vendorName = v.name
-      ..amount = v.rentalFee == null ? null : (v.rentalFee! / 10000).round();
-    if (item.status == ItemStatus.todo || item.status == ItemStatus.candidate) item.status = ItemStatus.consulting;
+    ensureVenueItem();
     if (!plan.hasSido) updatePlan(plan.copyWith(sido: v.sido));
     // '공공예식장 둘러보고 신청 기간 확인하기'는 끝낸 것으로
     if (tasks.any((t) => t.id == 't02')) doneTasks.add('t02');
-    notifyListeners();
-  }
-
-  void clearVenue() {
-    chosenVenueId = null;
-    final item = items.where((i) => i.id == venueItemId).firstOrNull;
-    if (item != null) {
-      item
-        ..vendorName = null
-        ..amount = null
-        ..status = ItemStatus.todo;
-    }
     syncCandidateStatus();
     notifyListeners();
   }
@@ -294,7 +429,10 @@ class AppState extends ChangeNotifier {
 
   void setStatus(VendorCategory c, ItemStatus s) {
     final item = itemFor(c);
-    if (item != null) updateItem(item, status: s);
+    if (item == null) return;
+    final done = contractedPlace(item);
+    // 계약한 곳이 있으면 그 곳의 상태를 바꾼다 (예: 업체 상세의 [계약 취소])
+    done != null ? setPlaceStatus(item, done.ref, s) : updateItem(item, status: s);
   }
 
   PlanItem addItem(
@@ -342,7 +480,6 @@ class AppState extends ChangeNotifier {
     final index = items.indexOf(item);
     items.remove(item);
     if (item.category != null) contracts.remove(item.category);
-    if (item.id == venueItemId) chosenVenueId = null;
     notifyListeners();
     return index;
   }
@@ -378,9 +515,12 @@ class AppState extends ChangeNotifier {
     consultations
       ..add(c)
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    // 상담 신청한 업체는 담은 곳에 들어가고 '상담 중'
+    final ref = 'vendor:${c.vendor.id}';
+    favorites.add(ref);
+    if (statusOfPlace(ref).index < ItemStatus.consulting.index) placeStatus[ref] = ItemStatus.consulting;
     final item = itemFor(c.vendor.category);
-    if (item != null && item.status == ItemStatus.todo)
-      item.status = ItemStatus.consulting;
+    if (item != null) recomputeItem(item);
     notifyListeners();
   }
 
@@ -402,12 +542,10 @@ class AppState extends ChangeNotifier {
       );
       items.add(item);
     }
-    item
-      ..status = ItemStatus.contracted
-      ..amount = price
-      ..vendorName = name;
-    contracts[v.category] = (v, price);
-    notifyListeners();
+    favorites.add('vendor:${v.id}');
+    setPlaceStatus(item, 'vendor:${v.id}', ItemStatus.contracted); // 이름·금액·계약 표시는 recomputeItem
+    if (item.vendorName == null) item.vendorName = name;
+    item.amount ??= price;
   }
 
   // ───────────────────────── 예식일 기준 할 일 ─────────────────────────

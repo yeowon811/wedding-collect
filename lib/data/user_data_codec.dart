@@ -68,7 +68,12 @@ class UserDataCodec {
     'favorites': s.favorites.toList(),
     if (s.simSelected != null) 'simSelected': s.simSelected!.toList(),
     'simVoucher': s.simVoucher,
-    if (s.chosenVenueId != null) 'chosenVenueId': s.chosenVenueId,
+    'placeStatus': {for (final e in s.placeStatus.entries) e.key: e.value.name},
+    'placeAmount': s.placeAmount,
+    'placeDate': {for (final e in s.placeDate.entries) e.key: _date(e.value)},
+    'manualPlaces': [
+      for (final m in s.manualPlaces) {'id': m.id, 'itemId': m.itemId, 'name': m.name, 'amount': m.amount},
+    ],
     'consultations': [
       for (final c in s.consultations)
         {
@@ -276,7 +281,28 @@ class UserDataCodec {
       favorites: ((d['favorites'] as List?) ?? const []).cast<String>().toSet(),
       simSelected: (d['simSelected'] as List?)?.cast<String>().toSet(),
       simVoucher: d['simVoucher'] == true,
-      chosenVenueId: d['chosenVenueId'] as String?,
+      chosenVenueId: d['chosenVenueId'] as String?, // 예전 저장본
+      placeStatus: {
+        for (final e in ((d['placeStatus'] as Map?) ?? const {}).entries)
+          if (ItemStatus.values.where((x) => x.name == e.value).firstOrNull case final st?) e.key as String: st,
+      },
+      placeAmount: {
+        for (final e in ((d['placeAmount'] as Map?) ?? const {}).entries)
+          if (_int(e.value) case final v?) e.key as String: v,
+      },
+      placeDate: {
+        for (final e in ((d['placeDate'] as Map?) ?? const {}).entries)
+          if (_parseDate(e.value) case final v?) e.key as String: v,
+      },
+      manualPlaces: [
+        for (final m in ((d['manualPlaces'] as List?) ?? const []).cast<Map>())
+          ManualPlace(
+            id: m['id'] as String,
+            itemId: m['itemId'] as String,
+            name: m['name'] as String,
+            amount: _int(m['amount']),
+          ),
+      ],
     );
   }
 }
