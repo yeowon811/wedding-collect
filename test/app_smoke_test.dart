@@ -174,13 +174,17 @@ void main() {
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), 200, scrollable: list);
 
     // 할 일 캘린더: 달력과 이번 달 일정 (상담 신청한 날이 들어 있다)
-    await tester.ensureVisible(find.textContaining('캘린더 ·'));
+    await tester.ensureVisible(find.text('캘린더로 보기'));
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('캘린더 ·'));
+    await tester.tap(find.text('캘린더로 보기'));
     await tester.pumpAndSettle();
     expect(find.text('할 일 캘린더'), findsOneWidget);
     expect(find.textContaining('월 일정'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('전체 할 일'), 300,
+        scrollable: find.byType(Scrollable).last);
+    expect(find.textContaining('전체 할 일'), findsOneWidget);
     await back(tester);
+    expect(find.textContaining('다음 할 일 ·'), findsOneWidget); // 체크리스트에는 가장 가까운 할 일만
 
     expect(tester.takeException(), isNull);
   });

@@ -637,96 +637,86 @@ class _TimelineCard extends StatelessWidget {
 
   final AppState state;
 
+  void _openCalendar(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TaskCalendarScreen()));
+
   @override
   Widget build(BuildContext context) {
     final wedding = state.plan.weddingDate;
-    final today = DateTime.now();
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     final tasks = state.tasks;
     final done = tasks.where(state.isTaskDone).length;
-    final nextTodo = tasks.where((t) => !state.isTaskDone(t)).firstOrNull;
+    DateTime due(ChecklistTask t) {
+      final d = wedding.subtract(Duration(days: t.dMinus));
+      return DateTime(d.year, d.month, d.day);
+    }
+
+    final open = tasks.where((t) => !state.isTaskDone(t)).toList();
+    final overdue = open.where((t) => due(t).isBefore(today)).length;
+    // 가장 가깝게 남은 할 일 (마감일이 오늘 이후 중 가장 빠른 것)
+    final upcoming = open.where((t) => !due(t).isBefore(today)).toList()
+      ..sort((a, b) => due(a).compareTo(due(b)));
+    final next = upcoming.firstOrNull;
 
     return _Section(
       title: '예식일 기준 할 일',
-      trailing: TextButton.icon(
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TaskCalendarScreen())),
-        icon: const Icon(Icons.calendar_month_outlined, size: 18),
-        label: Text('캘린더 · $done/${tasks.length}'),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (nextTodo != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(12)),
-              child: Text('지금 할 일 · ${nextTodo.title}',
-                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            ),
-          for (final t in tasks) _taskRow(context, t, wedding, today),
-          const SizedBox(height: 8),
-          SizedBox(
+      trailing: Text('완료 $done/${tasks.length}', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // 카드를 누르면 캘린더
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _openCalendar(context),
+          child: Container(
             width: double.infinity,
-            child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('할 일 추가')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _taskRow(BuildContext context, ChecklistTask t, DateTime wedding, DateTime today) {
-    final due = wedding.subtract(Duration(days: t.dMinus));
-    final isDone = state.isTaskDone(t);
-    final overdue = !isDone && due.isBefore(today);
-    final auto = t.category != null && state.statusOf(t.category!).isDone;
-
-    return InkWell(
-      onTap: auto ? null : () => state.toggleTask(t.id),
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Icon(isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 22, color: isDone ? AppColors.success : AppColors.border),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    t.title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      decoration: isDone ? TextDecoration.lineThrough : null,
-                      color: isDone ? AppColors.textSecondary : AppColors.textPrimary,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(12)),
+            child: next == null
+                ? Text(open.isEmpty ? '모든 할 일을 마쳤어요' : '남은 할 일은 모두 시기가 지났어요',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary))
+                : Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
+                      child: Text(
+                        due(next) == today ? 'D-DAY' : 'D-${due(next).difference(today).inDays}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    auto
-                        ? 'D-${t.dMinus} · 계약 완료로 자동 체크'
-                        : 'D-${t.dMinus} · ${formatDateWithDay(due)}${overdue ? ' · 시기 지남' : ''}',
-                    style: TextStyle(fontSize: 13, color: overdue ? AppColors.warning : AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              tooltip: '할 일 삭제',
-              icon: Icon(Icons.close, size: 18, color: AppColors.textHint),
-              onPressed: () {
-                state.removeTask(t);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text("'${t.title}' 할 일을 지웠어요"),
-                  action: SnackBarAction(label: '되돌리기', onPressed: () => state.restoreTask(t)),
-                ));
-              },
-            ),
-          ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('다음 할 일 · ${next.title}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                        const SizedBox(height: 2),
+                        Text('${formatDateWithDay(due(next))}까지 · 예식 D-${next.dMinus}',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ]),
+                    ),
+                    Icon(Icons.chevron_right, color: AppColors.textHint),
+                  ]),
+          ),
         ),
-      ),
+        if (overdue > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('시기가 지난 할 일 $overdue개가 있어요 · 캘린더에서 확인하세요',
+                style: TextStyle(fontSize: 13, color: AppColors.warning)),
+          ),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('할 일 추가'))),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => _openCalendar(context),
+              icon: const Icon(Icons.calendar_month_outlined, size: 18),
+              label: const Text('캘린더로 보기'),
+            ),
+          ),
+        ]),
+      ]),
     );
   }
 

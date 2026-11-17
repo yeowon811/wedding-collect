@@ -87,6 +87,20 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
                 )
               else
                 for (final (d, e) in monthEvents) _eventRow(e, d),
+              const SizedBox(height: 12),
+              // 모든 할 일 (다른 달 것까지 한 번에)
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text('전체 할 일 ${_app.tasks.length}개',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  children: [
+                    for (final t in [..._app.tasks]..sort((a, b) => b.dMinus.compareTo(a.dMinus)))
+                      _eventRow(_Event.task(t), _due(t)),
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -195,7 +209,18 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
                 decoration: done ? TextDecoration.lineThrough : null,
                 color: done ? AppColors.textSecondary : AppColors.textPrimary,
               )),
-          subtitle: Text('${when}D-${t.dMinus}${auto ? ' · 계약 완료로 자동 체크' : ''}'),
+          subtitle: Text('${when}예식 D-${t.dMinus}${auto ? ' · 계약 완료로 자동 체크' : ''}'),
+          trailing: IconButton(
+            tooltip: '할 일 삭제',
+            icon: Icon(Icons.close, size: 18, color: AppColors.textHint),
+            onPressed: () {
+              _app.removeTask(t);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text("'${t.title}' 할 일을 지웠어요"),
+                action: SnackBarAction(label: '되돌리기', onPressed: () => _app.restoreTask(t)),
+              ));
+            },
+          ),
         );
       case _Kind.consult:
         final c = e.consult!;
