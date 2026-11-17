@@ -116,7 +116,6 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   }
 
   Widget _header(List<Venue> all) {
-    final free = all.where((v) => v.isFree).length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
@@ -126,7 +125,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '공공예식장',
+                  'We Connect',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
@@ -138,11 +137,6 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
               const FavoritesAction(),
               const AccountButton(),
             ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '전국 ${all.length}곳 · 대관료 무료 $free곳',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),

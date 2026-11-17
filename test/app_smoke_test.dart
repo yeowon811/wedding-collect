@@ -40,8 +40,8 @@ void main() {
     MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
-    expect(find.text('공공예식장'), findsWidgets);
-    expect(find.textContaining('전국 240곳'), findsOneWidget);
+    expect(find.text('We Connect'), findsOneWidget);
+    expect(find.textContaining('전국 240곳'), findsNothing); // 제목 아래 개수 줄은 없앰
 
     for (final tab in ['정책', '업체', '체크리스트', 'AI 상담', '예식장']) {
       await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text(tab)));
