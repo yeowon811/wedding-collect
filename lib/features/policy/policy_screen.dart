@@ -10,6 +10,7 @@ import '../../core/widgets/inputs.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
+import '../../data/models/user_profile.dart';
 import '../../data/models/policy.dart';
 import '../../data/repositories/policy_repository.dart';
 import 'policy_detail_screen.dart';
@@ -27,19 +28,16 @@ class PolicyScreen extends StatefulWidget {
 }
 
 class _PolicyScreenState extends State<PolicyScreen> {
-  // 시안을 바꿔 화면이 새로 만들어져도 입력값이 남도록 보관
-  static PolicyProfile? _savedProfile;
   static PolicyCategory? _savedCategory;
 
   late final Future<List<Policy>> _future = widget.repository.loadAll();
-  // 처음에는 체크리스트 탭 결혼 정보의 지역을 따른다
-  PolicyProfile _profile = _savedProfile ??
-      (AppState.instance.profileDone
-          ? PolicyProfile.fromUser(AppState.instance.profile)
-          : PolicyProfile(sido: AppState.instance.plan.sido));
   PolicyCategory? _category = _savedCategory;
+  final _app = AppState.instance;
 
-  void _update(PolicyProfile p) => setState(() => _profile = _savedProfile = p);
+  /// 내 상황 = 내 정보(AI 상담·체크리스트와 같은 값). 비어 있으면 공란으로 보여준다
+  UserProfile get _me => _app.profile;
+  bool get _blank => _me.sido == null && _me.age == null && _me.stage == null;
+  PolicyProfile get _profile => PolicyProfile.fromUser(_me);
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +46,9 @@ class _PolicyScreenState extends State<PolicyScreen> {
         title: const Text('맞춤 지원 정책'),
         actions: const [FavoritesAction(), AccountButton()],
       ),
-      body: FutureBuilder<List<Policy>>(
+      body: ListenableBuilder(
+        listenable: _app,
+        builder: (context, _) => FutureBuilder<List<Policy>>(
         future: _future,
         builder: (context, snap) {
           if (snap.hasError) {
@@ -57,7 +57,15 @@ class _PolicyScreenState extends State<PolicyScreen> {
           if (!snap.hasData) {
             return const SkeletonList(header: false);
           }
-          final judged = PolicyMatcher.judge(snap.data!, _profile);
+          // 내 상황을 입력하기 전에는 판정하지 않고 전체 정책을 보여준다
+          final judged = _blank
+              ? (
+                  matches: [
+                    for (final p in snap.data!) PolicyMatch(p, MatchLevel.check, const [], const ['내 상황을 입력하면 확인해 드려요'])
+                  ],
+                  misses: const <PolicyMiss>[],
+                )
+              : PolicyMatcher.judge(snap.data!, _profile);
           final matches = judged.matches;
           bool inCategory(Policy p) => _category == null || p.category == _category;
           final shown = matches.where((m) => inCategory(m.policy)).toList();
@@ -73,7 +81,9 @@ class _PolicyScreenState extends State<PolicyScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
                 child: Text(
-                  '정책 ${snap.data!.length}건 중 내 조건으로 ${shown.length}건 · 대상 여부는 기관에서 최종 확인',
+                  _blank
+                      ? '전체 정책 ${shown.length}건 · 내 상황을 입력하면 받을 수 있는 정책을 골라 드려요'
+                      : '정책 ${snap.data!.length}건 중 내 조건으로 ${shown.length}건 · 대상 여부는 기관에서 최종 확인',
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
               ),
@@ -82,7 +92,8 @@ class _PolicyScreenState extends State<PolicyScreen> {
                 TileGrid(runSpacing: 24, maxTileWidth: 400, minColumns: 1, children: [for (final m in likely) _PolicyCard(match: m)]),
               ],
               if (check.isNotEmpty) ...[
-                _groupHeader('조건 확인 필요', check.length, '소득·무주택처럼 앱이 알 수 없는 조건이 있어요', AppColors.warning),
+                if (!_blank)
+                  _groupHeader('조건 확인 필요', check.length, '소득·무주택처럼 앱이 알 수 없는 조건이 있어요', AppColors.warning),
                 TileGrid(runSpacing: 24, maxTileWidth: 400, minColumns: 1, children: [for (final m in check) _PolicyCard(match: m)]),
               ],
               if (shown.isEmpty)
@@ -102,17 +113,21 @@ class _PolicyScreenState extends State<PolicyScreen> {
           );
         },
       ),
+      ),
     );
   }
 
   /// 내 상황 요약 한 줄 + [조건 바꾸기] (입력은 아래에서 올라오는 창에서)
   Widget _profileCard() {
-    final p = _profile;
-    final summary = [
-      p.sido ?? '지역 미선택',
-      '만 ${p.age}세',
-      p.stage == MarriageStage.married ? '신혼부부 ${p.marriedYears}년차' : '예비부부',
-    ].join(' · ');
+    final u = _me;
+    final summary = _blank
+        ? '아직 입력하지 않았어요'
+        : [
+            u.sido ?? '지역 미입력',
+            if (u.age != null) '만 ${u.age}세',
+            if (u.stage != null)
+              u.stage == MarriageStage.married ? '신혼부부 ${u.marriedYears ?? 1}년차' : '예비부부',
+          ].join(' · ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
       child: Material(
@@ -129,10 +144,13 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   Text('내 상황', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   const SizedBox(height: 2),
                   Text(summary,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _blank ? AppColors.textHint : AppColors.textPrimary)),
                 ]),
               ),
-              Text('조건 바꾸기',
+              Text(_blank ? '입력하기' : '조건 바꾸기',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
             ]),
           ),
@@ -142,12 +160,15 @@ class _PolicyScreenState extends State<PolicyScreen> {
   }
 
   Future<void> _editProfile() async {
-    var draft = _profile;
-    final applied = await showModalBottomSheet<PolicyProfile>(
+    var draft = _me;
+    final applied = await showModalBottomSheet<UserProfile>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Column(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -157,22 +178,27 @@ class _PolicyScreenState extends State<PolicyScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 children: [
                   Text('내 상황', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 4),
+                  Text('AI 상담·체크리스트의 내 정보와 같이 바뀌어요.',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(height: 16),
                   FormSection(
                     title: '거주 지역',
-                    child: Wrap(spacing: 8, runSpacing: 8, children: [
-                      ChoiceChip(
-                        label: const Text('전국 정책만'),
-                        selected: draft.sido == null,
-                        onSelected: (_) => setSheet(() => draft = draft.copyWith(clearSido: true)),
+                    child: LayoutBuilder(
+                      builder: (context, box) => DropdownMenu<String>(
+                        width: box.maxWidth,
+                        initialSelection: draft.sido,
+                        hintText: '지역을 입력하거나 고르세요 (예: 서울)',
+                        enableFilter: true,
+                        requestFocusOnTap: true,
+                        menuHeight: 260,
+                        leadingIcon: const Icon(Icons.place_outlined),
+                        dropdownMenuEntries: [for (final s in kSidoList) DropdownMenuEntry(value: s, label: s)],
+                        onSelected: (s) {
+                          if (s != null) setSheet(() => draft = draft.copyWith(sido: s));
+                        },
                       ),
-                      for (final s in kSidoList)
-                        ChoiceChip(
-                          label: Text(s),
-                          selected: draft.sido == s,
-                          onSelected: (_) => setSheet(() => draft = draft.copyWith(sido: s)),
-                        ),
-                    ]),
+                    ),
                   ),
                   FormSection(
                     title: '만 나이',
@@ -180,9 +206,10 @@ class _PolicyScreenState extends State<PolicyScreen> {
                       value: draft.age,
                       min: 19,
                       max: 49,
+                      initial: 29,
                       unit: '세',
                       label: '만 나이',
-                      onChanged: (v) => setSheet(() => draft = draft.copyWith(age: v)),
+                      onChanged: (v) => setSheet(() => draft = draft.copyWith(age: v, clearAgeMax: true)),
                     ),
                   ),
                   FormSection(
@@ -200,6 +227,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                         value: draft.marriedYears,
                         min: 1,
                         max: 10,
+                        initial: 1,
                         unit: '년차',
                         label: '혼인 연차',
                         onChanged: (v) => setSheet(() => draft = draft.copyWith(marriedYears: v)),
@@ -216,9 +244,10 @@ class _PolicyScreenState extends State<PolicyScreen> {
             ]),
           ],
         ),
+        ),
       ),
     );
-    if (applied != null) _update(applied);
+    if (applied != null) _app.updateProfileDraft(applied);
   }
 
   /// 결과 묶음 제목: 색 점 + 이름 + 건수 + 한 줄 설명
