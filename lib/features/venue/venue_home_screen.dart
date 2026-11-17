@@ -4,6 +4,7 @@ import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/grid.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
@@ -83,17 +84,28 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 if (shown.isEmpty)
                   SliverToBoxAdapter(child: _empty())
                 else
-                  SliverList.builder(
-                    itemCount: shown.length,
-                    itemBuilder: (context, i) => VenueCard(
-                      venue: shown[i],
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => VenueDetailScreen(venue: shown[i]),
+                  // 2열 격자 (넓은 화면에서는 열이 늘어남). 칸 높이 = 카드 폭(정사각형 사진) + 글자 영역
+                  SliverLayoutBuilder(builder: (context, box) {
+                    final spec = GridSpec.of(box.crossAxisExtent);
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(GridSpec.sidePadding, 12, GridSpec.sidePadding, 0),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: spec.columns,
+                          crossAxisSpacing: GridSpec.gap,
+                          mainAxisSpacing: 20,
+                          mainAxisExtent: spec.tileWidth + VenueCard.textHeight,
+                        ),
+                        itemCount: shown.length,
+                        itemBuilder: (context, i) => VenueCard(
+                          venue: shown[i],
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => VenueDetailScreen(venue: shown[i])),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 const SliverToBoxAdapter(child: SizedBox(height: 16)),
               ],
             );

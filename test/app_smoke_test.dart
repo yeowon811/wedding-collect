@@ -94,9 +94,9 @@ void main() {
     await tester.tap(find.widgetWithText(ChoiceChip, '드레스'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 2; i++) {
-      await tester.ensureVisible(find.text('비교 담기').first);
+      await tester.ensureVisible(find.byTooltip('비교 담기').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('비교 담기').first);
+      await tester.tap(find.byTooltip('비교 담기').first);
       await tester.pumpAndSettle();
     }
     await tester.tap(find.text('비교하기'));
@@ -199,7 +199,10 @@ void main() {
     final h159 = venues.firstWhere((v) => v.id == 'H159'); // 세종: 사이트 접속 차단
     expect(h159.isCollected, isFalse);
     expect(h159.dataNotes.single, startsWith('수집 실패: 접근 차단'));
-    expect(venues.fold<int>(0, (n, v) => n + v.aiImages.length), 20);
+    // AI 생성 이미지는 실제 사진이 없는 곳(4곳)에만 남기고, 실제 사진이 있으면 뺀다
+    final aiOnly = venues.where((v) => v.aiImages.isNotEmpty).toList();
+    expect(aiOnly.length, 4);
+    expect(aiOnly.every((v) => v.aiImages.length == v.images.length), isTrue);
     // 정원 '1명'·'문의' 같은 값은 숫자로 쓰지 않고, 확인 필요 안내가 붙는다
     for (final v in venues.where((v) => v.capacityText != null && v.capacity == null)) {
       expect(v.dataNotes, isNotEmpty, reason: v.id);
@@ -212,14 +215,14 @@ void main() {
     expect(h001.feeLabel, '기본요금 10만원');
     expect(h001.images.length, 1);
 
-    // 더아결: 정원 범위, AI 생성 이미지 표시, 협력업체
+    // 더아결: 정원 범위, AI 생성 이미지 제외, 협력업체
     final h078 = venues.firstWhere((v) => v.id == 'H078');
     expect(h078.capacityMin, 100);
     expect(h078.capacity, 200);
     expect(h078.capacityLabel, '100~200명');
     expect(h078.isFree, isTrue);
-    expect(h078.aiImages.length, 1);
-    expect(h078.isAiImage(h078.coverImage!), isFalse); // 대표 사진은 실제 사진
+    expect(h078.aiImages, isEmpty); // 실제 사진이 있어 AI 생성 이미지는 뺌
+    expect(h078.images, isNotEmpty);
     expect(h078.partnerVendors, isNotEmpty);
     for (final v in venues) {
       expect(v.aiImages.every(v.images.contains), isTrue, reason: v.id);

@@ -14,117 +14,82 @@ class DemoVendorCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _grid(context);
+
+  /// 격자 카드: 4:3 회색 면(항목 아이콘) → 항목·지역 → 이름(2줄) → 가격대(굵게) → 평점. 비교 담기는 사진 위 버튼
+  Widget _grid(BuildContext context) {
     final state = AppState.instance;
     final v = vendor;
-    final budget = state.plan.budgetFor(v.category);
-    final estimate = v.estimate(guests: state.plan.guests);
-    final inBudget = budget == 0 || estimate <= budget;
     final summary = ReviewRepository.summaryFor(v);
-    final latest = ReviewRepository.reviewsFor(v).firstOrNull;
-
-    return _CardShell(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(v.category.icon, size: 18, color: AppColors.primaryDark),
-              const SizedBox(width: 6),
-              Text(v.category.label,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              const Spacer(),
-              const InfoBadge(label: '시연용', color: AppColors.unknown),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(v.name,
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF2B33D)),
-              Text(' ${summary.average}', style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text(' (후기 ${summary.count})',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(v.styles.join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              ),
-            ],
-          ),
-          if (latest != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              '“${latest.text}”',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
-            ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(v.priceText,
-                        style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primaryDark)),
-                    const SizedBox(height: 2),
-                    Text(
-                      inBudget ? '예상 $estimate만원 · 추천 예산 안' : '예상 $estimate만원 · 추천 예산 $budget만원 초과',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: inBudget ? AppColors.success : AppColors.warning,
-                      ),
-                    ),
-                  ],
+          AspectRatio(
+            aspectRatio: 4 / 3, // 업체는 사진이 없어 낮게
+            child: Stack(children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(12)),
+                  child: Center(child: Icon(v.category.icon, size: 36, color: AppColors.textHint)),
                 ),
               ),
-              ListenableBuilder(
-                listenable: state,
-                builder: (context, _) {
-                  final on = state.inCompare(v);
-                  // 카드 안의 작은 보조 버튼: 높이 36, 담으면 검정으로 채움
-                  return OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      backgroundColor: on ? AppColors.ink : Colors.white,
-                      foregroundColor: on ? Colors.white : AppColors.textPrimary,
-                      side: BorderSide(color: on ? AppColors.ink : AppColors.border),
-                    ),
-                    onPressed: () => state.toggleCompare(v),
-                    child: Text(on ? '비교 중' : '비교 담기'),
-                  );
-                },
+              Positioned(
+                right: 4,
+                top: 4,
+                child: ListenableBuilder(
+                  listenable: state,
+                  builder: (context, _) {
+                    final on = state.inCompare(v);
+                    return IconButton(
+                      tooltip: on ? '비교 중' : '비교 담기',
+                      onPressed: () => state.toggleCompare(v),
+                      icon: Icon(on ? Icons.check_circle : Icons.add_circle_outline,
+                          color: on ? AppColors.primary : AppColors.textSecondary),
+                    );
+                  },
+                ),
               ),
-            ],
+              if (v.publicVenueOk)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                    child: const Text('공공예식장 출장',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
+                  ),
+                ),
+            ]),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              if (v.publicVenueOk)
-                const InfoBadge(
-                    label: '공공예식장 출장 가능', icon: Icons.verified_outlined, color: AppColors.success),
-              for (final item in v.packageItems.take(2))
-                InfoBadge(label: item, color: AppColors.textSecondary),
-            ],
+          Text('${v.category.label} · ${v.sido}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(height: 2),
+          SizedBox(
+            height: 40,
+            child: Text(v.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4, color: AppColors.textPrimary)),
           ),
+          const SizedBox(height: 6),
+          Text(v.priceText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+          const SizedBox(height: 2),
+          Row(children: [
+            const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF2B33D)),
+            Text(' ${summary.average}',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textBody)),
+            Text(' (${summary.count})', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ]),
         ],
       ),
     );

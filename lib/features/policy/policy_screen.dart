@@ -4,6 +4,7 @@ import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/grid.dart';
 import '../../core/widgets/inputs.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/utils/region.dart';
@@ -76,11 +77,11 @@ class _PolicyScreenState extends State<PolicyScreen> {
               ),
               if (likely.isNotEmpty) ...[
                 _groupHeader('받을 가능성 높음', likely.length, '내 상황이 정책 조건과 맞아요', AppColors.success),
-                for (final m in likely) _PolicyCard(match: m),
+                TileGrid(runSpacing: 12, children: [for (final m in likely) _PolicyCard(match: m)]),
               ],
               if (check.isNotEmpty) ...[
                 _groupHeader('조건 확인 필요', check.length, '소득·무주택처럼 앱이 알 수 없는 조건이 있어요', AppColors.warning),
-                for (final m in check) _PolicyCard(match: m),
+                TileGrid(runSpacing: 12, children: [for (final m in check) _PolicyCard(match: m)]),
               ],
               if (shown.isEmpty)
                 EmptyState(
@@ -283,60 +284,52 @@ class _PolicyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = match.policy;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-      child: Material(
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.border),
+    final checks = match.checks;
+    // 격자 카드: 분야·지역 → 이름(3줄) → 지원 자격 요약(2줄) → 확인할 것 (높이 고정)
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: AppColors.border),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => PolicyDetailScreen(match: match)),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => PolicyDetailScreen(match: match)),
-          ),
+        child: SizedBox(
+          height: 196,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 가능성은 묶음 제목이 알려주므로 카드에는 분야·지역만 (배지 줄이기)
-                Text(
-                  '${p.category.label} · ${p.regionLabel}',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
+                Text('${p.category.label} · ${p.regionLabel}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
                 const SizedBox(height: 6),
+                Text(p.name,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.4, color: AppColors.textPrimary)),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: Text(p.eligibility,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, height: 1.45, color: AppColors.textSecondary)),
+                ),
                 Text(
-                  p.name,
-                  maxLines: 2,
+                  checks.isEmpty ? '조건이 잘 맞아요' : '확인할 것 ${checks.length}개 · ${checks.first}',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    height: 1.4,
-                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: checks.isEmpty ? AppColors.success : AppColors.warning,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  p.eligibility,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
-                ),
-                if (match.checks.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      '확인할 것 · ${match.checks.join(' · ')}',
-                      style: const TextStyle(fontSize: 13, color: AppColors.warning),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

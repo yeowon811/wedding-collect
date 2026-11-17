@@ -201,7 +201,7 @@ def main():
             for col, key in the_pairs:
                 if (sg(r, col) or None) != v[key]:
                     raw_diff.append((v["id"], col))
-            if [u for u in sg(r, "전체 이미지 URL").split("\n") if u.strip()] != v["images"]:
+            if cv.real_first([u for u in sg(r, "전체 이미지 URL").split("\n") if u.strip()])[0] != v["images"]:
                 raw_diff.append((v["id"], "전체 이미지 URL"))
     rep.check("[JSON] 원본 글자가 그대로 들어감 (출처별 정원·요금·주차·피로연·예식일 등)", not raw_diff,
               f"{raw_diff[:10]}", "다른 글자 0건")
@@ -221,8 +221,10 @@ def main():
               all(v["capacityMin"] is None or v["capacityMin"] <= v["capacity"] for v in js), "", "통과")
     rep.check("요금 값 범위 (0~1천만원)",
               all(0 <= v["rentalFee"] <= 10_000_000 for v in js if v["rentalFee"] is not None), "", "통과")
-    rep.check("AI 생성 이미지는 사진 목록 안에 있음",
-              all(set(v["aiImages"]) <= set(v["images"]) for v in js), "", f"{sum(len(v['aiImages']) for v in js)}장")
+    rep.check("AI 생성 이미지는 실제 사진이 없는 곳에만 남김",
+              all(not v["aiImages"] or set(v["aiImages"]) == set(v["images"]) for v in js), "",
+              f"실제 사진이 있는 곳의 AI 생성 이미지는 삭제, 남은 {sum(len(v['aiImages']) for v in js)}장"
+              f"({sum(1 for v in js if v['aiImages'])}곳)은 실제 사진이 없는 곳")
     rep.check("수집상태가 없는 곳에는 값이 없음",
               all(v["collectStatus"] or not (v["capacityText"] or v["feeText"] or v["images"]) for v in js))
 
@@ -321,7 +323,7 @@ def main():
             ("요금 (숫자로 사용 가능, 무료 포함)", stat(lambda v: v["rentalFee"] is not None)),
             ("└ 무료", stat(lambda v: v["rentalFee"] == 0)),
             ("사진 1장 이상", stat(lambda v: bool(v["images"]))),
-            ("└ AI 생성 이미지 포함", stat(lambda v: bool(v["aiImages"]))),
+            ("└ 실제 사진 없이 AI 생성 이미지만", stat(lambda v: bool(v["aiImages"]))),
             ("피로연 정보", stat(lambda v: v["reception"])),
             ("예식 가능일(26·27년)", stat(lambda v: v["availableDates2026"] or v["availableDates2027"])),
             ("주차", stat(lambda v: v["parking"])),
@@ -351,7 +353,7 @@ def main():
         "- 값이 있으면: 하객 수·무료 대관 필터와 카드·상세 화면에 표시",
         "- 값이 없거나 오류로 보이면: **제외하지 않고** '기관 확인 필요'로 표시하고 목록 아래쪽에 정렬",
         "- 정원이 범위(예: 100명~200명)면 최대값으로 하객 수 수용 여부를 판단하고 범위를 함께 표시",
-        "- **AI 생성 이미지는 'AI 생성 이미지' 표시**를 붙이고, 목록 카드 대표 사진으로는 실제 사진을 먼저 씀",
+        "- AI 생성 이미지(출처 사이트에 등록된 것)는 실제 사진이 있으면 빼고, 실제 사진이 없는 곳에만 대표 이미지로 씀",
     ]
     with open(os.path.join(OUT_DIR, "venues_report.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

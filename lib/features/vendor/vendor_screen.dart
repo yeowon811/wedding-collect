@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/grid.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
@@ -186,19 +187,21 @@ class _VendorScreenState extends State<VendorScreen> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: Text(
-            '가격·평점은 시연을 위해 임의로 만든 값이에요. 실제 업체가 아니에요.',
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            '시연용 가상 업체예요 (가격·평점 임의 생성)',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ),
-        for (final v in list)
-          DemoVendorCard(
-            vendor: v,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => DemoVendorDetailScreen(vendor: v)),
+        TileGrid(children: [
+          for (final v in list)
+            DemoVendorCard(
+              vendor: v,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => DemoVendorDetailScreen(vendor: v)),
+              ),
             ),
-          ),
+        ]),
       ],
     );
   }

@@ -174,6 +174,12 @@ def build(path: str):
 AI_IMAGE = re.compile(r"(?:^|[-_ .])AI(?:[-_ .]|$)|OPENAI_IMAGE")
 
 
+def real_first(images: list) -> tuple:
+    """실제 사진이 있으면 AI 생성 이미지는 뺀다. AI 생성 이미지만 있으면 그대로 둔다. → (images, aiImages)"""
+    real = [u for u in images if not is_ai_image(u)]
+    return (real, []) if real else (images, list(images))
+
+
 def is_ai_image(url: str) -> bool:
     """파일명에 'AI' 표시가 있거나 OPENAI 생성 파일이면 AI 생성 이미지로 본다 (수집 파일 기준과 같음)"""
     name = unquote(url.rsplit("/", 1)[-1])
@@ -248,8 +254,8 @@ def apply_theagyeol(venues: list, path: str) -> None:
             "availableDates2027": g("예식가능일자(27년)") or None,
             "partnerVendors": [p.strip() for p in g("협력전문웨딩업체").split(",") if p.strip()],
             "extraInfo": g("기타 안내") or None,
-            "images": images,
-            "aiImages": [u for u in images if is_ai_image(u)],
+            "images": real_first(images)[0],
+            "aiImages": real_first(images)[1],  # 실제 사진이 없을 때만 남긴 AI 생성 이미지
             "dataNotes": notes,
         })
 
@@ -351,8 +357,8 @@ def apply_rest(venues: list, path: str) -> None:
             "inquiry": g("문의") or None,
             "extraInfo": g("기타 안내") or None,
             "programInfo": g("공통 사업 안내") or None,
-            "images": images,
-            "aiImages": [u for u in images if is_ai_image(u)],
+            "images": real_first(images)[0],
+            "aiImages": real_first(images)[1],  # 실제 사진이 없을 때만 남긴 AI 생성 이미지
             "dataNotes": notes,
         })
 

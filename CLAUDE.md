@@ -72,7 +72,7 @@
   - 검증: `python -I tools/validate_venues.py "../공공예식장_eshare수집.xlsx" --reference "../전국 공공예식장 및 연계업체 현황 (2).xlsx" [--check-images]` → `docs/data-validation/venues_report.md`, 추가 수집 목록 `docs/data-validation/venues_to_collect.csv`(157곳)
   - **2026-11-16: `공공예식장_더아결수집.xlsx` 추가.** 대상 123곳 = 공유누리 미수집 123곳과 정확히 같음(겹침 없음). 수집 65곳(서울마이웨딩), 58곳은 여전히 미수집(인천·울산·세종 등 지자체 자체 예약처)
     - 열: 수용인원(범위 '100명~200명' → capacityMin/capacity), 대관료('무료…'로 시작하면 0, 그 외 원문), 피로연, 예식가능/불가일(26·27년), 주차, 협력전문웨딩업체(실제 업체 이름과 연결 164/268건), 기타 안내, 전체 이미지 URL(최대 32장)
-    - **AI 생성 이미지 20장(18곳)**: 파일명 'AI'·'OPENAI_IMAGE'로 판별(수집 파일 표시와 일치). 앱에서 'AI 생성 이미지' 배지, 카드 대표 사진은 실제 사진 우선
+    - **AI 생성 이미지 20장(18곳)**: 파일명 'AI'·'OPENAI_IMAGE'로 판별(수집 파일 표시와 일치). **2026-11-17: 실제 사진이 있는 14곳은 AI 이미지를 변환 때 삭제, 실제 사진이 없는 4곳(6장)만 남김. 앱의 AI 배지·안내 문구는 뺌**
     - 변환: `python -I tools/convert_venues.py "../공공예식장_eshare수집.xlsx" "../공공예식장_더아결수집.xlsx"`, 검증: `validate_venues.py ... --supplement "../공공예식장_더아결수집.xlsx"`
     - JSON 필드 `eshareStatus` → `collectSource`(공유누리/서울마이웨딩(더아결)) + `collectStatus`로 바꿈
   - **2026-11-16: `공공예식장_나머지.xlsx` 추가** (기관 페이지 직접 수집). 대상 58곳 = 앞 두 출처 미수집분과 정확히 같음, 기본 13개 열도 같음
@@ -100,13 +100,16 @@
     - **Gemini 연결 (2026-11-16):** Firebase AI Logic(Gemini Developer API, 무료), 프로젝트 `wedding-collect`, 모델 `gemini-3.5-flash-lite`. ① 질문 이해(JSON)와 ⑤ 답변 문장만 Gemini, 실패하면 규칙 기반. 답변 숫자가 조회 결과에 없으면 Gemini 문장을 버림. 코드 `agent/gemini_client.dart`, 설정 `lib/firebase_options.dart`(`flutterfire configure --project=wedding-collect --platforms=android,web`로 다시 만들 수 있음)
     - **실행할 때 `--dart-define-from-file=secrets.json` 필수** (App Check 디버그 토큰, 저장소 제외. 없으면 Gemini 호출이 거절되고 규칙 기반으로만 동작). 토큰은 콘솔 App Check 웹·안드로이드 앱에 등록됨
     - 평가: `test/eval/` 질문 42개, 결과 `docs/ai-eval/` (질문 이해: 규칙 29/42 → Gemini·앱 42/42, 1.5초 / 답변 문장: 숫자·표시어 검사 통과 4/15 → 15/15)
+    - **대화 흐름 (2026-11-17):** 최근 3턴 요약 상태 + 규칙 보완(평가 32/32). "두 번째 거"·"그중에 무료만"·"더 싼 곳"·"그럼 부산은?" 처리, 이어서 하기 때 기억 복원. `agent/conversation_context.dart`, 평가 `test/eval/context_*`, `docs/ai-eval/context_report.md`
     - 정책 판정(`policy_matcher.dart`)은 나이 범위(20대 등)·무주택 여부도 반영
 - 후기 (2026-11-15 추가): **시연용 업체에만** 있음. `lib/data/repositories/review_repository.dart`가 업체 ID 고정 시드로 생성 (별점 분포는 업체 평점·후기 수와 정확히 일치, 최근 30개 표시). 업체 상세에 요약(평균·분포·키워드)+최근 3개, 전체 보기(정렬·별점 필터), 상담/계약한 업체만 후기 쓰기. **실제 업체에는 가짜 후기를 만들지 않음** (안내 문구만 표시)
 - 공유 상태: `lib/data/app_state.dart`
 - **회원가입·로그인 (2026-11-17):** Firebase 이메일/비밀번호 인증 + Firestore `users/{uid}` 문서에 내 정보 자동 저장(변경 0.8초 후). `lib/data/account_service.dart`(AccountMode: unavailable/signedOut/guest/signedIn), `user_data_codec.dart`(저장 형식, 이메일은 저장 안 함), `lib/features/auth/login_screen.dart`(로그인·회원가입·비밀번호 재설정·**로그인 없이 둘러보기**, 가입 시 개인정보 동의), 각 탭 오른쪽 위 계정 버튼(저장 시각·로그아웃). 로그아웃하면 상태 초기화
+  - **AI 상담 대화도 저장** (최근 60개, AppState.chat): 사용자 문장의 전화번호·이메일은 가려서 저장, 결과 카드는 ref(`venue:H078` 등)로 다시 열기(`chat_card_link.dart`), 되묻기 상태·버튼은 저장 안 함. 다시 들어오면 "지난 상담이 있어요 → 이어서 하기 / 새로 시작하기", 상단 "새 상담" 버튼. 로그아웃하면 대화도 지움
   - 보안 규칙 `firestore.rules`(본인 문서만 읽기·쓰기), 배포: `firebase deploy --only firestore:rules --project wedding-collect`
   - 콘솔 준비: Authentication 이메일/비밀번호 사용 설정, Firestore 데이터베이스(asia-northeast3) 생성
   - Firebase가 없는 테스트 환경에서는 로그인 화면 없이 바로 앱(unavailable). 시연 링크(?tab= 등)로 열면 둘러보기로 시작
+- **목록 배치 (2026-11-17):** 예식장·정책·업체 목록은 2열 격자(쇼핑앱식, 넓은 화면은 열 증가). `lib/core/widgets/grid.dart`(GridSpec·TileGrid). 예식장 카드: 정사각형 사진→지역→이름→대관료(굵게)→정원 / 업체: 4:3 항목 아이콘 면 + 비교 담기(+) 버튼→가격→평점 / 정책: 분야·지역→이름→자격 요약→확인할 것
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`
@@ -114,6 +117,13 @@
   - 글자: 본문 15·설명 13 이상, 가장 연한 회색(textHint)은 입력 안내에만. 줄마다 아이콘·색 배지 남발 금지(정보는 이름·값 두 칸)
   - 로딩은 `SkeletonList`, 결과 없음은 `EmptyState`(원인에 맞는 다음 행동 버튼)
   - 화면 캡처: `flutter build web` → `python -I -m http.server 8095 --directory build/web` → `node tools/screenshots.mjs <폴더> "?tab=0" "?demo=1&tab=4" "?venue=H078" "?vendor=D0001" "?demo=1&policy=0"` (`|x,y`를 붙이면 그 위치를 누른 뒤 캡처, `WAIT_MS`로 대기 시간). 시연 링크는 `lib/app/demo_links.dart`
+
+## 배포 (2026-11-17)
+- **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
+- 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → `firebase deploy --only hosting --project wedding-collect`
+- 웹 제목·설명: `web/index.html`, `web/manifest.json` (결혼 준비 도우미)
+- 주의: 배포본에 App Check 디버그 토큰이 들어감 (무료 요금제라 비용 위험은 없고 최악은 무료 사용량 소진). 웹은 reCAPTCHA 제공자로 바꾸는 것이 안전. 공모전 후 콘솔에서 토큰 삭제
+- 캡처 도구로 배포본 확인: `BASE_URL=https://wedding-collect.web.app/ node tools/screenshots.mjs <폴더> "?demo=1&tab=4"`
 
 ## 다음 할 일
 1. 사용자의 디자인 기준(버튼 등) 받기 → 시안 3가지 → 디자인 기준 문서와 Flutter 테마 코드

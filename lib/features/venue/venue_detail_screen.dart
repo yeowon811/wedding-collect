@@ -284,7 +284,6 @@ class VenueDetailScreen extends StatelessWidget {
     final notes = v.isCollected
         ? [
             ...v.dataNotes,
-            if (v.aiImages.isNotEmpty) '사진 ${v.images.length}장 중 ${v.aiImages.length}장은 AI 생성 이미지예요 (실제 모습과 다를 수 있음).',
           ]
         : [
             '정원·요금·예식 가능일·사진이 아직 수집되지 않았어요. 예약 페이지나 문의처에서 확인해 주세요.',
@@ -399,7 +398,7 @@ class _PartnerVendors extends StatelessWidget {
   }
 }
 
-/// 사진 넘겨보기 (AI 생성 이미지는 표시)
+/// 사진 넘겨보기
 class _Gallery extends StatefulWidget {
   const _Gallery({required this.venue});
 
@@ -428,8 +427,6 @@ class _GalleryState extends State<_Gallery> {
               onPageChanged: (i) => setState(() => _page = i),
               itemBuilder: (_, i) => VenueImage(url: images[i]),
             ),
-            if (widget.venue.isAiImage(images[_page]))
-              const Positioned(left: 10, top: 10, child: AiImageBadge()),
             Positioned(
               right: 10,
               bottom: 10,
