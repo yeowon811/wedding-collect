@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../simulator/cost_simulator_screen.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
@@ -352,6 +353,15 @@ class _BudgetCard extends StatelessWidget {
           _line(AppColors.primary, '계약·결제 완료', confirmed),
           const SizedBox(height: 6),
           _line(AppColors.primary.withValues(alpha: 0.35), '예정 (금액만 적어 둔 항목)', planned),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen())),
+              child: const Text('결혼 비용 시뮬레이션'),
+            ),
+          ),
         ],
       ),
     );

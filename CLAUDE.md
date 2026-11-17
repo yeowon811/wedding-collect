@@ -117,6 +117,11 @@
   - **무료 사진 (11-17):** `tools/collect_stock_images.py`(Wikimedia Commons, CC0·PD·CC BY·CC BY-SA) → `assets/data/stock_images.json`(12개 묶음 44장, 주소·저작자·라이선스·출처). 파일은 받지 않고 앱이 위키미디어에서 불러옴(대량 다운로드 시 429 차단됨). `lib/data/repositories/stock_photos.dart`가 업체 ID로 고정 선택: [시연] 업체는 항목 사진, 사진 없는 실제 업체는 분류별 참고 사진(상세에 '참고 이미지 · 업체 사진 아님'). 상세 사진 아래 저작자·라이선스 표시. 화면 위젯 `vendor/widgets/vendor_photo.dart`
   - Gemini 이미지 생성은 무료 요금제 한도가 없어(quota 0) 쓰지 않음
   - 주의: 업체 사진은 저작권 허락을 받지 않은 이미지라, 소개서 출처 표에 '각 업체 홈페이지(대표 이미지 링크)'로 적고 필요하면 빼야 함
+- **비용 기준 데이터 (2026-11-17):** 사용자가 만든 `../업체_요소.xlsx`(웨딩옵션 22개 단가: 실속·공공 표준가 / 일반 평균가 / 숨은 추가금, 출처·지원 연계). `python -I tools/convert_options.py "../업체_요소.xlsx"` → `assets/data/wedding_options.json`(만원, 추가금 내역에서 addOns 추출). 엑셀 합계 줄은 수식이라 앱에서 계산. 정책 시트(12건)·대시보드 시트는 아직 안 씀
+  - **[시연] 업체 가격 재생성:** `convert_vendors.py`가 wedding_options.json 기준으로 등급(실속 35%·표준 40%·프리미엄 25%)을 뽑고 기준가 주변 범위를 무작위 생성(가격 전용 시드, 이름·평점·후기 수는 그대로). 업체마다 `tier`, `addOns`(±30%). 식대는 1인, 청첩장은 100장 단위로 나눔
+  - **업체 상세 추가 옵션:** `AddOnPicker` 체크하면 '옵션 포함 예상' 금액·내 예산 비교가 바뀜
+  - **비용 시뮬레이터:** `lib/features/simulator/cost_simulator_screen.dart` (체크리스트 예산 카드 '결혼 비용 시뮬레이션', AI 예산 답변 버튼 action `open_simulator`, 시연 링크 `?page=simulator`). 22개 항목 켜고 끄기 → 공공·실속 vs 일반 웨딩(평균가+숨은 추가금) 총액·절감액·총예산 비교, 비용 컨설팅(절감 큰 항목 3개·숨은 추가금), 하객 수(식대·답례품 비례), 지자체 지원금 −100만원 토글. 선택은 AppState.simSelected/simVoucher로 계정 저장
+- **찜 (2026-11-17):** 예식장·업체·정책 카드와 상세 화면에 하트(`core/widgets/favorite_button.dart`, ref = `venue:`/`vendor:`(시연)/`real:`(실제)/`policy:`), 예식장·정책·업체 탭 상단 하트 → `features/favorites/favorites_screen.dart`(종류별 모아 보기, 시연 링크 `?page=favorites`). AppState.favorites로 계정 저장
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

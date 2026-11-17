@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/favorite_button.dart';
 import '../../../core/widgets/info_badge.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/vendor.dart';
@@ -42,9 +43,10 @@ class DemoVendorCard extends StatelessWidget {
                   ),
                 ),
               ),
+              Positioned(right: 4, top: 4, child: FavoriteButton(ref: 'vendor:${v.id}', onImage: true)),
               Positioned(
                 right: 4,
-                top: 4,
+                bottom: 4,
                 child: ListenableBuilder(
                   listenable: state,
                   builder: (context, _) {
@@ -133,6 +135,7 @@ class RealVendorTile extends StatelessWidget {
                   ),
                 ),
               ),
+              Positioned(right: 4, top: 4, child: FavoriteButton(ref: 'real:${v.id}', onImage: true)),
               Positioned(
                 left: 8,
                 bottom: 8,

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../data/app_state.dart';
 import '../data/models/user_profile.dart';
 import '../data/repositories/repositories.dart';
+import '../features/favorites/favorites_screen.dart';
 import '../features/policy/policy_detail_screen.dart';
 import '../features/policy/policy_matcher.dart';
+import '../features/simulator/cost_simulator_screen.dart';
 import '../features/vendor/demo_vendor_detail_screen.dart';
 import '../features/venue/venue_detail_screen.dart';
 
@@ -13,13 +15,14 @@ import '../features/venue/venue_detail_screen.dart';
 /// - `?venue=H078`    : 예식장 상세
 /// - `?vendor=<ID>`   : 시연용 업체 상세
 /// - `?policy=<번호>` : 맞춤 정책 목록의 N번째 정책 상세 (0부터)
+/// - `?page=simulator` / `?page=favorites` : 비용 시뮬레이터 / 찜 목록
 class DemoLinks {
   DemoLinks._();
 
   static Map<String, String> get _q => Uri.base.queryParameters;
 
   /// 시연·캡처용 주소로 열었는지 (로그인 화면 없이 둘러보기로 시작)
-  static bool get isDemoLink => const ['demo', 'tab', 'venue', 'vendor', 'policy'].any(_q.containsKey);
+  static bool get isDemoLink => const ['demo', 'tab', 'venue', 'vendor', 'policy', 'page'].any(_q.containsKey);
 
   /// 앱 시작 전에 적용 (내 정보)
   static void applyProfile() {
@@ -49,6 +52,10 @@ class DemoLinks {
       final matches = PolicyMatcher.match(all, PolicyProfile.fromUser(AppState.instance.profile));
       final i = int.tryParse(n) ?? 0;
       if (i < matches.length) page = PolicyDetailScreen(match: matches[i]);
+    } else if (_q['page'] == 'simulator') {
+      page = const CostSimulatorScreen();
+    } else if (_q['page'] == 'favorites') {
+      page = const FavoritesScreen();
     }
     if (page != null && nav.mounted) {
       final p = page;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/favorite_button.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/venue.dart';
 import 'venue_image.dart';
@@ -34,7 +35,8 @@ class VenueCard extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 1,
-            child: ClipRRect(
+            child: Stack(fit: StackFit.expand, children: [
+              ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: v.images.isEmpty
                   ? ColoredBox(
@@ -58,7 +60,9 @@ class VenueCard extends StatelessWidget {
                           ),
                         ),
                     ]),
-            ),
+              ),
+              Positioned(right: 4, top: 4, child: FavoriteButton(ref: 'venue:${v.id}', onImage: true)),
+            ]),
           ),
           const SizedBox(height: 8),
           Text(v.region,

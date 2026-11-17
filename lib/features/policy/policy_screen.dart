@@ -4,6 +4,8 @@ import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/favorite_button.dart';
+import '../favorites/favorites_screen.dart';
 import '../../core/widgets/grid.dart';
 import '../../core/widgets/inputs.dart';
 import '../../core/widgets/skeleton.dart';
@@ -44,7 +46,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('맞춤 지원 정책'),
-        actions: const [AccountButton()],
+        actions: const [FavoritesAction(), AccountButton()],
       ),
       body: FutureBuilder<List<Policy>>(
         future: _future,
@@ -304,10 +306,23 @@ class _PolicyCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${p.category.label} · ${p.regionLabel}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                Row(children: [
+                  Expanded(
+                    child: Text('${p.category.label} · ${p.regionLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  ),
+                  SizedBox(
+                    width: 28,
+                    height: 20,
+                    child: OverflowBox(
+                      maxWidth: 48,
+                      maxHeight: 48,
+                      child: FavoriteButton(ref: 'policy:${p.id}', size: 20),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 6),
                 Text(p.name,
                     maxLines: 3,

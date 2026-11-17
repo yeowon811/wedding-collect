@@ -1,3 +1,4 @@
+import '../../core/widgets/favorite_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,7 +20,7 @@ class RealVendorDetailScreen extends StatelessWidget {
     final v = vendor;
     final phone = v.phone.replaceAll(RegExp(r'[^0-9]'), '');
     return Scaffold(
-      appBar: AppBar(title: const Text('업체 정보')),
+      appBar: AppBar(title: const Text('업체 정보'), actions: [FavoriteButton(ref: 'real:${v.id}')]),
       bottomNavigationBar: v.url.isEmpty && phone.isEmpty
           ? null
           : BottomActionBar(children: [

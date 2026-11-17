@@ -1,3 +1,4 @@
+import '../../core/widgets/favorite_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -121,7 +122,7 @@ class VenueDetailScreen extends StatelessWidget {
     final contactIsPhone = _phonePattern.hasMatch(v.bookingContact.trim());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('예식장 정보')),
+      appBar: AppBar(title: const Text('예식장 정보'), actions: [FavoriteButton(ref: 'venue:${venue.id}')]),
       // 주요 행동은 화면 아래에 고정 (스크롤하지 않아도 바로 누를 수 있게)
       bottomNavigationBar: BottomActionBar(children: [
         if (contactIsPhone)

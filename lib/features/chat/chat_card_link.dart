@@ -5,6 +5,7 @@ import '../../data/repositories/repositories.dart';
 import '../policy/policy_detail_screen.dart';
 import '../policy/policy_matcher.dart';
 import '../vendor/demo_vendor_detail_screen.dart';
+import '../vendor/real_vendor_detail_screen.dart';
 import '../venue/venue_detail_screen.dart';
 
 /// 저장된 대화의 결과 카드를 눌렀을 때: 'venue:H078' 같은 연결 정보로 상세 화면을 찾아 연다
@@ -22,6 +23,9 @@ class ChatCardLink extends StatelessWidget {
       case 'vendor':
         final v = (await Repos.vendor.demoVendors()).where((v) => v.id == id).firstOrNull;
         return v == null ? null : DemoVendorDetailScreen(vendor: v);
+      case 'real':
+        final v = (await Repos.vendor.realVendors()).where((v) => v.id == id).firstOrNull;
+        return v == null ? null : RealVendorDetailScreen(vendor: v);
       case 'policy':
         final all = await Repos.policy.loadAll();
         final judged = PolicyMatcher.judge(all, PolicyProfile.fromUser(AppState.instance.profile));

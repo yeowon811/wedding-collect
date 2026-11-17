@@ -1,3 +1,4 @@
+import '../../core/widgets/favorite_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -26,7 +27,7 @@ class DemoVendorDetailScreen extends StatelessWidget {
     final v = vendor;
 
     return Scaffold(
-      appBar: AppBar(title: Text(v.category.label)),
+      appBar: AppBar(title: Text(v.category.label), actions: [FavoriteButton(ref: 'vendor:${v.id}')]),
       // 주요 행동: 상담 신청(주) + 계약 완료 표시(보조), 화면 아래 고정
       bottomNavigationBar: ListenableBuilder(
         listenable: state,
@@ -105,6 +106,8 @@ class DemoVendorDetailScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(total),
                     ],
+                    const SizedBox(height: 4),
+                    Text('${v.tier} 등급 · 시연용 가격', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     Text(
                       budget == null
@@ -121,6 +124,10 @@ class DemoVendorDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (v.addOns.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                AddOnPicker(vendor: v, base: estimate, budget: budget),
+              ],
               const SizedBox(height: 24),
               Row(children: [
                 const Expanded(
@@ -183,5 +190,58 @@ class DemoVendorDetailScreen extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// 추가 옵션 고르기: 체크하면 예상 금액이 바로 바뀐다 (시연용)
+class AddOnPicker extends StatefulWidget {
+  const AddOnPicker({super.key, required this.vendor, required this.base, this.budget});
+
+  final DemoVendor vendor;
+  final int base; // 기본 예상 금액 (만원)
+  final int? budget; // 준비 항목에 정한 금액
+
+  @override
+  State<AddOnPicker> createState() => _AddOnPickerState();
+}
+
+class _AddOnPickerState extends State<AddOnPicker> {
+  final _on = <int>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final adds = widget.vendor.addOns;
+    final extra = _on.fold(0, (s, i) => s + adds[i].price);
+    final total = widget.base + extra;
+    final b = widget.budget;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('추가 옵션', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text('계약할 때 자주 붙는 옵션이에요. 고르면 금액이 바뀌어요.',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+      const SizedBox(height: 8),
+      for (var i = 0; i < adds.length; i++)
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _on.contains(i),
+          onChanged: (_) => setState(() => _on.contains(i) ? _on.remove(i) : _on.add(i)),
+          title: Text(adds[i].name, style: const TextStyle(fontSize: 14)),
+          secondary: Text('+${adds[i].price}만원', style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
+      const Divider(),
+      Row(children: [
+        const Expanded(child: Text('옵션 포함 예상', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
+        Text('약 $total만원', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primary)),
+      ]),
+      if (b != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            total <= b ? '내 ${widget.vendor.category.label} 예산 $b만원 안이에요' : '내 예산 $b만원보다 ${total - b}만원 많아요',
+            style: TextStyle(fontSize: 13, color: total <= b ? AppColors.success : AppColors.warning),
+          ),
+        ),
+    ]);
   }
 }

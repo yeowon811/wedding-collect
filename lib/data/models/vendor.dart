@@ -149,12 +149,16 @@ class DemoVendor {
     required this.rating,
     required this.reviewCount,
     required this.publicVenueOk,
+    this.tier = '표준',
+    this.addOns = const [],
   });
 
   final String id;
   final String name;
   final VendorCategory category;
   final String sido;
+  final String tier; // 실속 / 표준 / 프리미엄 (시연용 가격 등급)
+  final List<VendorAddOn> addOns; // 고르면 금액이 늘어나는 추가 옵션
   final int priceMin; // 만원
   final int priceMax;
   final String priceUnit; // '', '1인', '100장'
@@ -199,6 +203,11 @@ class DemoVendor {
     rating: (j['rating'] as num).toDouble(),
     reviewCount: (j['reviewCount'] as num).toInt(),
     publicVenueOk: j['publicVenueOk'] as bool,
+    tier: j['tier'] as String? ?? '표준',
+    addOns: [
+      for (final a in ((j['addOns'] as List?) ?? const []).cast<Map<String, dynamic>>())
+        VendorAddOn(a['name'] as String, a['price'] as int),
+    ],
   );
 }
 
@@ -225,4 +234,12 @@ class VendorMatch {
     distanceKm: (j['distanceKm'] as num).toDouble(),
     linkType: j['linkType'] as String,
   );
+}
+
+/// 시연 업체 추가 옵션 (만원). 기준: 업체_요소.xlsx의 '숨은 필수 추가금' 내역
+class VendorAddOn {
+  const VendorAddOn(this.name, this.price);
+
+  final String name;
+  final int price;
 }

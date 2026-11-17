@@ -126,16 +126,52 @@ def build_matches(sheets):
     return out
 
 
+# 시연 업체 가격 기준: 업체_요소.xlsx(tools/convert_options.py → wedding_options.json)의
+# 실속·공공 표준가 / 일반 웨딩 평균가. 단위가 다른 항목은 1인·100장 기준으로 나눈다.
+UNIT_DIVISOR = {"MEAL": 100, "INVITATION": 2}  # 식대: 하객 100명 기준 → 1인, 청첩장: 200매 → 100장
+TIERS = [("실속", 0.35), ("표준", 0.40), ("프리미엄", 0.25)]
+
+
+def load_price_basis():
+    path = os.path.join(DATA, "wedding_options.json")
+    opts = json.load(open(path, encoding="utf-8"))
+    return {o["category"]: o for o in opts if o["category"]}
+
+
+def demo_price(rnd, code, basis):
+    """가격대(만원): 등급을 무작위로 정한 뒤 기준가 주변에서 범위를 뽑는다 (시연용, 정확한 값 아님)"""
+    o = basis[code]
+    div = UNIT_DIVISOR.get(code, 1)
+    pub, avg = o["publicPrice"] / div, o["averagePrice"] / div
+    tier = rnd.choices([t for t, _ in TIERS], [w for _, w in TIERS])[0]
+    center = {
+        "실속": rnd.uniform(0.8, 1.05) * pub,
+        "표준": rnd.uniform(pub, avg),
+        "프리미엄": rnd.uniform(1.05, 1.4) * avg,
+    }[tier]
+    p_min = max(1, round(center * rnd.uniform(0.82, 0.95)))
+    p_max = max(p_min + 1, round(center * rnd.uniform(1.08, 1.3)))
+    add_ons = [
+        {"name": a["name"], "price": max(1, round(a["price"] * rnd.uniform(0.7, 1.3)))}
+        for a in o["addOns"] if rnd.random() < 0.85
+    ]
+    return tier, p_min, p_max, add_ons
+
+
 def build_demo():
     rnd = random.Random(20261123)
+    price_rnd = random.Random(20261117)  # 가격 전용 (이름·평점 순서는 그대로 두려고 따로)
+    basis = load_price_basis()
     out = []
     n = 0
     for sido in SIDOS:
         for code, lo, hi, unit, words, items, styles in DEMO_CATEGORIES:
             for name in rnd.sample(words, 3):
                 n += 1
-                p_min = rnd.randint(lo, max(lo, int(hi * 0.7)))
-                p_max = rnd.randint(p_min + max(1, (hi - lo) // 6), hi + max(1, (hi - lo) // 5))
+                # 예전 무작위 호출은 그대로 둬서 이름·평점·후기 수가 바뀌지 않게 한다
+                old_min = rnd.randint(lo, max(lo, int(hi * 0.7)))
+                rnd.randint(old_min + max(1, (hi - lo) // 6), hi + max(1, (hi - lo) // 5))
+                tier, p_min, p_max, add_ons = demo_price(price_rnd, code, basis)
                 out.append({
                     "id": f"D{n:04d}",
                     "name": f"[시연] {name} {sido}점",
@@ -144,6 +180,8 @@ def build_demo():
                     "priceMin": p_min,  # 만원 단위
                     "priceMax": p_max,
                     "priceUnit": unit,
+                    "tier": tier,  # 실속 / 표준 / 프리미엄
+                    "addOns": add_ons,  # 선택 추가 옵션 (만원)
                     "packageItems": rnd.sample(items, min(len(items), rnd.randint(3, 4))),
                     "styles": rnd.sample(styles, 2),
                     "rating": round(rnd.uniform(4.0, 4.9), 1),

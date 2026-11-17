@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/vendor.dart';
+import '../models/wedding_option.dart';
 import 'stock_photos.dart';
 
 /// 실제 업체, 시연용 업체, 예식장-업체 매칭 데이터를 읽는다.
@@ -10,6 +11,13 @@ class VendorRepository {
   List<RealVendor>? _real;
   List<DemoVendor>? _demo;
   Map<String, List<VendorMatch>>? _matches;
+  List<WeddingOption>? _options;
+
+  /// 비용 시뮬레이터 항목 22개
+  Future<List<WeddingOption>> options() async => _options ??= (await _json('wedding_options.json'))
+      .cast<Map<String, dynamic>>()
+      .map(WeddingOption.fromJson)
+      .toList(growable: false);
 
   Future<List<dynamic>> _json(String name) async =>
       jsonDecode(await rootBundle.loadString('assets/data/$name'))

@@ -127,9 +127,9 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
     // 후기: 요약·목록이 보이고, 상담한 업체라 후기를 쓸 수 있다
-    await tester.scrollUntilVisible(find.text('많이 언급된 키워드'), -300,
+    await tester.scrollUntilVisible(find.text('많이 언급된 키워드'), 300,
         scrollable: find.byType(Scrollable).first);
-    await tester.scrollUntilVisible(find.text('후기 쓰기'), -300,
+    await tester.scrollUntilVisible(find.text('후기 쓰기'), -200,
         scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('후기 쓰기'));

@@ -63,6 +63,9 @@ class UserDataCodec {
         },
     ],
     'doneTasks': s.doneTasks.toList(),
+    'favorites': s.favorites.toList(),
+    if (s.simSelected != null) 'simSelected': s.simSelected!.toList(),
+    'simVoucher': s.simVoucher,
     'consultations': [
       for (final c in s.consultations)
         {
@@ -257,6 +260,9 @@ class UserDataCodec {
         for (final m in ((d['chat'] as List?) ?? const []).cast<Map>()) _decodeMessage(m),
       ],
       chatUpdatedAt: _parseDate(d['chatUpdatedAt']),
+      favorites: ((d['favorites'] as List?) ?? const []).cast<String>().toSet(),
+      simSelected: (d['simSelected'] as List?)?.cast<String>().toSet(),
+      simVoucher: d['simVoucher'] == true,
     );
   }
 }

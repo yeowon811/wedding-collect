@@ -62,6 +62,9 @@ class AppState extends ChangeNotifier {
     List<Review> myReviews = const [],
     List<ChatMessage> chat = const [],
     DateTime? chatUpdatedAt,
+    Set<String> favorites = const {},
+    Set<String>? simSelected,
+    bool simVoucher = false,
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -97,6 +100,37 @@ class AppState extends ChangeNotifier {
     this.chatUpdatedAt = chatUpdatedAt;
     chatFromSaved = chat.isNotEmpty; // 저장된 대화가 있으면 이어갈지 먼저 묻는다
     chatEpoch++;
+    this.favorites
+      ..clear()
+      ..addAll(favorites);
+    this.simSelected = simSelected == null ? null : {...simSelected};
+    this.simVoucher = simVoucher;
+    notifyListeners();
+  }
+
+  // ───────────────────────── 찜 (하트) ─────────────────────────
+
+  /// 찜한 것: 'venue:H078', 'vendor:D0001'(시연 업체), 'real:V003'(실제 업체), 'policy:P012'
+  final Set<String> favorites = {};
+
+  bool isFavorite(String ref) => favorites.contains(ref);
+
+  void toggleFavorite(String ref) {
+    favorites.contains(ref) ? favorites.remove(ref) : favorites.add(ref);
+    notifyListeners();
+  }
+
+  // ───────────────────────── 비용 시뮬레이터 ─────────────────────────
+
+  /// 고른 항목 id (null이면 아직 손대지 않음 → 기본 채택 항목)
+  Set<String>? simSelected;
+
+  /// 지자체 지원금(바우처) 반영 여부
+  bool simVoucher = false;
+
+  void setSimulation({Set<String>? selected, bool? voucher}) {
+    if (selected != null) simSelected = {...selected};
+    if (voucher != null) simVoucher = voucher;
     notifyListeners();
   }
 

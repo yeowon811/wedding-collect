@@ -9,6 +9,7 @@ import 'agent/gemini_client.dart';
 import '../../core/widgets/inputs.dart';
 import 'chat_agent.dart';
 import 'chat_card_link.dart';
+import '../simulator/cost_simulator_screen.dart';
 import 'profile_setup_view.dart';
 
 /// AI 상담: 내 정보 입력 → 첫 추천 → 질문 → (필요하면 되묻기) → 답변
@@ -105,8 +106,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _run(() => _agent.reply(q), userMessage: ChatMessage(fromUser: true, text: q));
   }
 
-  void _choose(QuickReply r) =>
-      _run(() => _agent.choose(r), userMessage: ChatMessage(fromUser: true, text: r.label));
+  void _choose(QuickReply r) {
+    if (r.action == 'open_simulator') {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen()));
+      return;
+    }
+    _run(() => _agent.choose(r), userMessage: ChatMessage(fromUser: true, text: r.label));
+  }
 
   void _scrollDown() {
     WidgetsBinding.instance.addPostFrameCallback((_) {

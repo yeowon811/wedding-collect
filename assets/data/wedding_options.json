@@ -1,0 +1,495 @@
+[
+ {
+  "id": "dress",
+  "category": "DRESS",
+  "group": "기본 스드메·의상",
+  "name": "드레스",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 100,
+  "averagePrice": 150,
+  "hiddenExtra": 35,
+  "perGuest": false,
+  "detail": "본식 드레스 1벌 + 촬영용 2벌 기준",
+  "extraDetail": "추가금: 피팅비(투어 2곳 10만) + 신상/블랙라벨 업그레이드(25만)",
+  "addOns": [
+   {
+    "name": "피팅비 (투어 2곳)",
+    "price": 10
+   },
+   {
+    "name": "신상/블랙라벨 업그레이드",
+    "price": 25
+   }
+  ],
+  "support": "서울시 '더 아름다운 결혼식' 선정 시 스드메 최대 300만 원 지원 연계 가능",
+  "sourceName": "서울시 더아결 표준가격표 / 아이웨딩 정찰가",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr"
+ },
+ {
+  "id": "makeup",
+  "category": "MAKEUP",
+  "group": "기본 스드메·의상",
+  "name": "메이크업",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 60,
+  "averagePrice": 90,
+  "hiddenExtra": 20,
+  "perGuest": false,
+  "detail": "신랑·신부 본식 및 리허설 헤어·메이크업",
+  "extraDetail": "추가금: 실장→부원장/원장 직급 지정비(15만) + 얼리스타트 새벽비용(5만)",
+  "addOns": [
+   {
+    "name": "실장→부원장/원장 직급 지정비",
+    "price": 15
+   },
+   {
+    "name": "얼리스타트 새벽비용",
+    "price": 5
+   }
+  ],
+  "support": "공공예식장 표준가격제 협약 업체 이용 시 직급 지정 추가금 면제 혜택",
+  "sourceName": "서울시 더아결 표준가격표 / 웨딩북 정찰제",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr"
+ },
+ {
+  "id": "studio",
+  "category": "STUDIO",
+  "group": "사진·영상 기록",
+  "name": "웨딩촬영 (스튜디오)",
+  "defaultOn": true,
+  "kind": "선택옵션",
+  "publicPrice": 120,
+  "averagePrice": 175,
+  "hiddenExtra": 55,
+  "perGuest": false,
+  "detail": "리허설 앨범 20P + 기본 액자",
+  "extraDetail": "추가금: 원본·수정본 데이터 필수구매(44만) + 야간/로드씬 추가(11만)",
+  "addOns": [
+   {
+    "name": "원본·수정본 데이터 필수구매",
+    "price": 44
+   },
+   {
+    "name": "야간/로드씬 추가",
+    "price": 11
+   }
+  ],
+  "support": "공공예식장 야외 스냅으로 리허설 촬영 대체 시 스튜디오 비용 전액 절감 가능",
+  "sourceName": "한국소비자원 결혼서비스 가격정보 (참가격)",
+  "sourceUrl": "https://www.price.go.kr"
+ },
+ {
+  "id": "snap",
+  "category": "SNAP",
+  "group": "사진·영상 기록",
+  "name": "스냅사진 (본식스냅)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 50,
+  "averagePrice": 85,
+  "hiddenExtra": 15,
+  "perGuest": false,
+  "detail": "본식 1인 작가 원판+스냅 합본",
+  "extraDetail": "추가금: 2인 작가 변경 또는 메이크업샵 동행 촬영 추가(15만)",
+  "addOns": [
+   {
+    "name": "2인 작가 변경 또는 메이크업샵 동행 촬영 추가",
+    "price": 15
+   }
+  ],
+  "support": "공공예식장 협약 작가 섭외 시 출장비 면제 및 원판 포함 정찰가 적용",
+  "sourceName": "숨고(Soomgo) 본식스냅 시세 / 크몽 정찰제",
+  "sourceUrl": "https://soomgo.com"
+ },
+ {
+  "id": "video",
+  "category": "VIDEO",
+  "group": "사진·영상 기록",
+  "name": "본식 영상 (DVD/아이폰)",
+  "defaultOn": true,
+  "kind": "선택옵션",
+  "publicPrice": 35,
+  "averagePrice": 65,
+  "hiddenExtra": 10,
+  "perGuest": false,
+  "detail": "4K 본식 시네마틱 영상 1인 캠 또는 아이폰 스냅",
+  "extraDetail": "추가금: 다각도 2캠 추가 및 SNS 하이라이트 편집본(10만)",
+  "addOns": [
+   {
+    "name": "다각도 2캠 추가 및 SNS 하이라이트 편집본",
+    "price": 10
+   }
+  ],
+  "support": "실속형 1인 4K 캠 또는 공공예식장 셀프 기록 선택 시 40% 이상 절감",
+  "sourceName": "크몽(Kmong) 웨딩영상 / 다이렉트결혼준비",
+  "sourceUrl": "https://kmong.com"
+ },
+ {
+  "id": "meal",
+  "category": "MEAL",
+  "group": "식사·피로연",
+  "name": "식대 (하객 100명 기준)",
+  "defaultOn": true,
+  "kind": "공통(핵심비중)",
+  "publicPrice": 420,
+  "averagePrice": 800,
+  "hiddenExtra": 60,
+  "perGuest": true,
+  "detail": "하객 100명 기준 (공공: 출장뷔페/한상 4.2만 vs 일반홀 서울 중간값 8만)",
+  "extraDetail": "추가금: 주류·음료 별도 정산 및 보증인원 미달 공석비(60만)",
+  "addOns": [
+   {
+    "name": "주류·음료 별도 정산 및 보증인원 미달 공석비",
+    "price": 60
+   }
+  ],
+  "support": "공공예식장은 최소 보증인원(50~100명)이 낮아 공석 식대 낭비 원천 차단",
+  "sourceName": "한국소비자원 식대 조사 / 더아결 케이터링 표준가",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr"
+ },
+ {
+  "id": "invitation",
+  "category": "INVITATION",
+  "group": "예식 소품·안내",
+  "name": "청첩장 (종이+모바일)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 15,
+  "averagePrice": 28,
+  "hiddenExtra": 5,
+  "perGuest": false,
+  "detail": "종이 청첩장 200매 + 모바일 청첩장",
+  "extraDetail": "추가금: 식권 유료 인쇄, 실링왁스 스티커 및 컬러봉투 업그레이드(5만)",
+  "addOns": [
+   {
+    "name": "식권 유료 인쇄, 실링왁스 스티커 및 컬러봉투 업그레이드",
+    "price": 5
+   }
+  ],
+  "support": "모바일 청첩장 무료 템플릿 및 에코 재생지 청첩장 선택 시 비용 최소화",
+  "sourceName": "바른손카드 / 보자기카드 정찰 단가표",
+  "sourceUrl": "https://www.barunsoncard.com"
+ },
+ {
+  "id": "props",
+  "category": "PROPS",
+  "group": "예식 소품·안내",
+  "name": "부케·케이크·화기",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 16,
+  "averagePrice": 35,
+  "hiddenExtra": 8,
+  "perGuest": false,
+  "detail": "신부 생화 부케 + 부토니아 + 양가 코사지 6개",
+  "extraDetail": "추가금: 수입 생화(작약·은방울꽃) 변경 및 웨딩케이크(8만)",
+  "addOns": [
+   {
+    "name": "수입 생화(작약·은방울꽃) 변경 및 웨딩케이크",
+    "price": 8
+   }
+  ],
+  "support": "지자체 비품비 바우처(최대 100만 원)로 조화/생화 부케 및 연출 소품 충당 가능",
+  "sourceName": "네이버 스마트스토어 웨딩부케 인기 상품군",
+  "sourceUrl": "https://search.shopping.naver.com"
+ },
+ {
+  "id": "suit",
+  "category": "SUIT",
+  "group": "기본 스드메·의상",
+  "name": "신랑 정장 (예복)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 45,
+  "averagePrice": 95,
+  "hiddenExtra": 15,
+  "perGuest": false,
+  "detail": "신랑 본식 예복 대여 또는 국내원단 맞춤정장",
+  "extraDetail": "추가금: 촬영용 턱시도 추가 대여 및 맞춤 수제화·타이 세트(15만)",
+  "addOns": [
+   {
+    "name": "촬영용 턱시도 추가 대여 및 맞춤 수제화·타이 세트",
+    "price": 15
+   }
+  ],
+  "support": "기성 정장 활용 + 본식용 보타이/베스트 단품 대여 시 70% 이상 비용 절감",
+  "sourceName": "포튼가먼트 / 미니스트로 웨딩 패키지 공지가",
+  "sourceUrl": "https://soomgo.com"
+ },
+ {
+  "id": "hanbok",
+  "category": "HANBOK",
+  "group": "혼주·가족 예우",
+  "name": "어머니 한복 (양가 2벌)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 50,
+  "averagePrice": 90,
+  "hiddenExtra": 12,
+  "perGuest": false,
+  "detail": "양가 어머님 본식 한복 2벌 세트 대여",
+  "extraDetail": "추가금: 실크(본견) 원단 업그레이드 및 노리개·비녀·한복신발 대여(12만)",
+  "addOns": [
+   {
+    "name": "실크(본견) 원단 업그레이드 및 노리개·비녀·한복신발 대여",
+    "price": 12
+   }
+  ],
+  "support": "양가 커플 대여 패키지 할인 또는 세미 정장(양장) 대체 시 대폭 절감",
+  "sourceName": "베틀한복 / 한복린 정찰 대여 패키지",
+  "sourceUrl": "https://www.bettl.co.kr"
+ },
+ {
+  "id": "parentMakeup",
+  "category": "PARENT_MAKEUP",
+  "group": "혼주·가족 예우",
+  "name": "혼주 메이크업 (양가 4인)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 48,
+  "averagePrice": 72,
+  "hiddenExtra": 10,
+  "perGuest": false,
+  "detail": "양가 부모님 4인 헤어·메이크업 (1인당 12~18만)",
+  "extraDetail": "추가금: 가발(부분피스) 부착비 및 출장 새벽 할증(10만)",
+  "addOns": [
+   {
+    "name": "가발(부분피스) 부착비 및 출장 새벽 할증",
+    "price": 10
+   }
+  ],
+  "support": "출장 메이크업 4인 다인 할인 패키지 이용 시 이동 불편 해소 및 비용 절감",
+  "sourceName": "숨고(Soomgo) 혼주 출장 메이크업 평균 시세",
+  "sourceUrl": "https://soomgo.com"
+ },
+ {
+  "id": "host",
+  "category": "HOST",
+  "group": "본식 연출·진행",
+  "name": "사회·진행 (전문MC/기획)",
+  "defaultOn": true,
+  "kind": "공통(필수)",
+  "publicPrice": 25,
+  "averagePrice": 40,
+  "hiddenExtra": 10,
+  "perGuest": false,
+  "detail": "전문 사회자 섭외 또는 예식 식순 디렉팅",
+  "extraDetail": "추가금: 주례 없는 예식 시나리오 작성 및 2부 피로연 진행비(10만)",
+  "addOns": [
+   {
+    "name": "주례 없는 예식 시나리오 작성 및 2부 피로연 진행비",
+    "price": 10
+   }
+  ],
+  "support": "지인 사회 진행 또는 공공예식장 표준 기획·진행 패키지 포함 시 절감",
+  "sourceName": "크몽(Kmong) 웨딩 전문 사회자 정찰가",
+  "sourceUrl": "https://kmong.com"
+ },
+ {
+  "id": "rental",
+  "category": null,
+  "group": "공공예식장 특화",
+  "name": "대관료 (예식 공간)",
+  "defaultOn": true,
+  "kind": "공공특화(핵심)",
+  "publicPrice": 0,
+  "averagePrice": 330,
+  "hiddenExtra": 50,
+  "perGuest": false,
+  "detail": "공공예식장(시청·공원·박물관 등 73곳+) 무료~50만 원 vs 일반 웨딩홀 평균 대관료 330만",
+  "extraDetail": "추가금: 일반홀 폐백실·신부대기실 사용료(50만)",
+  "addOns": [
+   {
+    "name": "일반홀 폐백실·신부대기실 사용료",
+    "price": 50
+   }
+  ],
+  "support": "서울시·경기도 등 지정 공공예식장 이용 시 대관료 전액 무료(0원) 지원",
+  "sourceName": "공유누리 / 서울시 더 아름다운 결혼식 공고",
+  "sourceUrl": "https://www.eshare.go.kr"
+ },
+ {
+  "id": "flower",
+  "category": null,
+  "group": "공공예식장 특화",
+  "name": "꽃장식·공간연출 (버진로드)",
+  "defaultOn": true,
+  "kind": "공공특화(핵심)",
+  "publicPrice": 150,
+  "averagePrice": 300,
+  "hiddenExtra": 80,
+  "perGuest": false,
+  "detail": "단상·버진로드·포토테이블·웰컴아치 플라워 연출",
+  "extraDetail": "추가금: 일반 웨딩홀 생화 랩핑 강제 추가금(80만)",
+  "addOns": [
+   {
+    "name": "일반 웨딩홀 생화 랩핑 강제 추가금",
+    "price": 80
+   }
+  ],
+  "support": "서울시 비품비 바우처 100만 원 지원 적용 시 실부담 50만 원대로 연출 가능",
+  "sourceName": "서울시 공공예식장 표준가격표 (실속형 150만)",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr/notice/916"
+ },
+ {
+  "id": "equipment",
+  "category": null,
+  "group": "공공예식장 특화",
+  "name": "음향·조명·의자 집기 렌탈",
+  "defaultOn": true,
+  "kind": "공공특화(핵심)",
+  "publicPrice": 150,
+  "averagePrice": 0,
+  "hiddenExtra": 0,
+  "perGuest": false,
+  "detail": "야외/강당용 음향장비(50만) + 하객 의자·테이블·천막 설치(100만)",
+  "extraDetail": "※ 일반 웨딩홀은 대관료에 기포함",
+  "addOns": [],
+  "support": "지자체 공공예식장 비품 지원금(최대 100만 원)으로 렌탈비 상쇄 가능",
+  "sourceName": "서울시 공공예식장 표준가격표 (장비·비품 항목)",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr/notice/916"
+ },
+ {
+  "id": "directing",
+  "category": "DIRECTING",
+  "group": "공공예식장 특화",
+  "name": "총괄 디렉팅·현장 진행비",
+  "defaultOn": true,
+  "kind": "공공특화(필수)",
+  "publicPrice": 100,
+  "averagePrice": 0,
+  "hiddenExtra": 0,
+  "perGuest": false,
+  "detail": "공공예식장 전담 웨딩 플래닝 및 당일 현장 세팅·철거 총괄 인력비 (표준가격표 기준 100만 원)",
+  "extraDetail": "",
+  "addOns": [],
+  "support": "공공예식장 전담 협력업체 표준단가 적용으로 불투명한 바가지 요금 차단",
+  "sourceName": "서울시 공공예식장 표준가격표 (기획·진행비)",
+  "sourceUrl": "https://wedding.seoulwomen.or.kr/notice/916"
+ },
+ {
+  "id": "shuttle",
+  "category": null,
+  "group": "공공예식장 특화",
+  "name": "하객 셔틀버스 대절 (45인승)",
+  "defaultOn": false,
+  "kind": "공공특화(선택)",
+  "publicPrice": 55,
+  "averagePrice": 65,
+  "hiddenExtra": 8,
+  "perGuest": false,
+  "detail": "주차가 협소한 공원·숲속 공공예식장 또는 지방 하객 이동용 전세버스 1대",
+  "extraDetail": "추가금: 톨게이트비·주차비·기사님 식대(8만)",
+  "addOns": [
+   {
+    "name": "톨게이트비·주차비·기사님 식대",
+    "price": 8
+   }
+  ],
+  "support": "대중교통 역세권 공공예식장(시청 태평홀 등) 선택 시 불필요",
+  "sourceName": "올버스(Allbus) 전세버스 실시간 견적 비교",
+  "sourceUrl": "https://allbus.kr"
+ },
+ {
+  "id": "helper",
+  "category": null,
+  "group": "숨은추가금 방어",
+  "name": "본식·촬영 헬퍼비 (수모비)",
+  "defaultOn": true,
+  "kind": "공통(필수주의)",
+  "publicPrice": 22,
+  "averagePrice": 25,
+  "hiddenExtra": 25,
+  "perGuest": false,
+  "detail": "드레스 환복 및 촬영/본식 동행 헬퍼 도우미 인건비 (1회 22~25만 원 현금 별도 결제 관행)",
+  "extraDetail": "촬영+본식 2회 시 50만 원 발생",
+  "addOns": [],
+  "support": "리허설 촬영 생략 또는 원피스형 셀프 웨딩드레스 착용 시 헬퍼비 100% 절감",
+  "sourceName": "다이렉트결혼준비 / 한국소비자원 추가금 실태조사",
+  "sourceUrl": "https://www.directwedding.co.kr"
+ },
+ {
+  "id": "hairChange",
+  "category": null,
+  "group": "숨은추가금 방어",
+  "name": "헤어 변형 출장 작가",
+  "defaultOn": false,
+  "kind": "선택옵션",
+  "publicPrice": 20,
+  "averagePrice": 30,
+  "hiddenExtra": 5,
+  "perGuest": false,
+  "detail": "웨딩촬영 또는 2부 피로연 시 생화 장식·번헤어·웨이브 변형 전담 스태프",
+  "extraDetail": "추가금: 생화 코사지 및 타임 연장비(5만)",
+  "addOns": [
+   {
+    "name": "생화 코사지 및 타임 연장비",
+    "price": 5
+   }
+  ],
+  "support": "기본 메이크업샵 스타일링 유지 시 전액 절감 가능",
+  "sourceName": "숨고 / 인스타그램 헤어변형 정찰 공지가",
+  "sourceUrl": "https://soomgo.com"
+ },
+ {
+  "id": "song",
+  "category": null,
+  "group": "본식 연출·진행",
+  "name": "축가·연주 섭외",
+  "defaultOn": true,
+  "kind": "선택옵션",
+  "publicPrice": 20,
+  "averagePrice": 45,
+  "hiddenExtra": 5,
+  "perGuest": false,
+  "detail": "전문 축가 가수 또는 현악/재즈 3중주 연주팀 섭외",
+  "extraDetail": "추가금: MR 편집 및 원거리 출장비(5만)",
+  "addOns": [
+   {
+    "name": "MR 편집 및 원거리 출장비",
+    "price": 5
+   }
+  ],
+  "support": "친구/지인 축가 진행 또는 공공예식장 음향 BGM 활용 시 절감",
+  "sourceName": "크몽(Kmong) 웨딩 축가·연주 카테고리",
+  "sourceUrl": "https://kmong.com"
+ },
+ {
+  "id": "gift",
+  "category": null,
+  "group": "예식 소품·안내",
+  "name": "답례품 (식사 대체/감사선물)",
+  "defaultOn": true,
+  "kind": "공통(실속추천)",
+  "publicPrice": 50,
+  "averagePrice": 80,
+  "hiddenExtra": 0,
+  "perGuest": true,
+  "detail": "하객 100명 기준 고급 답례품(휘낭시에·소금·전통주 등 개당 5,000~8,000원)",
+  "extraDetail": "피로연 미진행 시 고단가 답례품으로 식대 대체 가능",
+  "addOns": [],
+  "support": "서울시×민간협약(농심 등) 기획전 선정 시 답례품 무상 지원 혜택 연계",
+  "sourceName": "네이버 스마트스토어 웨딩답례품 베스트",
+  "sourceUrl": "https://search.shopping.naver.com"
+ },
+ {
+  "id": "welcome",
+  "category": null,
+  "group": "사진·영상 기록",
+  "name": "웰컴 아크릴 액자·포토테이블",
+  "defaultOn": true,
+  "kind": "선택옵션",
+  "publicPrice": 6,
+  "averagePrice": 25,
+  "hiddenExtra": 15,
+  "perGuest": false,
+  "detail": "식장 입구 대형 웰컴 아크릴 액자(20x24인치) 및 포토테이블 액자 세트",
+  "extraDetail": "스튜디오 구매 시 25만+ vs 외부 인터넷 직구 시 6만 원",
+  "addOns": [],
+  "support": "스튜디오 프레임 업그레이드 대신 스마트스토어 직구 제작으로 75% 절감",
+  "sourceName": "스마트스토어 웨딩 아크릴액자 정찰 제작소",
+  "sourceUrl": "https://search.shopping.naver.com"
+ }
+]

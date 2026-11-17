@@ -5,6 +5,7 @@ import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/grid.dart';
+import '../favorites/favorites_screen.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
@@ -135,6 +136,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                   ),
                 ),
               ),
+              const FavoritesAction(),
               const AccountButton(),
             ],
           ),

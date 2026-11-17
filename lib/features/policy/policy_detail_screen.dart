@@ -1,3 +1,4 @@
+import '../../core/widgets/favorite_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,7 +19,7 @@ class PolicyDetailScreen extends StatelessWidget {
     final host = Uri.tryParse(p.url)?.host.replaceFirst('www.', '') ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('정책 정보')),
+      appBar: AppBar(title: const Text('정책 정보'), actions: [FavoriteButton(ref: 'policy:${match.policy.id}')]),
       bottomNavigationBar: BottomActionBar(children: [
         SizedBox(
           width: double.infinity,
