@@ -57,6 +57,7 @@ class WeddingPlan {
 /// 준비 항목의 진행 상태
 enum ItemStatus {
   todo('미정'),
+  candidate('후보'), // 찜한 업체·예식장이 있음
   consulting('상담 중'),
   contracted('계약 완료'),
   paid('결제 완료');

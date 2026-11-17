@@ -13,6 +13,11 @@ class VendorRepository {
   Map<String, List<VendorMatch>>? _matches;
   List<WeddingOption>? _options;
 
+  /// 이미 읽어 둔 목록 (아직이면 null)
+  List<RealVendor>? get realCached => _real;
+  List<DemoVendor>? get demoCached => _demo;
+  List<WeddingOption>? get optionsCached => _options;
+
   /// 비용 시뮬레이터 항목 22개
   Future<List<WeddingOption>> options() async => _options ??= (await _json('wedding_options.json'))
       .cast<Map<String, dynamic>>()

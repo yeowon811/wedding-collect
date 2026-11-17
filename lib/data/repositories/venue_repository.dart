@@ -9,6 +9,9 @@ import '../models/venue.dart';
 class VenueRepository {
   List<Venue>? _cache;
 
+  /// 이미 읽어 둔 목록 (아직이면 null)
+  List<Venue>? get cached => _cache;
+
   Future<List<Venue>> loadAll() async {
     if (_cache != null) return _cache!;
     final raw = await rootBundle.loadString('assets/data/venues.json');

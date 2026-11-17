@@ -1,3 +1,7 @@
+import '../../data/candidates.dart';
+import '../../data/repositories/repositories.dart';
+import '../chat/chat_card_link.dart';
+import '../estimate/estimate_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -16,12 +20,18 @@ import '../../data/models/wedding_plan.dart';
 class ChecklistScreen extends StatelessWidget {
   const ChecklistScreen({super.key});
 
+  /// 후보(찜한 업체·예식장) 계산에 쓰는 데이터를 한 번 읽어 둔다
+  static final Future<void> _preload =
+      Future.wait([Repos.venue.loadAll(), Repos.vendor.realVendors(), Repos.vendor.demoVendors()]);
+
   @override
   Widget build(BuildContext context) {
     final state = AppState.instance;
     return Scaffold(
       appBar: AppBar(title: const Text('준비 체크리스트'), actions: const [AccountButton()]),
-      body: ListenableBuilder(
+      body: FutureBuilder(
+        future: _preload,
+        builder: (context, _) => ListenableBuilder(
         listenable: state,
         builder: (context, _) => ListView(
           padding: const EdgeInsets.only(bottom: 24),
@@ -33,6 +43,7 @@ class ChecklistScreen extends StatelessWidget {
             if (state.consultations.isNotEmpty) _ConsultationCard(state: state),
           ],
         ),
+      ),
       ),
     );
   }
@@ -357,14 +368,23 @@ class _BudgetCard extends StatelessWidget {
           const SizedBox(height: 6),
           _line(AppColors.primary.withValues(alpha: 0.35), '예정 (금액만 적어 둔 항목)', planned),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen())),
-              child: const Text('결혼 비용 시뮬레이션'),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen())),
+                child: const Text('비용 시뮬레이션'),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EstimateScreen())),
+                child: const Text('내 견적서 A·B안'),
+              ),
+            ),
+          ]),
         ],
       ),
     );
@@ -413,6 +433,11 @@ class _ItemStatusCard extends StatelessWidget {
       if (item.vendorName != null) item.vendorName!,
       item.amount != null ? formatManwon(item.amount!) : '금액 미입력',
     ].join(' · ');
+    final cands = Candidates.forItem(item, state);
+    final venue = item.id == AppState.venueItemId && state.chosenVenueId != null
+        ? Repos.venue.cached?.where((v) => v.id == state.chosenVenueId).firstOrNull
+        : null;
+    final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
     return InkWell(
       onTap: () => showItemEditor(context, state, item: item),
       borderRadius: BorderRadius.circular(10),
@@ -432,6 +457,22 @@ class _ItemStatusCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 13, color: item.amount == null ? AppColors.textHint : AppColors.textSecondary)),
+                  if (venue != null)
+                    Text(
+                      '${venue.capacityLabel}${fits == null ? '' : (fits ? ' · 하객 ${state.plan.guests}명 수용 가능' : ' · 하객 ${state.plan.guests}명은 정원 초과')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: fits == false ? AppColors.warning : AppColors.success),
+                    ),
+                  if (cands.isNotEmpty)
+                    InkWell(
+                      onTap: () => _showCandidates(context, item, cands),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('${Candidates.summary(cands)} ›',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -444,7 +485,49 @@ class _ItemStatusCard extends StatelessWidget {
   }
 }
 
-/// 상태 표시: 미정(회색) / 상담 중(주황) / 계약 완료·결제 완료(초록)
+/// 찜한 후보 목록 (눌러서 상세로)
+void _showCandidates(BuildContext context, PlanItem item, List<CandidateInfo> list) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+            child: Text('${item.name} 후보 ${list.length}곳',
+                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('찜(하트)한 곳이 후보로 모여요. 눌러서 자세히 보고 상담·계약을 진행하세요.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          ),
+          Flexible(
+            child: ListView(shrinkWrap: true, children: [
+              for (final c in list)
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  title: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(c.sub, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: Text(c.priceText, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatCardLink(ref: c.ref)));
+                  },
+                ),
+            ]),
+          ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    ),
+  );
+}
+
+/// 상태 표시: 미정(회색) / 후보(파랑) / 상담 중(주황) / 계약 완료·결제 완료(초록)
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.status});
 
@@ -454,6 +537,7 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (fg, bg) = switch (status) {
       ItemStatus.todo => (AppColors.textSecondary, AppColors.fill),
+      ItemStatus.candidate => (AppColors.primary, AppColors.primarySoft),
       ItemStatus.consulting => (AppColors.warning, AppColors.warningSoft),
       ItemStatus.contracted || ItemStatus.paid => (AppColors.success, AppColors.successSoft),
     };

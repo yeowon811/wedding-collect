@@ -67,6 +67,8 @@ class UserDataCodec {
     'favorites': s.favorites.toList(),
     if (s.simSelected != null) 'simSelected': s.simSelected!.toList(),
     'simVoucher': s.simVoucher,
+    if (s.chosenVenueId != null) 'chosenVenueId': s.chosenVenueId,
+    'estimates': s.estimates,
     'consultations': [
       for (final c in s.consultations)
         {
@@ -273,6 +275,11 @@ class UserDataCodec {
       favorites: ((d['favorites'] as List?) ?? const []).cast<String>().toSet(),
       simSelected: (d['simSelected'] as List?)?.cast<String>().toSet(),
       simVoucher: d['simVoucher'] == true,
+      chosenVenueId: d['chosenVenueId'] as String?,
+      estimates: {
+        for (final e in ((d['estimates'] as Map?) ?? const {}).entries)
+          e.key as String: (e.value as Map).cast<String, String>(),
+      },
     );
   }
 }

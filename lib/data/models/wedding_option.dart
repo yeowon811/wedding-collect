@@ -3,6 +3,7 @@
 class WeddingOption {
   const WeddingOption({
     required this.id,
+    this.category,
     required this.group,
     required this.name,
     required this.defaultOn,
@@ -19,6 +20,7 @@ class WeddingOption {
   });
 
   final String id;
+  final String? category; // 준비 항목 코드 (DRESS 등), 없으면 공공예식장 특화 항목
   final String group; // 기본 스드메·의상, 사진·영상 기록 …
   final String name;
   final bool defaultOn;
@@ -46,6 +48,7 @@ class WeddingOption {
 
   factory WeddingOption.fromJson(Map<String, dynamic> j) => WeddingOption(
         id: j['id'] as String,
+        category: j['category'] as String?,
         group: j['group'] as String,
         name: j['name'] as String,
         defaultOn: j['defaultOn'] as bool,

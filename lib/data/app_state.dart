@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../features/chat/chat_agent.dart';
 import 'models/review.dart';
+import 'candidates.dart';
 import 'models/user_profile.dart';
+import 'models/venue.dart';
 import 'models/vendor.dart';
 import 'models/wedding_plan.dart';
 
@@ -65,6 +67,8 @@ class AppState extends ChangeNotifier {
     Set<String> favorites = const {},
     Set<String>? simSelected,
     bool simVoucher = false,
+    String? chosenVenueId,
+    Map<String, Map<String, String>> estimates = const {},
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -105,6 +109,10 @@ class AppState extends ChangeNotifier {
       ..addAll(favorites);
     this.simSelected = simSelected == null ? null : {...simSelected};
     this.simVoucher = simVoucher;
+    this.chosenVenueId = chosenVenueId;
+    this.estimates
+      ..clear()
+      ..addAll({for (final e in estimates.entries) e.key: {...e.value}});
     notifyListeners();
   }
 
@@ -116,7 +124,73 @@ class AppState extends ChangeNotifier {
   bool isFavorite(String ref) => favorites.contains(ref);
 
   void toggleFavorite(String ref) {
-    favorites.contains(ref) ? favorites.remove(ref) : favorites.add(ref);
+    final adding = !favorites.contains(ref);
+    adding ? favorites.add(ref) : favorites.remove(ref);
+    if (adding && ref.startsWith('venue:')) ensureVenueItem(); // 예식장을 찜하면 체크리스트에 '예식장' 항목
+    syncCandidateStatus();
+    notifyListeners();
+  }
+
+  /// 찜 = 후보: 후보가 생기면 '미정' → '후보', 모두 빼면 '후보' → '미정'
+  void syncCandidateStatus() {
+    for (final item in items) {
+      final has = Candidates.forItem(item, this).isNotEmpty;
+      if (has && item.status == ItemStatus.todo) item.status = ItemStatus.candidate;
+      if (!has && item.status == ItemStatus.candidate) item.status = ItemStatus.todo;
+    }
+  }
+
+  // ───────────────────────── 예식장 (준비 항목) ─────────────────────────
+
+  static const venueItemId = 'venue';
+
+  /// [이 곳으로 정하기]로 고른 예식장
+  String? chosenVenueId;
+
+  /// 체크리스트 맨 위 '예식장' 항목 (없으면 만든다)
+  PlanItem ensureVenueItem() {
+    var item = items.where((i) => i.id == venueItemId).firstOrNull;
+    if (item == null) {
+      item = PlanItem(id: venueItemId, name: '예식장');
+      items.insert(0, item);
+    }
+    return item;
+  }
+
+  /// 예식장 상세의 [이 곳으로 정하기]: 예식장 항목에 이름·대관료를 넣고, 지역을 입력 안 했으면 채운다
+  void chooseVenue(Venue v) {
+    chosenVenueId = v.id;
+    favorites.add('venue:${v.id}');
+    final item = ensureVenueItem()
+      ..vendorName = v.name
+      ..amount = v.rentalFee == null ? null : (v.rentalFee! / 10000).round();
+    if (item.status == ItemStatus.todo || item.status == ItemStatus.candidate) item.status = ItemStatus.consulting;
+    if (!plan.hasSido) updatePlan(plan.copyWith(sido: v.sido));
+    // '공공예식장 둘러보고 신청 기간 확인하기'는 끝낸 것으로
+    if (tasks.any((t) => t.id == 't02')) doneTasks.add('t02');
+    notifyListeners();
+  }
+
+  void clearVenue() {
+    chosenVenueId = null;
+    final item = items.where((i) => i.id == venueItemId).firstOrNull;
+    if (item != null) {
+      item
+        ..vendorName = null
+        ..amount = null
+        ..status = ItemStatus.todo;
+    }
+    syncCandidateStatus();
+    notifyListeners();
+  }
+
+  // ───────────────────────── 내 결혼 견적서 (A안·B안) ─────────────────────────
+
+  /// 'A'/'B' → 항목 키('venue', 'dress' …) → 고른 것 ('avg:public', 'avg:general', 'mine', 'none', 'ref:vendor:D0001')
+  final Map<String, Map<String, String>> estimates = {};
+
+  void setEstimate(String plan, String key, String choice) {
+    estimates.putIfAbsent(plan, () => {})[key] = choice;
     notifyListeners();
   }
 
@@ -281,6 +355,7 @@ class AppState extends ChangeNotifier {
     final index = items.indexOf(item);
     items.remove(item);
     if (item.category != null) contracts.remove(item.category);
+    if (item.id == venueItemId) chosenVenueId = null;
     notifyListeners();
     return index;
   }
