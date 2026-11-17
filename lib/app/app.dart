@@ -12,7 +12,7 @@ class WeddingCollectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '공공예식장 찾기',
+      title: 'We Connect',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       locale: const Locale('ko', 'KR'),
