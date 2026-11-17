@@ -25,6 +25,7 @@ class UserDataCodec {
     'profileDone': s.profileDone,
     'profile': {
       'sido': s.profile.sido,
+      'sigungu': s.profile.sigungu,
       'age': s.profile.age,
       'ageMax': s.profile.ageMax,
       'stage': s.profile.stage?.name,
@@ -166,6 +167,7 @@ class UserDataCodec {
     final p = (d['profile'] as Map?)?.cast<String, dynamic>() ?? const {};
     final profile = UserProfile(
       sido: p['sido'] as String?,
+      sigungu: p['sigungu'] as String?,
       age: _int(p['age']),
       ageMax: _int(p['ageMax']),
       stage: MarriageStage.values

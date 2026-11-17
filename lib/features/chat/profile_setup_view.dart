@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
-import '../../core/utils/region.dart';
 import '../../core/widgets/inputs.dart';
+import '../../core/widgets/region_fields.dart';
 import '../../data/app_state.dart';
 import '../../data/models/user_profile.dart';
 
@@ -36,8 +36,13 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
   void _onAppChanged() {
     final a = _app.profile;
     if (identical(a, _p) || !mounted) return; // 이 화면에서 바꾼 것
-    if (a.sido == _p.sido && a.guests == _p.guests && a.budget == _p.budget && a.weddingDate == _p.weddingDate) return;
-    setState(() => _p = _p.copyWith(sido: a.sido, guests: a.guests, budget: a.budget, weddingDate: a.weddingDate));
+    if (a.sido == _p.sido && a.sigungu == _p.sigungu && a.guests == _p.guests && a.budget == _p.budget &&
+        a.weddingDate == _p.weddingDate) {
+      return;
+    }
+    setState(() => _p = _p.copyWith(
+        sido: a.sido, sigungu: a.sigungu, clearSigungu: a.sigungu == null, guests: a.guests, budget: a.budget,
+        weddingDate: a.weddingDate));
   }
 
   @override
@@ -56,7 +61,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
     var p = _p;
     if (!_ageKnown) {
       p = UserProfile(
-          sido: p.sido, stage: p.stage, marriedYears: p.marriedYears, weddingDate: p.weddingDate,
+          sido: p.sido, sigungu: p.sigungu, stage: p.stage, marriedYears: p.marriedYears, weddingDate: p.weddingDate,
           weddingUndecided: p.weddingUndecided, guests: p.guests, budget: p.budget, homeless: p.homeless);
     }
     _app.saveProfile(p);
@@ -82,22 +87,12 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               const SizedBox(height: 28),
               FormSection(
                 title: '거주 지역',
-                // 입력칸 + 드롭다운: 글자를 치면 목록이 좁혀지고, 고르면 바로 적용
-                child: LayoutBuilder(
-                  builder: (context, box) => DropdownMenu<String>(
-                    key: ValueKey(p.sido),
-                    width: box.maxWidth,
-                    initialSelection: p.sido,
-                    hintText: '지역을 입력하거나 고르세요 (예: 서울)',
-                    enableFilter: true,
-                    requestFocusOnTap: true,
-                    menuHeight: 320,
-                    leadingIcon: const Icon(Icons.place_outlined),
-                    dropdownMenuEntries: [for (final s in kSidoList) DropdownMenuEntry(value: s, label: s)],
-                    onSelected: (s) {
-                      if (s != null) _set(p.copyWith(sido: s));
-                    },
-                  ),
+                hint: '시·군·구는 몰라도 돼요. 고르면 그 지역 정책까지 정확히 찾아요.',
+                child: RegionFields(
+                  sido: p.sido,
+                  sigungu: p.sigungu,
+                  onChanged: (sido, sigungu) =>
+                      _set(p.copyWith(sido: sido, sigungu: sigungu, clearSigungu: sigungu == null)),
                 ),
               ),
               FormSection(
@@ -167,7 +162,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                     label: const Text('아직 미정'),
                     selected: p.weddingDate == null && p.weddingUndecided,
                     onSelected: (_) => _set(UserProfile(
-                        sido: p.sido, age: p.age, ageMax: p.ageMax, stage: p.stage, marriedYears: p.marriedYears,
+                        sido: p.sido, sigungu: p.sigungu, age: p.age, ageMax: p.ageMax, stage: p.stage, marriedYears: p.marriedYears,
                         weddingUndecided: true, guests: p.guests, budget: p.budget, homeless: p.homeless)),
                   ),
                 ]),

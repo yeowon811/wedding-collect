@@ -121,6 +121,7 @@ class ConsultAgent implements ChatAgent {
     final cur = _app.profile;
     _known = _known.merge(UserProfile(
       sido: cur.sido != _seenApp.sido ? cur.sido : null,
+      sigungu: cur.sigungu != _seenApp.sigungu ? cur.sigungu : null,
       guests: cur.guests != _seenApp.guests ? cur.guests : null,
       budget: cur.budget != _seenApp.budget ? cur.budget : null,
       weddingDate: cur.weddingDate != _seenApp.weddingDate ? cur.weddingDate : null,

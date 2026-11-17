@@ -6,9 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
 import '../favorites/favorites_screen.dart';
 import '../../core/widgets/grid.dart';
+import '../../core/widgets/region_fields.dart';
 import '../../core/widgets/inputs.dart';
 import '../../core/widgets/skeleton.dart';
-import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/models/policy.dart';
@@ -123,7 +123,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
     final summary = _blank
         ? '아직 입력하지 않았어요'
         : [
-            u.sido ?? '지역 미입력',
+            u.regionLabel ?? '지역 미입력',
             if (u.age != null) '만 ${u.age}세',
             if (u.stage != null)
               u.stage == MarriageStage.married ? '신혼부부 ${u.marriedYears ?? 1}년차' : '예비부부',
@@ -184,20 +184,12 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   const SizedBox(height: 16),
                   FormSection(
                     title: '거주 지역',
-                    child: LayoutBuilder(
-                      builder: (context, box) => DropdownMenu<String>(
-                        width: box.maxWidth,
-                        initialSelection: draft.sido,
-                        hintText: '지역을 입력하거나 고르세요 (예: 서울)',
-                        enableFilter: true,
-                        requestFocusOnTap: true,
-                        menuHeight: 260,
-                        leadingIcon: const Icon(Icons.place_outlined),
-                        dropdownMenuEntries: [for (final s in kSidoList) DropdownMenuEntry(value: s, label: s)],
-                        onSelected: (s) {
-                          if (s != null) setSheet(() => draft = draft.copyWith(sido: s));
-                        },
-                      ),
+                    hint: '시·군·구까지 고르면 그 지역 정책만 정확히 골라 드려요.',
+                    child: RegionFields(
+                      sido: draft.sido,
+                      sigungu: draft.sigungu,
+                      onChanged: (sido, sigungu) => setSheet(() => draft =
+                          draft.copyWith(sido: sido, sigungu: sigungu, clearSigungu: sigungu == null)),
                     ),
                   ),
                   FormSection(

@@ -12,6 +12,7 @@ enum MarriageStage {
 class UserProfile {
   const UserProfile({
     this.sido,
+    this.sigungu,
     this.age,
     this.ageMax,
     this.stage,
@@ -24,6 +25,10 @@ class UserProfile {
   });
 
   final String? sido; // 거주 지역 (시도)
+  final String? sigungu; // 거주 시·군·구 (선택, 시군구 단위 정책 판정에 씀)
+
+  /// "서울 강남구" 또는 "서울"
+  String? get regionLabel => sido == null ? null : (sigungu == null ? sido : '$sido $sigungu');
   final int? age; // 만 나이. 범위로만 알면 최소값 (예: 20대 → 20)
   final int? ageMax; // 범위로만 알 때 최대값 (예: 20대 → 29). 정확한 나이면 null
   final MarriageStage? stage;
@@ -54,7 +59,7 @@ class UserProfile {
 
   /// "서울 · 만 29세 · 예비부부" 같은 요약 (값이 있는 것만)
   String get summary => [
-    if (sido != null) sido!,
+    if (sido != null) regionLabel!,
     if (age != null) ageLabel,
     if (stage != null) stageLabel,
     if (guests != null) '하객 $guests명',
@@ -64,6 +69,8 @@ class UserProfile {
   /// 대화에서 새로 알게 된 값으로 덮어쓴다 (null인 값은 그대로 둠)
   UserProfile merge(UserProfile o) => UserProfile(
     sido: o.sido ?? sido,
+    // 시도가 바뀌면 예전 시군구는 버린다
+    sigungu: o.sigungu ?? (o.sido != null && o.sido != sido ? null : sigungu),
     age: o.age ?? age,
     ageMax: o.age != null ? o.ageMax : ageMax,
     stage: o.stage ?? stage,
@@ -79,6 +86,8 @@ class UserProfile {
 
   UserProfile copyWith({
     String? sido,
+    String? sigungu,
+    bool clearSigungu = false,
     int? age,
     int? ageMax,
     bool clearAgeMax = false,
@@ -92,6 +101,7 @@ class UserProfile {
     bool clearHomeless = false,
   }) => UserProfile(
     sido: sido ?? this.sido,
+    sigungu: clearSigungu || (sido != null && sido != this.sido && sigungu == null) ? null : (sigungu ?? this.sigungu),
     age: age ?? this.age,
     ageMax: clearAgeMax ? null : (ageMax ?? this.ageMax),
     stage: stage ?? this.stage,

@@ -7,6 +7,7 @@ export '../../data/models/user_profile.dart' show MarriageStage;
 class PolicyProfile {
   const PolicyProfile({
     this.sido,
+    this.sigungu,
     this.age = 31,
     this.ageMax,
     this.stage = MarriageStage.engaged,
@@ -17,6 +18,7 @@ class PolicyProfile {
   /// 내 정보(또는 대화에서 알게 된 정보)로 만든다. 모르는 값은 기본값을 쓴다.
   factory PolicyProfile.fromUser(UserProfile u) => PolicyProfile(
         sido: u.sido,
+        sigungu: u.sigungu,
         age: u.age ?? 31,
         ageMax: u.ageMax,
         stage: u.stage ?? MarriageStage.engaged,
@@ -25,6 +27,7 @@ class PolicyProfile {
       );
 
   final String? sido; // null = 지역 미선택 (전국 정책만)
+  final String? sigungu; // null = 시군구 모름 (시군구 정책은 '주민등록 확인'으로 남김)
   final int age; // 정확한 나이 또는 범위의 최소
   final int? ageMax; // 범위로만 알 때 최대 (예: 20대 → 29)
   final MarriageStage stage;
@@ -43,6 +46,7 @@ class PolicyProfile {
   }) =>
       PolicyProfile(
         sido: clearSido ? null : (sido ?? this.sido),
+        sigungu: clearSido || (sido != null && sido != this.sido) ? null : sigungu,
         age: age ?? this.age,
         ageMax: age != null ? null : ageMax, // 나이를 직접 고르면 정확한 나이로 본다
         stage: stage ?? this.stage,
@@ -89,10 +93,16 @@ class PolicyMatcher {
       if (policy.isNational) {
         reasons.add('전국 대상');
       } else if (p.sido != null && policy.sido == p.sido) {
-        reasons.add(policy.sigungu.isEmpty
-            ? '${policy.sido} 거주'
-            : '${policy.sido} ${policy.sigungu} 거주 시');
-        if (policy.sigungu.isNotEmpty) checks.add('${policy.sigungu} 주민등록 필요');
+        if (policy.sigungu.isEmpty) {
+          reasons.add('${policy.sido} 거주');
+        } else if (p.sigungu == null) {
+          reasons.add('${policy.sido} ${policy.sigungu} 거주 시');
+          checks.add('${policy.sigungu} 주민등록 필요');
+        } else if (p.sigungu == policy.sigungu) {
+          reasons.add('${policy.sido} ${policy.sigungu} 거주');
+        } else {
+          continue; // 같은 시도의 다른 시군구 정책
+        }
       } else {
         continue;
       }
