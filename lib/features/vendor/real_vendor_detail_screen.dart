@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../core/widgets/inputs.dart';
+import '../../data/app_state.dart';
 import '../../data/models/vendor.dart';
 import 'widgets/vendor_cards.dart';
 import 'widgets/vendor_photo.dart';
@@ -21,9 +22,35 @@ class RealVendorDetailScreen extends StatelessWidget {
     final phone = v.phone.replaceAll(RegExp(r'[^0-9]'), '');
     return Scaffold(
       appBar: AppBar(title: const Text('업체 정보'), actions: [FavoriteButton(ref: 'real:${v.id}')]),
-      bottomNavigationBar: v.url.isEmpty && phone.isEmpty
-          ? null
-          : BottomActionBar(children: [
+      bottomNavigationBar: BottomActionBar(children: [
+              ListenableBuilder(
+            listenable: AppState.instance,
+            builder: (context, _) {
+              final app = AppState.instance;
+              final ref = 'real:${v.id}';
+              final on = app.isFavorite(ref);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      app.toggleFavorite(ref);
+                      if (!on) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('체크리스트 준비 항목에 담았어요'),
+                          duration: Duration(seconds: 2),
+                        ));
+                      }
+                    },
+                    icon: Icon(on ? Icons.check_circle : Icons.add_task, size: 18),
+                    label: Text(on ? '체크리스트에 추가됨 (누르면 빼기)' : '체크리스트에 추가'),
+                  ),
+                ),
+              );
+            },
+          ),
+              if (v.url.isNotEmpty || phone.isNotEmpty)
               if (v.url.isNotEmpty && phone.isNotEmpty)
                 ActionPair(
                   secondary: OutlinedButton(

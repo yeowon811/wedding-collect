@@ -19,6 +19,9 @@ import 'widgets/vendor_cards.dart';
 class VendorScreen extends StatefulWidget {
   const VendorScreen({super.key});
 
+  /// 체크리스트 등에서 "이 항목 업체 찾기"로 열 때 고를 항목
+  static final categoryRequest = ValueNotifier<VendorCategory?>(null);
+
   @override
   State<VendorScreen> createState() => _VendorScreenState();
 }
@@ -40,6 +43,29 @@ class _VendorScreenState extends State<VendorScreen> {
         _savedSido = _sido;
         _savedCategory = _category;
       });
+
+  void _onCategoryRequest() {
+    final c = VendorScreen.categoryRequest.value;
+    if (c == null) return;
+    VendorScreen.categoryRequest.value = null;
+    _set(() {
+      _category = c;
+      if (AppState.instance.plan.hasSido) _sido = AppState.instance.plan.sido;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    VendorScreen.categoryRequest.addListener(_onCategoryRequest);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onCategoryRequest());
+  }
+
+  @override
+  void dispose() {
+    VendorScreen.categoryRequest.removeListener(_onCategoryRequest);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

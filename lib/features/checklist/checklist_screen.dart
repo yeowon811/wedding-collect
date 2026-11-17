@@ -1,3 +1,6 @@
+import '../../app/main_shell.dart';
+import '../../core/widgets/favorite_button.dart';
+import '../vendor/vendor_screen.dart';
 import '../../data/candidates.dart';
 import '../../data/repositories/repositories.dart';
 import '../chat/chat_card_link.dart';
@@ -400,19 +403,15 @@ class _ItemStatusCard extends StatelessWidget {
     final items = state.items;
     final done = items.where((i) => i.status.isDone).length;
     return _Section(
-      title: '준비 항목 ${items.length}개',
-      trailing: Text('$done/${items.length} 완료', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+      title: '준비 항목 · $done/${items.length} 완료',
+      trailing: TextButton.icon(
+        onPressed: () => showItemEditor(context, state),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('항목 추가'),
+      ),
       child: Column(
         children: [
           for (final item in items) _row(context, item),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => showItemEditor(context, state),
-              child: const Text('항목 추가'),
-            ),
-          ),
         ],
       ),
     );
@@ -429,10 +428,10 @@ class _ItemStatusCard extends StatelessWidget {
         : null;
     final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
     return InkWell(
-      onTap: () => showItemEditor(context, state, item: item),
+      onTap: () => showItemDetail(context, state, item),
       borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
             Expanded(
@@ -455,19 +454,17 @@ class _ItemStatusCard extends StatelessWidget {
                       style: TextStyle(fontSize: 13, color: fits == false ? AppColors.warning : AppColors.success),
                     ),
                   if (cands.isNotEmpty)
-                    InkWell(
-                      onTap: () => _showCandidates(context, item, cands),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text('${Candidates.summary(cands)} ›',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text('담은 곳 · ${Candidates.summary(cands).replaceFirst('후보 ', '')}',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
                     ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             _StatusPill(status: item.status),
+            Icon(Icons.chevron_right, color: AppColors.textHint),
           ],
         ),
       ),
@@ -475,44 +472,159 @@ class _ItemStatusCard extends StatelessWidget {
   }
 }
 
-/// 찜한 후보 목록 (눌러서 상세로)
-void _showCandidates(BuildContext context, PlanItem item, List<CandidateInfo> list) {
+/// 준비 항목 상세: 담은 곳(정한 곳·후보)을 먼저 크게, 그 아래 진행 상태·금액
+void showItemDetail(BuildContext context, AppState state, PlanItem item) {
+  final nav = Navigator.of(context);
+  void open(String ref) => nav.push(MaterialPageRoute(builder: (_) => ChatCardLink(ref: ref)));
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-            child: Text('${item.name} 후보 ${list.length}곳',
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text('찜(하트)한 곳이 후보로 모여요. 눌러서 자세히 보고 상담·계약을 진행하세요.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          ),
-          Flexible(
-            child: ListView(shrinkWrap: true, children: [
-              for (final c in list)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  title: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(c.sub, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: Text(c.priceText, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatCardLink(ref: c.ref)));
-                  },
+    builder: (ctx) => ListenableBuilder(
+      listenable: state,
+      builder: (ctx, _) {
+        final isVenue = item.id == AppState.venueItemId;
+        final cands = Candidates.forItem(item, state);
+        // 정한 곳: 체크리스트에 추가한 예식장 / 계약 완료 표시한 업체
+        final chosenRef = isVenue
+            ? (state.chosenVenueId == null ? null : 'venue:${state.chosenVenueId}')
+            : (item.category != null && state.contracts[item.category] != null
+                ? 'vendor:${state.contracts[item.category]!.$1.id}'
+                : null);
+        final others = [for (final c in cands) if (c.ref != chosenRef) c];
+        final venue = isVenue && state.chosenVenueId != null
+            ? Repos.venue.cached?.where((v) => v.id == state.chosenVenueId).firstOrNull
+            : null;
+        final fits = venue == null || !state.plan.hasGuests ? null : venue.fits(state.plan.guests);
+
+        Widget card({required String title, required String sub, required String price, String? badge,
+            Color? border, VoidCallback? onTap, Widget? trailing}) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Material(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: border ?? AppColors.border, width: border == null ? 1 : 1.5),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        if (badge != null)
+                          Text(badge,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        Text(title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(sub, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
+                        Text(price, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                      ]),
+                    ),
+                    ?trailing,
+                    if (onTap != null) Icon(Icons.chevron_right, color: AppColors.textHint),
+                  ]),
                 ),
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.85),
+            child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 0, 20, 20), children: [
+              Row(children: [
+                Expanded(
+                  child: Text(item.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+                ),
+                _StatusPill(status: item.status),
+              ]),
+              const SizedBox(height: 16),
+              Text('담은 곳', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              if (chosenRef != null && item.vendorName != null)
+                card(
+                  badge: isVenue ? '체크리스트에 추가한 예식장' : '계약한 업체',
+                  title: item.vendorName!,
+                  sub: venue == null
+                      ? item.status.label
+                      : '${venue.capacityLabel}${fits == null ? '' : (fits ? ' · 하객 ${state.plan.guests}명 수용 가능' : ' · 하객 ${state.plan.guests}명은 정원 초과')}',
+                  price: item.amount == null ? '금액 미입력' : (item.amount == 0 ? '대관료 무료' : formatManwon(item.amount!)),
+                  border: AppColors.primary,
+                  onTap: () => open(chosenRef),
+                ),
+              for (final c in others)
+                card(
+                  badge: '찜한 후보',
+                  title: c.name,
+                  sub: c.sub,
+                  price: c.priceText,
+                  onTap: () => open(c.ref),
+                  trailing: FavoriteButton(ref: c.ref, size: 22),
+                ),
+              if (chosenRef == null && others.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(14)),
+                  child: Text(
+                    '아직 담은 곳이 없어요.\n${isVenue ? '예식장' : '업체'} 화면에서 [체크리스트에 추가]나 하트를 누르면 여기에 모여요.',
+                    style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
+                  ),
+                ),
+              if (isVenue || item.category != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        if (isVenue) {
+                          MainShell.goTo(0);
+                        } else {
+                          VendorScreen.categoryRequest.value = item.category;
+                          MainShell.goTo(2);
+                        }
+                      },
+                      icon: const Icon(Icons.search, size: 18),
+                      label: Text(isVenue ? '예식장 찾아보기' : '${item.name} 업체 찾아보기'),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text('진행 상태 · 금액', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(
+                '${item.status.label} · ${item.amount == null ? '금액 미입력' : formatManwon(item.amount!)}'
+                '${item.vendorName == null ? '' : ' · ${item.vendorName}'}',
+                style: TextStyle(fontSize: 14, color: AppColors.textBody),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    showItemEditor(context, state, item: item);
+                  },
+                  child: const Text('상태·금액 수정'),
+                ),
+              ),
             ]),
           ),
-          const SizedBox(height: 12),
-        ]),
-      ),
+        );
+      },
     ),
   );
 }

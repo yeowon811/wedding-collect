@@ -34,6 +34,33 @@ class DemoVendorDetailScreen extends StatelessWidget {
         builder: (context, _) {
           final contracted = state.contracts[v.category]?.$1.id == v.id;
           return BottomActionBar(children: [
+            ListenableBuilder(
+            listenable: AppState.instance,
+            builder: (context, _) {
+              final app = AppState.instance;
+              final ref = 'vendor:${v.id}';
+              final on = app.isFavorite(ref);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      app.toggleFavorite(ref);
+                      if (!on) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('체크리스트 준비 항목에 담았어요'),
+                          duration: Duration(seconds: 2),
+                        ));
+                      }
+                    },
+                    icon: Icon(on ? Icons.check_circle : Icons.add_task, size: 18),
+                    label: Text(on ? '체크리스트에 추가됨 (누르면 빼기)' : '체크리스트에 추가'),
+                  ),
+                ),
+              );
+            },
+          ),
             ActionPair(
               secondary: OutlinedButton(
                 onPressed: contracted
