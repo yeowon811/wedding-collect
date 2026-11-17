@@ -124,6 +124,8 @@
 - **찜 (2026-11-17):** 예식장·업체·정책 카드와 상세 화면에 하트(`core/widgets/favorite_button.dart`, ref = `venue:`/`vendor:`(시연)/`real:`(실제)/`policy:`), 예식장·정책·업체 탭 상단 하트 → `features/favorites/favorites_screen.dart`(종류별 모아 보기, 시연 링크 `?page=favorites`). AppState.favorites로 계정 저장
 - **할 일 캘린더 (2026-11-17):** 체크리스트 '예식일 기준 할 일' 오른쪽 [캘린더 · n/N] → `features/checklist/task_calendar_screen.dart`. 월 달력(일요일 시작)에 할 일 마감일(예식일 − D)·상담 일정·예식일을 색 점으로 표시(할 일 파랑·시기 지남 주황·완료 회색·상담 초록·예식일 분홍), 날짜를 누르면 그날 일정 + 체크, '이 날 할 일 추가'(D-값으로 저장), 아래 이번 달 일정 목록. 시연 링크 `?page=calendar`
 - **예식장 지역 선택 (2026-11-17):** 시도 칩을 누르면 시군구 선택창(3열 격자, '서울 전체' 포함) → [확인]. 목록 위에 펼쳐지던 시군구 칩은 없앰. 고른 시군구는 칩에 '서울 · 강남구 ▾'로 표시, 다시 누르면 선택창. 시군구가 1곳뿐인 시도는 바로 적용
+- **정책 공고 카드 (2026-11-17):** 시안(test3)처럼 배너 그림 + [지역] 정책명 + 기간. `features/policy/widgets/policy_banner.dart`(분야별 색·그림: 예식 분홍·장려금 주황·주거 파랑·검진 초록·교육 보라, 기관·접수 상태·괄호 앞 이름·괄호 안 설명·기간 알약). 휴대폰 1열(TileGrid minColumns 1), 상세 화면 맨 위에도 배너
+  - **기간은 데이터에 없어 정직하게 표시:** 전국 사업(대출·세제·검진)은 '상시 신청', 지자체 사업은 '2026년 12월 31일(목) 까지 · 예산 소진 시 마감'(2026년 사업 기준), 상세에 '정확한 신청 기간은 기관 공고에서 확인'. 실제 마감일을 모으면 Policy에 필드 추가해 바꾸기
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

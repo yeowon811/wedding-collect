@@ -4,7 +4,6 @@ import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/empty_state.dart';
-import '../../core/widgets/favorite_button.dart';
 import '../favorites/favorites_screen.dart';
 import '../../core/widgets/grid.dart';
 import '../../core/widgets/inputs.dart';
@@ -14,6 +13,7 @@ import '../../data/app_state.dart';
 import '../../data/models/policy.dart';
 import '../../data/repositories/policy_repository.dart';
 import 'policy_detail_screen.dart';
+import 'widgets/policy_banner.dart';
 import 'policy_matcher.dart';
 
 /// 맞춤 정책 찾기: 내 상황 입력 → 규칙으로 대상 판정 → 목록
@@ -79,11 +79,11 @@ class _PolicyScreenState extends State<PolicyScreen> {
               ),
               if (likely.isNotEmpty) ...[
                 _groupHeader('받을 가능성 높음', likely.length, '내 상황이 정책 조건과 맞아요', AppColors.success),
-                TileGrid(runSpacing: 12, children: [for (final m in likely) _PolicyCard(match: m)]),
+                TileGrid(runSpacing: 24, maxTileWidth: 400, minColumns: 1, children: [for (final m in likely) _PolicyCard(match: m)]),
               ],
               if (check.isNotEmpty) ...[
                 _groupHeader('조건 확인 필요', check.length, '소득·무주택처럼 앱이 알 수 없는 조건이 있어요', AppColors.warning),
-                TileGrid(runSpacing: 12, children: [for (final m in check) _PolicyCard(match: m)]),
+                TileGrid(runSpacing: 24, maxTileWidth: 400, minColumns: 1, children: [for (final m in check) _PolicyCard(match: m)]),
               ],
               if (shown.isEmpty)
                 EmptyState(
@@ -287,69 +287,33 @@ class _PolicyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = match.policy;
     final checks = match.checks;
-    // 격자 카드: 분야·지역 → 이름(3줄) → 지원 자격 요약(2줄) → 확인할 것 (높이 고정)
-    return Material(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+    // 공고 카드: 배너 그림 → [지역] 정책명(2줄) → 신청 기간 → 조건
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PolicyDetailScreen(match: match)),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PolicyDetailScreen(match: match)),
-        ),
-        child: SizedBox(
-          height: 196,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Expanded(
-                    child: Text('${p.category.label} · ${p.regionLabel}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                  ),
-                  SizedBox(
-                    width: 28,
-                    height: 20,
-                    child: OverflowBox(
-                      maxWidth: 48,
-                      maxHeight: 48,
-                      child: FavoriteButton(ref: 'policy:${p.id}', size: 20),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 6),
-                Text(p.name,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.4, color: AppColors.textPrimary)),
-                const SizedBox(height: 6),
-                Expanded(
-                  child: Text(p.eligibility,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, height: 1.45, color: AppColors.textSecondary)),
-                ),
-                Text(
-                  checks.isEmpty ? '조건이 잘 맞아요' : '확인할 것 ${checks.length}개 · ${checks.first}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: checks.isEmpty ? AppColors.success : AppColors.warning,
-                  ),
-                ),
-              ],
-            ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        PolicyBanner(policy: p),
+        const SizedBox(height: 10),
+        Text('[${p.regionLabel}] ${p.name}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.4, color: AppColors.textPrimary)),
+        const SizedBox(height: 4),
+        Text(p.periodLong, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+        const SizedBox(height: 2),
+        Text(
+          checks.isEmpty ? '조건이 잘 맞아요' : '확인할 것 ${checks.length}개 · ${checks.first}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: checks.isEmpty ? AppColors.success : AppColors.warning,
           ),
         ),
-      ),
+      ]),
     );
   }
 }

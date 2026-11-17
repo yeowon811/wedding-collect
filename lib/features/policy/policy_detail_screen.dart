@@ -1,3 +1,4 @@
+import 'widgets/policy_banner.dart';
 import '../../core/widgets/favorite_button.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,6 +33,8 @@ class PolicyDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          PolicyBanner(policy: p, showFavorite: false),
+          const SizedBox(height: 16),
           Wrap(
             spacing: 6,
             children: [
@@ -43,6 +46,9 @@ class PolicyDetailScreen extends StatelessWidget {
           Text(p.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(p.agency, style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          Text('${p.periodLong} (정확한 신청 기간은 기관 공고에서 확인)',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 20),
           _box(
             title: '내 상황과 맞는 부분',
