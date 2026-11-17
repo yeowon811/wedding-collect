@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/user_profile.dart';
+import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
 import 'package:wedding_collect/features/chat/chat_agent.dart';
 
@@ -43,8 +44,24 @@ void main() {
     final agent = ConsultAgent();
     await agent.reply('드레스 추천해줘');
     final cheaper = await agent.reply('더 싼 데는 없어?');
-    expect(cheaper.text, contains('예상 비용이 낮은 순'));
+    expect(cheaper.text, contains('가격이 낮은 순'));
     expect(cheaper.cards.first.ref, startsWith('vendor:'));
+  });
+
+  test('준비 항목에 금액을 정하면 그 예산 안의 업체를 먼저 추천한다', () async {
+    final app = AppState.instance;
+    final dress = app.itemFor(VendorCategory.dress)!;
+    app.updateItem(dress, clearAmount: true);
+    final none = await ConsultAgent().reply('드레스 추천해줘');
+    expect(none.text, contains('드레스 금액을 정하면'));
+    expect(none.text, isNot(contains('추천 예산')));
+    expect(none.cards.every((c) => c.badge == null), isTrue);
+
+    app.updateItem(dress, amount: 200);
+    final set = await ConsultAgent().reply('드레스 추천해줘');
+    expect(set.text, contains('예산 200만원 안의 업체'));
+    expect(set.cards.first.badge, '예산 안');
+    app.updateItem(dress, clearAmount: true);
   });
 
   test('이어서 하기: 저장된 대화로 기억을 되살려 "첫 번째 거"를 찾는다', () async {

@@ -110,6 +110,7 @@
   - 콘솔 준비: Authentication 이메일/비밀번호 사용 설정, Firestore 데이터베이스(asia-northeast3) 생성
   - Firebase가 없는 테스트 환경에서는 로그인 화면 없이 바로 앱(unavailable). 시연 링크(?tab= 등)로 열면 둘러보기로 시작
 - **목록 배치 (2026-11-17):** 예식장·정책·업체 목록은 2열 격자(쇼핑앱식, 넓은 화면은 열 증가). `lib/core/widgets/grid.dart`(GridSpec·TileGrid). 예식장 카드: 정사각형 사진→지역→이름→대관료(굵게)→정원 / 업체: 4:3 항목 아이콘 면 + 비교 담기(+) 버튼→가격→평점 / 정책: 분야·지역→이름→자격 요약→확인할 것
+- **업체 예산 (2026-11-17):** '추천 예산'(총예산 × 항목 비율)은 쓰지 않음. 체크리스트 준비 항목에 정한 금액(`AppState.budgetOf`)이 그 항목 예산 → 업체 상세·비교표·AI 상담에서 '내 ○○ 예산 N만원 안/초과', 예산 안 업체를 먼저 추천. 금액이 없으면 비교하지 않고 '준비 항목에 금액을 정하면…' 안내. 1인·100장 단위 가격만 '하객 N명 기준 약 N만원' 표시
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

@@ -339,7 +339,7 @@ void main() {
       expect(p.basis, contains('만 29세'));
 
       final dress = await agent.reply('드레스 추천해줘');
-      expect(dress.text, contains('드레스 추천 예산은 360만원'));
+      expect(dress.text, isNot(contains('추천 예산')));
 
       expect((await agent.reply('대전 공공예식장 알려줘')).text, contains('없어요'));
       expect((await agent.reply('혼주 메이크업 추천')).text, contains('혼주 메이크업'));

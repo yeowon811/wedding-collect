@@ -170,6 +170,12 @@ class AppState extends ChangeNotifier {
   ];
   int _seq = 0;
 
+  /// 준비 항목에 정한 금액(만원) = 그 항목 예산. 정하지 않았으면 null
+  int? budgetOf(VendorCategory c) {
+    final a = itemFor(c)?.amount;
+    return a == null || a <= 0 ? null : a;
+  }
+
   PlanItem? itemFor(VendorCategory c) =>
       items.where((i) => i.category == c).firstOrNull;
 

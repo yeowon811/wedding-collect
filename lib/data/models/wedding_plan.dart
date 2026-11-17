@@ -23,9 +23,6 @@ class WeddingPlan {
     ).difference(DateTime(today.year, today.month, today.day)).inDays;
   }
 
-  /// 항목별 추천 예산(만원)
-  int budgetFor(VendorCategory c) => budget * c.budgetShare ~/ 100;
-
   WeddingPlan copyWith({
     DateTime? weddingDate,
     String? sido,

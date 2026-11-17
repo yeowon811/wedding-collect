@@ -56,7 +56,8 @@ class DemoVendorDetailScreen extends StatelessWidget {
         listenable: state,
         builder: (context, _) {
           final estimate = v.estimate(guests: state.plan.guests);
-          final budget = state.plan.budgetFor(v.category);
+          final budget = state.budgetOf(v.category); // 준비 항목에 정한 금액
+          final total = v.totalLabel(guests: state.plan.guests);
           final mine = state.consultations.where((c) => c.vendor.id == v.id).toList();
           final summary = ReviewRepository.summaryFor(v);
           final reviews = ReviewRepository.reviewsFor(v);
@@ -97,15 +98,22 @@ class DemoVendorDetailScreen extends StatelessWidget {
                     Text('가격대 ${v.priceText}',
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+                    if (total != null) ...[
+                      const SizedBox(height: 6),
+                      Text(total),
+                    ],
                     const SizedBox(height: 6),
-                    Text('내 조건 예상 비용: $estimate만원'
-                        '${v.priceUnit == '1인' ? ' (하객 ${state.plan.guests}명 기준)' : ''}'),
                     Text(
-                      estimate <= budget
-                          ? '추천 예산 $budget만원 안이에요'
-                          : '추천 예산 $budget만원보다 ${estimate - budget}만원 많아요',
+                      budget == null
+                          ? '체크리스트 준비 항목에 ${v.category.label} 금액을 정하면 예산 안인지 알려드려요'
+                          : estimate <= budget
+                              ? '내 ${v.category.label} 예산 $budget만원 안이에요'
+                              : '내 ${v.category.label} 예산 $budget만원보다 ${estimate - budget}만원 많아요',
                       style: TextStyle(
-                          color: estimate <= budget ? AppColors.success : AppColors.warning),
+                          fontSize: budget == null ? 13 : null,
+                          color: budget == null
+                              ? AppColors.textSecondary
+                              : (estimate <= budget ? AppColors.success : AppColors.warning)),
                     ),
                   ],
                 ),

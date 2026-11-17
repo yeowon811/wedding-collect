@@ -14,7 +14,7 @@ class CompareScreen extends StatelessWidget {
     final state = AppState.instance;
     final list = state.compare;
     final guests = state.plan.guests;
-    final budget = list.isEmpty ? 0 : state.plan.budgetFor(list.first.category);
+    final budget = list.isEmpty ? null : state.budgetOf(list.first.category); // 준비 항목에 정한 금액
 
     // 비교 기준별 최고값 표시용
     final cheapest = list.map((v) => v.estimate(guests: guests)).reduce((a, b) => a < b ? a : b);
@@ -24,7 +24,7 @@ class CompareScreen extends StatelessWidget {
     final rows = <(String, Widget Function(DemoVendor))>[
       ('가격대', (v) => Text(v.priceText)),
       (
-        '예상 비용',
+        '총 비용(약)',
         (v) {
           final e = v.estimate(guests: guests);
           return Text('$e만원',
@@ -34,15 +34,15 @@ class CompareScreen extends StatelessWidget {
               ));
         }
       ),
-      (
-        '추천 예산',
-        (v) {
-          final e = v.estimate(guests: guests);
-          final ok = budget == 0 || e <= budget;
-          return Text(ok ? '안 ✓' : '초과',
-              style: TextStyle(color: ok ? AppColors.success : AppColors.warning));
-        }
-      ),
+      if (budget != null)
+        (
+          '내 예산',
+          (v) {
+            final ok = v.estimate(guests: guests) <= budget;
+            return Text(ok ? '예산 안' : '초과',
+                style: TextStyle(color: ok ? AppColors.success : AppColors.warning));
+          }
+        ),
       (
         '평점',
         (v) {
@@ -69,7 +69,7 @@ class CompareScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            '하객 $guests명 · 추천 예산 $budget만원 기준 (시연용 데이터)',
+            '하객 $guests명 · ${budget == null ? '예산 미정 (체크리스트 준비 항목에 금액을 정하면 예산 안인지 비교해요)' : '내 예산 $budget만원 기준'} · 시연용 데이터',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),

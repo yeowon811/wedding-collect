@@ -31,23 +31,23 @@ class ConsultTools {
     return topic == null ? matches : matches.where((m) => m.policy.category == topic).toList();
   }
 
-  /// 시연용 업체: 항목 추천 예산 안 → 평점순
-  static Future<(List<DemoVendor> picks, int inBudget, int total, int budget)> searchVendors({
+  /// 시연용 업체: 준비 항목에 정한 예산이 있으면 예산 안 업체 먼저 → 평점순 (예산이 없으면 평점순만)
+  static Future<(List<DemoVendor> picks, int inBudget, int total)> searchVendors({
     required VendorCategory item,
     required String sido,
-    required int totalBudget,
+    required int? budget,
     required int guests,
-    bool cheapest = false, // true면 예상 비용이 낮은 순 ("더 싼 데")
+    bool cheapest = false, // true면 비용이 낮은 순 ("더 싼 데")
   }) async {
-    final budget = totalBudget * item.budgetShare ~/ 100;
     final all = (await Repos.vendor.demoVendors())
         .where((v) => v.sido == sido && v.category == item)
         .toList()
       ..sort((a, b) => cheapest
           ? a.estimate(guests: guests).compareTo(b.estimate(guests: guests))
           : b.rating.compareTo(a.rating));
+    if (budget == null) return (all.take(3).toList(), 0, all.length);
     final fit = all.where((v) => v.estimate(guests: guests) <= budget).toList();
-    return ((fit.isNotEmpty ? fit : all).take(3).toList(), fit.length, all.length, budget);
+    return ((fit.isNotEmpty ? fit : all).take(3).toList(), fit.length, all.length);
   }
 
   /// 예산 배분 (만원)

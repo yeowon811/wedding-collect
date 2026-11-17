@@ -140,7 +140,14 @@ class DemoVendor {
     return '$priceMin~$priceMax만원$unit';
   }
 
-  /// 예상 비용(만원). 식대는 하객 수, 청첩장은 100장 단위로 계산한다.
+  /// 하객 수를 곱해야 하는 가격(식대 1인, 청첩장 100장)이면 총액 안내, 아니면 null
+  String? totalLabel({required int guests}) => switch (priceUnit) {
+        '1인' => '하객 $guests명 기준 약 ${estimate(guests: guests)}만원',
+        '100장' => '하객 $guests명 기준 약 ${estimate(guests: guests)}만원',
+        _ => null,
+      };
+
+  /// 예산 비교용 비용(만원): 가격대 중간값. 식대는 하객 수, 청첩장은 100장 단위로 곱한다.
   int estimate({required int guests}) {
     final mid = (priceMin + priceMax) ~/ 2;
     return switch (priceUnit) {

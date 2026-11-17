@@ -418,7 +418,7 @@ class ConsultAgent implements ChatAgent {
           ],
         ),
       Slot.budget => (
-          '결혼 총예산은 어느 정도 생각하세요? 항목별 추천 예산을 계산할게요.',
+          '결혼 총예산은 어느 정도 생각하세요?',
           [
             for (final n in [1000, 2000, 3000, 5000, 7000])
               QuickReply(formatManwon(n), slot: s.name, value: n),
@@ -606,28 +606,39 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _vendorAnswer(VendorCategory item, {bool cheapest = false}) async {
     final sido = _known.sido!;
-    final total = _known.budget ?? _app.plan.budget;
     final guests = _known.guests ?? _app.plan.guests;
-    final (picks, inBudget, count, budget) = await ConsultTools.searchVendors(
-        item: item, sido: sido, totalBudget: total, guests: guests, cheapest: cheapest);
-    _lookupNote = '$sido ${item.label} 시연용 업체 $count곳 → 추천 예산 $budget만원 안 $inBudget곳, '
-        '${cheapest ? '예상 비용 낮은 순' : '평점순'}';
+    final budget = _app.budgetOf(item); // 체크리스트 준비 항목에 정한 금액
+    final (picks, inBudget, count) = await ConsultTools.searchVendors(
+        item: item, sido: sido, budget: budget, guests: guests, cheapest: cheapest);
+    final order = cheapest ? '가격이 낮은 순' : '평점순';
+    _lookupNote = budget == null
+        ? '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 금액이 없어 $order'
+        : '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 예산 $budget만원 안 $inBudget곳 먼저, $order';
     if (cheapest) _flowNote = '이전 질문을 이어서 더 싼 곳부터 다시 고름';
+    final String head;
+    if (budget == null) {
+      head = '$sido ${item.label} 업체 $count곳 중 $order으로 골랐어요.';
+    } else if (inBudget == 0) {
+      head = '정해 두신 ${item.label} 예산 $budget만원 안의 업체는 $sido에 없어요. $order으로 보여드릴게요.';
+    } else {
+      head = '정해 두신 ${item.label} 예산 $budget만원 안의 업체가 $sido에 $inBudget곳 있어요. 그중 $order으로 골랐어요.';
+    }
+    String line(DemoVendor v) =>
+        '${v.priceText}${v.totalLabel(guests: guests) != null ? ' (${v.totalLabel(guests: guests)})' : ''} · ★${v.rating}';
     return ChatMessage(
       fromUser: false,
-      basis: '$sido · 총예산 ${formatManwon(total)}${_known.budget == null ? '(기본값)' : ''} · 하객 $guests명',
-      text: '총예산 중 ${item.label} 추천 예산은 $budget만원(${item.budgetShare}%)이에요.\n'
-          '$sido ${item.label} 업체 $count곳 중 예산 안은 $inBudget곳이에요. '
-          '${cheapest ? '예상 비용이 낮은 순으로 골랐어요.' : (inBudget == 0 ? '예산 안 업체가 없어 평점순으로 보여드릴게요.' : '평점순으로 골랐어요.')}\n\n'
-          '${picks.map((v) => '• ${v.name.replaceFirst('[시연] ', '')} — ${v.priceText}, 예상 ${v.estimate(guests: guests)}만원, ★${v.rating}').join('\n')}\n\n'
+      basis: '$sido · ${budget == null ? '${item.label} 예산 미정' : '${item.label} 예산 $budget만원'} · 하객 $guests명',
+      text: '$head\n\n'
+          '${picks.map((v) => '• ${v.name.replaceFirst('[시연] ', '')} — ${line(v)}').join('\n')}\n\n'
+          '${budget == null ? '체크리스트 준비 항목에서 ${item.label} 금액을 정하면 그 예산 안의 업체를 먼저 골라 드려요.\n' : ''}'
           '(가격·평점은 시연용 가상 데이터예요)',
       cards: [
         for (final v in picks)
           ChatCard(
             title: v.name,
-            subtitle: '${v.priceText} · 예상 ${v.estimate(guests: guests)}만원 · ★${v.rating}',
+            subtitle: line(v),
             icon: item.icon,
-            badge: v.estimate(guests: guests) <= budget ? '예산 안' : '예산 초과',
+            badge: budget == null ? null : (v.estimate(guests: guests) <= budget ? '예산 안' : '예산 초과'),
             open: () => DemoVendorDetailScreen(vendor: v),
             ref: 'vendor:${v.id}',
           ),
@@ -707,7 +718,8 @@ class ConsultAgent implements ChatAgent {
           fromUser: false,
           basis: '이전 목록 ${index + 1}번째',
           text: '${v.name.replaceFirst('[시연] ', '')} 정보예요.\n'
-              '• 가격: ${v.priceText} (하객 $guests명 기준 예상 ${v.estimate(guests: guests)}만원)\n'
+              '• 가격: ${v.priceText}${v.totalLabel(guests: guests) != null ? ' (${v.totalLabel(guests: guests)})' : ''}\n'
+              '${_budgetLine(v, guests)}'
               '• 평점: ★${v.rating} (후기 ${v.reviewCount}개)\n'
               '• 포함: ${v.packageItems.join(', ')}\n\n'
               '후기와 상담 신청은 아래 카드를 눌러 확인하세요. (가격·평점은 시연용 가상 데이터예요)',
@@ -720,6 +732,13 @@ class ConsultAgent implements ChatAgent {
       text: '"${card.title}" 정보를 찾지 못했어요. 아래 카드를 눌러 확인해 주세요.',
       cards: [card],
     );
+  }
+
+  /// 준비 항목에 정한 금액이 있으면 "내 예산 안/초과" 한 줄
+  String _budgetLine(DemoVendor v, int guests) {
+    final b = _app.budgetOf(v.category);
+    if (b == null) return '';
+    return '• 내 ${v.category.label} 예산 $b만원 ${v.estimate(guests: guests) <= b ? '안이에요' : '보다 많아요'}\n';
   }
 
   ChatMessage _budgetAnswer() {
