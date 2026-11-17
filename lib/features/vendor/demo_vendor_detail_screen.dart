@@ -11,6 +11,7 @@ import '../../data/repositories/review_repository.dart';
 import 'consultation_sheet.dart';
 import 'review_list_screen.dart';
 import 'widgets/review_widgets.dart';
+import 'widgets/vendor_photo.dart';
 import 'write_review_sheet.dart';
 
 /// 시연용 업체 상세: 가격·구성, 예산 비교, 상담 신청, 계약 완료 표시
@@ -65,6 +66,8 @@ class DemoVendorDetailScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              VendorPhotoHeader(category: v.category, vendorId: v.id),
+              const SizedBox(height: 16),
               Wrap(spacing: 6, runSpacing: 6, children: [
                 InfoBadge(label: '시연용 가상 업체', color: AppColors.textSecondary, background: AppColors.fill),
                 InfoBadge(label: v.sido, color: AppColors.textSecondary, background: AppColors.fill),

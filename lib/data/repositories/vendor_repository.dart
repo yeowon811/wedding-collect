@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/vendor.dart';
+import 'stock_photos.dart';
 
 /// 실제 업체, 시연용 업체, 예식장-업체 매칭 데이터를 읽는다.
 class VendorRepository {
@@ -16,6 +17,7 @@ class VendorRepository {
 
   Future<List<RealVendor>> realVendors() async {
     if (_real != null) return _real!;
+    await StockPhotos.load();
     // 대표 이미지: tools/collect_vendor_images.py가 업체 홈페이지에서 찾은 주소
     final images = (jsonDecode(await rootBundle.loadString('assets/data/vendor_images.json'))
         as Map<String, dynamic>)['images'] as Map<String, dynamic>;
@@ -25,11 +27,14 @@ class VendorRepository {
         .toList(growable: false);
   }
 
-  Future<List<DemoVendor>> demoVendors() async =>
-      _demo ??= (await _json('demo_vendors.json'))
+  Future<List<DemoVendor>> demoVendors() async {
+    if (_demo != null) return _demo!;
+    await StockPhotos.load(); // 처음 한 번만 (테스트에서 다른 영역의 Future를 다시 기다리면 멈춤)
+    return _demo = (await _json('demo_vendors.json'))
           .cast<Map<String, dynamic>>()
           .map(DemoVendor.fromJson)
           .toList(growable: false);
+  }
 
   Future<Map<String, List<VendorMatch>>> _allMatches() async {
     if (_matches != null) return _matches!;

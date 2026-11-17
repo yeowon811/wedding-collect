@@ -4,6 +4,7 @@ import 'package:wedding_collect/app/app.dart';
 import 'package:wedding_collect/app/main_shell.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
+import 'package:wedding_collect/data/repositories/stock_photos.dart';
 import 'package:wedding_collect/features/vendor/widgets/vendor_cards.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/repositories/review_repository.dart';
@@ -235,11 +236,18 @@ void main() {
     final demo = await Repos.vendor.demoVendors();
     expect(demo.length, 561);
     expect(demo.every((v) => v.name.startsWith('[시연]')), isTrue);
-    // 실제 업체 대표 사진: 홈페이지에서 가져온 https 주소, 검수에서 뺀 곳(V001 등)은 없음
+    // 실제 업체 대표 사진: 홈페이지에서 가져온 https 주소, 검수에서 뺀 곳(V015 등)은 없음
     final withImage = real.where((v) => v.image != null).toList();
-    expect(withImage.length, 54);
+    expect(withImage.length, 59); // 첫 화면 54 + 하위 페이지 5
     expect(withImage.every((v) => v.image!.startsWith('https://')), isTrue);
-    expect(real.firstWhere((v) => v.id == 'V001').image, isNull);
+    expect(real.firstWhere((v) => v.id == 'V015').image, isNull); // 검수에서 뺀 곳
+    // 무료 사진: [시연] 업체는 모든 항목에, 사진 없는 실제 업체도 분류에 맞는 참고 사진이 있다 (저작자·라이선스 포함)
+    for (final c in [...VendorCategory.planItems, ...VendorCategory.realGroups]) {
+      final p = StockPhotos.pick(c, 'D0001');
+      expect(p, isNotNull, reason: c.name);
+      expect(p!.url, startsWith('https://'));
+      expect(p.credit, contains('Wikimedia Commons'));
+    }
     expect(demo.map((v) => v.category).toSet().length, VendorCategory.planItems.length);
     expect((await Repos.vendor.nearbyFor('H001')).isNotEmpty, isTrue);
 

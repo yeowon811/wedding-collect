@@ -2,13 +2,14 @@
  "meta": {
   "collectedAt": "2026-11-17",
   "method": "업체 홈페이지 대표 이미지(og:image) 주소만 기록, 파일은 복사하지 않음",
-  "review": "사람이 눈으로 검수해 안내·광고·깨진 이미지 11장 제외"
+  "review": "사람이 눈으로 검수해 안내·광고·깨진 이미지 11장 제외",
+  "deep": "첫 화면에 사진이 없던 업체는 하위 페이지(갤러리·포트폴리오 등)까지 찾음"
  },
  "images": {
   "V001": {
-   "image": null,
+   "image": "https://ecimg.cafe24img.com/pg423b91421178078/dowepa/file_data/2023/11/16/9d75dde61570205188362f907687d02e.jpg",
    "source": "https://dowepa.com/",
-   "note": "검수 제외: 사이트 템플릿 안내 이미지"
+   "note": "하위 페이지 사진"
   },
   "V002": {
    "image": null,
@@ -46,9 +47,9 @@
    "note": "og:image"
   },
   "V009": {
-   "image": null,
+   "image": "https://cdn.imweb.me/thumbnail/20200518/060aaec8479f1.jpg",
    "source": "https://mi-green.co.kr/",
-   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+   "note": "하위 페이지 사진"
   },
   "V010": {
    "image": "https://cdn.imweb.me/upload/S2025112763ec0a6853970/e5f2640e99a48.png",
@@ -78,12 +79,12 @@
   "V015": {
    "image": null,
    "source": "https://www.jbride.co.kr",
-   "note": "검수 제외: 이미지가 열리지 않음"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V016": {
-   "image": null,
+   "image": "https://www.dybf.co.kr/attachList/upload/hall/c20221007151438807/p20221019143133807/img20221019161832620.jpg",
    "source": "https://www.dybf.co.kr/",
-   "note": "검수 제외: 이벤트 광고 배너"
+   "note": "하위 페이지 사진"
   },
   "V017": {
    "image": "https://incheon.wedding/wp-content/uploads/2019/01/iwc-wedding-prepare-bg-07.jpg",
@@ -138,7 +139,7 @@
   "V027": {
    "image": null,
    "source": "https://dasonisnap.com",
-   "note": "검수 제외: 이미지가 열리지 않음"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V028": {
    "image": "https://fabstudio.co.kr/web/upload/NNEditor/20171213/01%20(13)_shop1_180056.jpg",
@@ -243,7 +244,7 @@
   "V048": {
    "image": null,
    "source": "https://wexpo.kr",
-   "note": "검수 제외: 박람회 광고 배너"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V049": {
    "image": "https://www.stanford-hotel.com/upload/contents/e0bbb1ceb4b7175ac179c4b01eea425d.jpg",
@@ -258,12 +259,12 @@
   "V051": {
    "image": null,
    "source": "https://proposelove.com",
-   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V052": {
    "image": null,
    "source": "https://proposelove.com",
-   "note": "검수 제외: 로고가 잘려 알아볼 수 없음"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V053": {
    "image": "https://www.jwoowedding.com/img/int/1.jpg",
@@ -298,7 +299,7 @@
   "V059": {
    "image": null,
    "source": "https://www.skyconvention.co.kr",
-   "note": "검수 제외: 영업시간 안내 공지"
+   "note": "검수 제외(하위 페이지 사진)"
   },
   "V060": {
    "image": "https://cdn.imweb.me/upload/S202303212428c84b8cd70/41ef2e54f0eea.png",
@@ -346,14 +347,14 @@
    "note": "홈페이지에 쓸 만한 사진이 없음"
   },
   "V069": {
-   "image": null,
+   "image": "https://cdn.imweb.me/thumbnail/20170321/58d0c8f91c255.jpg",
    "source": "http://alpsbuff.com",
-   "note": "홈페이지에 쓸 만한 사진이 없음"
+   "note": "하위 페이지 사진"
   },
   "V070": {
-   "image": null,
+   "image": "https://sunglimfood.com/img/meal-serving.jpg",
    "source": "https://sunglimfood.com",
-   "note": "검수 제외: 홍보 문구 배너"
+   "note": "하위 페이지 사진"
   },
   "V071": {
    "image": "https://cdn.imweb.me/upload/S201901115c380a0bbfabf/9ab7fd9afb92f.png",

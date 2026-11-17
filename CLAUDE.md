@@ -113,6 +113,9 @@
 - **업체 예산 (2026-11-17):** '추천 예산'(총예산 × 항목 비율)은 쓰지 않음. 체크리스트 준비 항목에 정한 금액(`AppState.budgetOf`)이 그 항목 예산 → 업체 상세·비교표·AI 상담에서 '내 ○○ 예산 N만원 안/초과', 예산 안 업체를 먼저 추천. 금액이 없으면 비교하지 않고 '준비 항목에 금액을 정하면…' 안내. 1인·100장 단위 가격만 '하객 N명 기준 약 N만원' 표시. AI 상담의 예산 질문(시작 추천 포함)도 비율 배분 대신 준비 항목에 정한 금액·계약 완료/계약 전 합계·남은 예산·금액 미정 항목을 보여줌, '체크리스트에서 금액 정하기' 버튼(action open_checklist)
 - **업체 탭 통합 (2026-11-17):** 시연용/실제 연계업체 전환을 없애고 한 목록(실제 업체 먼저: 공식전담 → 사진 있는 곳, 그다음 [시연] 업체). 항목 칩 = 준비 항목 11개 + 사회·진행, 실제 업체 분류는 `VendorCategory.coversReal`로 칩에 연결(스드메→드레스·메이크업·웨딩촬영, 사진·스냅→웨딩촬영·스냅·본식 영상, 케이터링→식대). 공식전담 업체는 `OfficialMark`(✓ 공식전담(서울시) 등). 카드 `RealVendorTile`(가격 문의)
   - **실제 업체 대표 사진:** `python -I tools/collect_vendor_images.py` → `assets/data/vendor_images.json`. 업체 홈페이지의 og:image(없으면 본문 첫 큰 사진) **주소만** 기록, 파일은 복사 안 함. 상세 화면에 '사진: 도메인' 출처 표시. 103곳 중 65곳 수집 → 눈으로 검수해 안내·광고·깨진·잘린 로고 11장 제외(`REVIEW_EXCLUDE`) → **54곳**. 인스타그램·링크 모음 등은 아이콘
+  - **하위 페이지 사진 (11-17):** `collect_vendor_images.py --deep`로 첫 화면에 사진이 없던 업체의 갤러리·포트폴리오 등 하위 페이지까지 찾음 → 검수 후 5곳 추가(`DEEP_EXCLUDE`로 6곳 제외) → **59곳**
+  - **무료 사진 (11-17):** `tools/collect_stock_images.py`(Wikimedia Commons, CC0·PD·CC BY·CC BY-SA) → `assets/data/stock_images.json`(12개 묶음 44장, 주소·저작자·라이선스·출처). 파일은 받지 않고 앱이 위키미디어에서 불러옴(대량 다운로드 시 429 차단됨). `lib/data/repositories/stock_photos.dart`가 업체 ID로 고정 선택: [시연] 업체는 항목 사진, 사진 없는 실제 업체는 분류별 참고 사진(상세에 '참고 이미지 · 업체 사진 아님'). 상세 사진 아래 저작자·라이선스 표시. 화면 위젯 `vendor/widgets/vendor_photo.dart`
+  - Gemini 이미지 생성은 무료 요금제 한도가 없어(quota 0) 쓰지 않음
   - 주의: 업체 사진은 저작권 허락을 받지 않은 이미지라, 소개서 출처 표에 '각 업체 홈페이지(대표 이미지 링크)'로 적고 필요하면 빼야 함
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제

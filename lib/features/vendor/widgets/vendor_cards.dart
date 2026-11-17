@@ -5,7 +5,7 @@ import '../../../core/widgets/info_badge.dart';
 import '../../../data/app_state.dart';
 import '../../../data/models/vendor.dart';
 import '../../../data/repositories/review_repository.dart';
-import '../../venue/widgets/venue_image.dart';
+import 'vendor_photo.dart';
 
 /// 시연용 업체 카드: 가격대, 평점, 패키지, 비교 담기
 class DemoVendorCard extends StatelessWidget {
@@ -32,9 +32,14 @@ class DemoVendorCard extends StatelessWidget {
             aspectRatio: 4 / 3, // 업체는 사진이 없어 낮게
             child: Stack(children: [
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(12)),
-                  child: Center(child: Icon(v.category.icon, size: 36, color: AppColors.textHint)),
+                child: Container(
+                  // 흰 바탕 로고 사진도 칸이 보이게 1px 테두리
+                  foregroundDecoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(12)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: VendorPhoto(category: v.category, vendorId: v.id),
+                  ),
                 ),
               ),
               Positioned(
@@ -45,6 +50,7 @@ class DemoVendorCard extends StatelessWidget {
                   builder: (context, _) {
                     final on = state.inCompare(v);
                     return IconButton(
+                      style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.92)),
                       tooltip: on ? '비교 중' : '비교 담기',
                       onPressed: () => state.toggleCompare(v),
                       icon: Icon(on ? Icons.check_circle : Icons.add_circle_outline,
@@ -117,15 +123,15 @@ class RealVendorTile extends StatelessWidget {
             aspectRatio: 4 / 3,
             child: Stack(children: [
               Positioned.fill(
-                child: v.image == null
-                    ? DecoratedBox(
-                        decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(12)),
-                        child: Center(child: Icon(v.category.icon, size: 36, color: AppColors.textHint)),
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: ColoredBox(color: AppColors.fill, child: VenueImage(url: v.image!)),
-                      ),
+                child: Container(
+                  // 흰 바탕 로고 사진도 칸이 보이게 1px 테두리
+                  foregroundDecoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(12)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: VendorPhoto(category: v.category, vendorId: v.id, url: v.image),
+                  ),
+                ),
               ),
               Positioned(
                 left: 8,
