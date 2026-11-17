@@ -114,6 +114,19 @@ class ConsultAgent implements ChatAgent {
 
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
   late UserProfile _known = _app.profileDone ? _app.profile : const UserProfile();
+  late UserProfile _seenApp = _app.profile; // 마지막으로 본 앱의 내 정보
+
+  /// 체크리스트·내 정보 화면에서 바뀐 결혼 정보만 대화 기억에 반영 (대화에서 말한 값은 덮지 않음)
+  void _syncFromApp() {
+    final cur = _app.profile;
+    _known = _known.merge(UserProfile(
+      sido: cur.sido != _seenApp.sido ? cur.sido : null,
+      guests: cur.guests != _seenApp.guests ? cur.guests : null,
+      budget: cur.budget != _seenApp.budget ? cur.budget : null,
+      weddingDate: cur.weddingDate != _seenApp.weddingDate ? cur.weddingDate : null,
+    ));
+    _seenApp = cur;
+  }
 
   Understanding? _pending; // 정보를 되묻는 동안 기다리는 원래 질문
   Slot? _asking; // 지금 되묻고 있는 항목
@@ -145,6 +158,7 @@ class ConsultAgent implements ChatAgent {
 
   @override
   Future<ChatMessage> reply(String question) async {
+    _syncFromApp();
     final text = question.trim();
     if (_asking != null && _pending != null) {
       if (_isDontKnow(text)) return _skipCurrent();

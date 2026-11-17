@@ -149,20 +149,22 @@ class _PlanCard extends StatelessWidget {
                 () => _pick(
                   context,
                   '지역',
-                  (done) => Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final s in kSidoList)
-                        ChoiceChip(
-                          label: Text(s),
-                          selected: p.hasSido && p.sido == s,
-                          onSelected: (_) {
-                            state.updatePlan(p.copyWith(sido: s));
-                            done();
-                          },
-                        ),
-                    ],
+                  (done) => LayoutBuilder(
+                    builder: (context, box) => DropdownMenu<String>(
+                      width: box.maxWidth,
+                      initialSelection: p.hasSido ? p.sido : null,
+                      hintText: '지역을 입력하거나 고르세요 (예: 서울)',
+                      enableFilter: true,
+                      requestFocusOnTap: true,
+                      menuHeight: 260,
+                      leadingIcon: const Icon(Icons.place_outlined),
+                      dropdownMenuEntries: [for (final s in kSidoList) DropdownMenuEntry(value: s, label: s)],
+                      onSelected: (s) {
+                        if (s == null) return;
+                        state.updatePlan(p.copyWith(sido: s));
+                        done();
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -174,15 +176,14 @@ class _PlanCard extends StatelessWidget {
                 () => _pick(
                   context,
                   '총예산',
-                  (done) => PresetPicker(
+                  (done) => NumberConfirmField(
                     value: p.hasBudget ? p.budget : null,
-                    presets: const [1000, 2000, 3000, 5000, 7000],
-                    format: formatManwon,
                     unit: '만원',
                     min: 100,
                     max: 100000,
-                    label: '총예산 (만원)',
-                    onChanged: (v) {
+                    hint: '예: 3000',
+                    preview: (v) => '총예산 ${formatManwon(v)}',
+                    onConfirmed: (v) {
                       state.updatePlan(p.copyWith(budget: v));
                       done();
                     },
@@ -197,15 +198,14 @@ class _PlanCard extends StatelessWidget {
                 () => _pick(
                   context,
                   '하객 수',
-                  (done) => PresetPicker(
+                  (done) => NumberConfirmField(
                     value: p.hasGuests ? p.guests : null,
-                    presets: const [50, 100, 150, 200, 300],
-                    format: (v) => '$v명',
                     unit: '명',
                     min: 10,
                     max: 2000,
-                    label: '하객 수',
-                    onChanged: (v) {
+                    hint: '예: 150',
+                    preview: (v) => '하객 $v명',
+                    onConfirmed: (v) {
                       state.updatePlan(p.copyWith(guests: v));
                       done();
                     },
@@ -272,8 +272,10 @@ class _PlanCard extends StatelessWidget {
   ) {
     return showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(ctx).viewInsets.bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,15 +313,11 @@ class _BudgetCard extends StatelessWidget {
 
     return _Section(
       title: '예산',
-      trailing: TextButton(
-        onPressed: () => _editBudget(context),
-        child: Text(p.hasBudget ? '총예산 수정' : '총예산 입력'),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!p.hasBudget)
-            Text('총예산을 입력하면 남은 예산을 계산해 드려요',
+            Text('위 결혼 정보에서 총예산을 입력하면 남은 예산을 계산해 드려요',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textSecondary))
           else
           Text.rich(TextSpan(children: [
@@ -379,35 +377,6 @@ class _BudgetCard extends StatelessWidget {
         Text(formatManwon(value),
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
       ]);
-
-  Future<void> _editBudget(BuildContext context) => showModalBottomSheet<void>(
-        context: context,
-        builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('총예산',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-              const SizedBox(height: 16),
-              PresetPicker(
-                value: state.plan.hasBudget ? state.plan.budget : null,
-                presets: const [1000, 2000, 3000, 5000, 7000],
-                format: formatManwon,
-                unit: '만원',
-                min: 100,
-                max: 100000,
-                label: '총예산 (만원)',
-                onChanged: (v) {
-                  state.updatePlan(state.plan.copyWith(budget: v));
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
-          ),
-        ),
-      );
 }
 
 /// 준비 항목: 누르면 이름·상태·금액·업체를 고치거나 지울 수 있고, 새 항목을 추가할 수 있다
@@ -669,19 +638,10 @@ class _TimelineCard extends StatelessWidget {
           Text(
             !state.plan.hasDate
                 ? '예식일을 입력하면 할 일마다 언제까지 해야 하는지 계산해 드려요.'
-                : '아직 할 일이 없어요. 직접 추가하거나 추천 할 일을 불러오세요.',
+                : '아직 할 일이 없어요. [할 일 추가]로 직접 넣어 주세요.',
             style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
-          if (tasks.isEmpty)
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: state.loadRecommendedTasks,
-                child: Text('추천 할 일 ${kChecklistTasks.length}개 불러오기'),
-              ),
-            ),
-          const SizedBox(height: 8),
           Row(children: [
             Expanded(child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('할 일 추가'))),
             if (tasks.isNotEmpty) ...[
@@ -762,7 +722,7 @@ class _TimelineCard extends StatelessWidget {
 
   Future<void> _addTask(BuildContext context) {
     final title = TextEditingController();
-    int? dMinus = 30;
+    final dMinusField = TextEditingController();
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -789,16 +749,12 @@ class _TimelineCard extends StatelessWidget {
                   ),
                   FormSection(
                     title: '언제까지',
-                    hint: '예식일 며칠 전까지 할지 골라 주세요.',
-                    child: PresetPicker(
-                      value: dMinus,
-                      presets: const [7, 30, 60, 90, 180, 365],
-                      format: (v) => 'D-$v',
-                      unit: '일 전',
-                      min: 0,
-                      max: 1000,
-                      label: '예식 며칠 전',
-                      onChanged: (v) => setSheet(() => dMinus = v),
+                    hint: '예식일 며칠 전까지 할지 숫자로 입력해 주세요.',
+                    child: TextField(
+                      controller: dMinusField,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(hintText: '예: 30', prefixText: '예식 ', suffixText: '일 전'),
                     ),
                   ),
                 ]),
@@ -808,8 +764,9 @@ class _TimelineCard extends StatelessWidget {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () {
-                      if (title.text.trim().isEmpty || dMinus == null) return;
-                      state.addTask(title.text, dMinus!);
+                      final dMinus = int.tryParse(dMinusField.text);
+                      if (title.text.trim().isEmpty || dMinus == null || dMinus > 1000) return;
+                      state.addTask(title.text, dMinus);
                       Navigator.pop(ctx);
                     },
                     child: const Text('추가'),

@@ -21,6 +21,22 @@ void main() {
     expect(s.tasks.length, kChecklistTasks.length);
   });
 
+  test('체크리스트와 AI 상담 내 정보는 서로 연동된다', () {
+    s.resetAll();
+    // 체크리스트에서 입력 → 내 정보
+    s.updatePlan(s.plan.copyWith(guests: 130, sido: '부산'));
+    expect(s.profile.guests, 130);
+    expect(s.profile.sido, '부산');
+    expect(s.profile.budget, isNull); // 입력하지 않은 값은 넣지 않는다
+    // 내 정보 화면에서 입력 → 체크리스트
+    s.updateProfileDraft(s.profile.copyWith(budget: 4200));
+    expect(s.plan.hasBudget, isTrue);
+    expect(s.plan.budget, 4200);
+    expect(s.plan.hasDate, isFalse);
+    s.resetAll();
+    s.loadRecommendedTasks(); // 뒤 테스트가 쓰는 할 일
+  });
+
   test('준비 항목을 추가·수정·삭제하고 되돌릴 수 있다', () {
     expect(s.items.length, 11);
     final trip = s.addItem('신혼여행', amount: 400);

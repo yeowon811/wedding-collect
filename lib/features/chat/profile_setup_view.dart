@@ -23,12 +23,34 @@ class ProfileSetupView extends StatefulWidget {
 
 class _ProfileSetupViewState extends State<ProfileSetupView> {
   late final _app = AppState.instance;
-  late UserProfile _p = _app.profileDone || _app.profile.summary.isNotEmpty
-      ? _app.profile
-      : UserProfile(guests: _app.plan.guests, budget: _app.plan.budget);
+  // 체크리스트에서 입력한 값도 profile에 들어 있다 (AppState.updatePlan)
+  late UserProfile _p = _app.profile;
   late bool _ageKnown = _p.age != null;
 
-  void _set(UserProfile p) => setState(() => _p = p);
+  void _set(UserProfile p) {
+    setState(() => _p = p);
+    _app.updateProfileDraft(p); // 체크리스트와 바로 연동
+  }
+
+  /// 이 화면이 열려 있는 동안 체크리스트에서 바꾼 결혼 정보도 받아 온다
+  void _onAppChanged() {
+    final a = _app.profile;
+    if (identical(a, _p) || !mounted) return; // 이 화면에서 바꾼 것
+    if (a.sido == _p.sido && a.guests == _p.guests && a.budget == _p.budget && a.weddingDate == _p.weddingDate) return;
+    setState(() => _p = _p.copyWith(sido: a.sido, guests: a.guests, budget: a.budget, weddingDate: a.weddingDate));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _app.addListener(_onAppChanged);
+  }
+
+  @override
+  void dispose() {
+    _app.removeListener(_onAppChanged);
+    super.dispose();
+  }
 
   void _save() {
     var p = _p;

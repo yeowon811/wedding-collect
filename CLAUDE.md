@@ -128,6 +128,8 @@
   - **기간은 데이터에 없어 정직하게 표시:** 전국 사업(대출·세제·검진)은 '상시 신청', 지자체 사업은 '2026년 12월 31일(목) 까지 · 예산 소진 시 마감'(2026년 사업 기준), 상세에 '정확한 신청 기간은 기관 공고에서 확인'. 실제 마감일을 모으면 Policy에 필드 추가해 바꾸기
 - **AI 상담 내 정보 입력 (2026-11-17):** 거주 지역은 입력칸+드롭다운(`DropdownMenu`, 글자 치면 목록 좁혀짐, 고르면 적용), 하객 수·총예산은 `NumberConfirmField`(입력칸 + [확인], 범위 밖이면 안내, '하객 120명으로 저장했어요'). `core/widgets/inputs.dart`. 체크리스트·시뮬레이터는 여전히 `PresetPicker`(칩 + 직접 입력)
 - **체크리스트 빈 상태로 시작 (2026-11-17):** 결혼 정보(예식일·지역·총예산·하객)는 `WeddingPlan.entered`에 입력한 항목만 표시('입력하기', D-?), 값은 계산용 기본값을 그대로 가짐(업체·시뮬레이터 내부 계산). 예식일 전엔 할 일 날짜·캘린더 계산 안 함, 총예산 전엔 남은 예산 대신 안내. 할 일은 빈 목록으로 시작 → [추천 할 일 20개 불러오기](`AppState.loadRecommendedTasks`)·[할 일 추가]. 준비 항목 11개는 유지. AI 상담 '뭐부터?'는 할 일이 없으면 추천 목록 기준. 예전 저장본은 저장된 값을 입력한 것으로 봄. 시연 링크 `?demo=1`은 추천 할 일도 불러옴
+- **체크리스트 ↔ AI 상담 연동 (2026-11-17):** `AppState.updatePlan`이 내 정보(profile)에도 입력한 값(지역·하객·총예산·예식일)을 넣고, AI 상담 내 정보 화면은 값을 바꿀 때마다 `updateProfileDraft`로 체크리스트(plan)에 바로 반영, 화면이 열려 있는 동안 바깥 변경도 받아 옴. 상담 에이전트는 답할 때마다 앱에서 바뀐 값만 대화 기억에 반영(`_syncFromApp`, 대화에서 말한 값은 덮지 않음)
+  - 체크리스트 입력 창: 지역은 입력칸+드롭다운, 총예산·하객은 `NumberConfirmField`, 할 일 추가의 '언제까지'는 숫자 입력칸('예식 ○일 전'). 예산 카드의 총예산 버튼·추천 할 일 불러오기 버튼은 없앰(`loadRecommendedTasks`는 시연 링크·테스트용으로만 남김)
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`
@@ -140,6 +142,7 @@
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → `firebase deploy --only hosting --project wedding-collect`
 - 웹 제목·설명: `web/index.html`, `web/manifest.json` (결혼 준비 도우미)
+- 캐시: 앱 코드·데이터·첫 화면은 no-cache(배포 후 새로고침하면 바로 반영), 글꼴·그림만 하루 저장 (`firebase.json` headers)
 - 주의: 배포본에 App Check 디버그 토큰이 들어감 (무료 요금제라 비용 위험은 없고 최악은 무료 사용량 소진). 웹은 reCAPTCHA 제공자로 바꾸는 것이 안전. 공모전 후 콘솔에서 토큰 삭제
 - 캡처 도구로 배포본 확인: `BASE_URL=https://wedding-collect.web.app/ node tools/screenshots.mjs <폴더> "?demo=1&tab=4"`
 

@@ -172,13 +172,12 @@ void main() {
     await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 예산보다 위
-    // 처음에는 할 일이 비어 있다 → 예식일 입력 + 추천 할 일 불러오기
+    // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
     expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
     final app = AppState.instance;
     app.updatePlan(app.plan.copyWith(weddingDate: DateTime.now().add(const Duration(days: 200))));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.textContaining('개 불러오기'));
-    await tester.tap(find.textContaining('개 불러오기'));
+    app.loadRecommendedTasks(); // (화면의 불러오기 버튼은 없앰) 시연용으로 할 일을 채운다
     await tester.pumpAndSettle();
 
     // 할 일 캘린더: 달력과 이번 달 일정 (상담 신청한 날이 들어 있다)

@@ -37,16 +37,7 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(js|wasm|otf|ttf|json|png|jpg)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
-        ]
-      },
-      {
-        "source": "/index.html",
+        "source": "**",
         "headers": [
           {
             "key": "Cache-Control",
@@ -55,11 +46,11 @@
         ]
       },
       {
-        "source": "/flutter_service_worker.js",
+        "source": "**/*.@(otf|ttf|png|jpg|ico)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache"
+            "value": "public, max-age=86400"
           }
         ]
       }

@@ -190,8 +190,23 @@ class AppState extends ChangeNotifier {
   final List<DemoVendor> compare = [];
   final List<Review> myReviews = [];
 
+  /// 체크리스트에서 결혼 정보를 바꾸면 AI 상담 내 정보에도 같은 값이 들어간다
   void updatePlan(WeddingPlan p) {
     plan = p;
+    profile = profile.copyWith(
+      sido: p.hasSido ? p.sido : null,
+      guests: p.hasGuests ? p.guests : null,
+      budget: p.hasBudget ? p.budget : null,
+      weddingDate: p.hasDate ? p.weddingDate : null,
+      weddingUndecided: p.hasDate ? false : null,
+    );
+    notifyListeners();
+  }
+
+  /// AI 상담 내 정보 입력 중에 바꾼 값을 바로 체크리스트에도 반영 (입력을 마치기 전이라도)
+  void updateProfileDraft(UserProfile p) {
+    profile = p;
+    plan = plan.copyWith(sido: p.sido, guests: p.guests, budget: p.budget, weddingDate: p.weddingDate);
     notifyListeners();
   }
 
