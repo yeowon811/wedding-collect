@@ -50,12 +50,6 @@ class ConsultTools {
     return ((fit.isNotEmpty ? fit : all).take(3).toList(), fit.length, all.length);
   }
 
-  /// 예산 배분 (만원)
-  static List<(VendorCategory, int)> budgetPlan(int totalBudget) {
-    final items = VendorCategory.planItems.toList()..sort((a, b) => b.budgetShare.compareTo(a.budgetShare));
-    return [for (final c in items) (c, totalBudget * c.budgetShare ~/ 100)];
-  }
-
   /// 아직 안 한 할 일 (예식일 기준 순서)
   static List<ChecklistTask> nextTasks({int count = 4}) {
     final s = AppState.instance;

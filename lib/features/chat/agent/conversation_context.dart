@@ -29,7 +29,7 @@ const _intentLabel = {
   ConsultIntent.policy: '지원 정책',
   ConsultIntent.venue: '공공예식장',
   ConsultIntent.vendor: '업체',
-  ConsultIntent.budget: '예산 배분',
+  ConsultIntent.budget: '예산 현황',
   ConsultIntent.schedule: '준비 순서',
   ConsultIntent.help: '일반 질문',
 };

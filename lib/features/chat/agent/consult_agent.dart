@@ -13,6 +13,7 @@ import '../../policy/policy_matcher.dart';
 import '../../vendor/demo_vendor_detail_screen.dart';
 import '../../venue/venue_detail_screen.dart';
 import '../chat_agent.dart';
+import '../../../app/main_shell.dart';
 import 'consult_tools.dart';
 import 'conversation_context.dart';
 import 'gemini_client.dart';
@@ -92,7 +93,7 @@ class ConsultAgent implements ChatAgent {
     ConsultIntent.policy: '지원 정책',
     ConsultIntent.venue: '공공예식장',
     ConsultIntent.vendor: '업체 추천',
-    ConsultIntent.budget: '예산 배분',
+    ConsultIntent.budget: '예산 현황',
     ConsultIntent.schedule: '준비 순서',
     ConsultIntent.help: '일반 질문',
   };
@@ -214,6 +215,9 @@ class ConsultAgent implements ChatAgent {
   @override
   Future<ChatMessage> choose(QuickReply r) async {
     switch (r.action) {
+      case 'open_checklist':
+        MainShell.goTo(3);
+        return ChatMessage(fromUser: false, text: '체크리스트 탭을 열었어요. 준비 항목을 눌러 금액을 적어 주세요.');
       case 'skip_ask':
         return _skipCurrent();
       case 'save_profile':
@@ -337,7 +341,7 @@ class ConsultAgent implements ChatAgent {
             Slot.budget,
             if (u.item == VendorCategory.meal || u.item == VendorCategory.invitation) Slot.guests,
           ],
-        ConsultIntent.budget => [Slot.budget, Slot.guests],
+        ConsultIntent.budget => [Slot.budget],
         ConsultIntent.schedule => [Slot.weddingDate],
         ConsultIntent.recommend => [Slot.sido, Slot.age, Slot.stage, Slot.guests, Slot.budget],
         ConsultIntent.help => const [],
@@ -645,7 +649,7 @@ class ConsultAgent implements ChatAgent {
       ],
       sources: const ['시연용 가상 업체 데이터'],
       quickReplies: _withSave(const [
-        QuickReply('예산 배분 보기', text: '예산 어떻게 나누면 돼?'),
+        QuickReply('내 예산 보기', text: '내 예산 현황 알려줘'),
         QuickReply('메이크업도 추천', text: '메이크업 추천해줘'),
       ]),
     );
@@ -741,22 +745,42 @@ class ConsultAgent implements ChatAgent {
     return '• 내 ${v.category.label} 예산 $b만원 ${v.estimate(guests: guests) <= b ? '안이에요' : '보다 많아요'}\n';
   }
 
+  /// 내 예산 현황: 체크리스트 준비 항목에 정한 금액 그대로 (임의 배분 비율은 쓰지 않음)
   ChatMessage _budgetAnswer() {
     final total = _known.budget!;
-    final plan = ConsultTools.budgetPlan(total);
-    _lookupNote = '앱 기본 배분 비율 × 총예산 ${formatManwon(total)}';
+    final withAmount = _app.items.where((i) => (i.amount ?? 0) > 0).toList();
+    final missing = _app.items.where((i) => (i.amount ?? 0) <= 0).map((i) => i.name).toList();
+    final confirmed = _app.confirmedTotal;
+    final planned = _app.plannedTotal;
+    final left = total - confirmed - planned;
+    _lookupNote = '체크리스트 준비 항목 ${_app.items.length}개 중 금액을 정한 ${withAmount.length}개 합산';
+    const actions = [
+      QuickReply('체크리스트에서 금액 정하기', action: 'open_checklist'),
+      QuickReply('무료 공공예식장', text: '공공예식장 추천해줘'),
+    ];
+    if (withAmount.isEmpty) {
+      return ChatMessage(
+        fromUser: false,
+        basis: '총예산 ${formatManwon(total)}',
+        text: '아직 준비 항목에 금액을 정하지 않았어요.\n'
+            '체크리스트의 준비 항목마다 금액을 적어 두면, 여기서 항목별 금액·합계·남은 예산을 정리해 드리고 '
+            '업체를 추천할 때도 그 금액 안의 업체를 먼저 골라 드려요.',
+        sources: const ['내 체크리스트'],
+        quickReplies: actions,
+      );
+    }
+    String line(PlanItem i) =>
+        '• ${i.name} ${formatManwon(i.amount!)}${i.status == ItemStatus.todo ? '' : ' (${i.status.label})'}';
     return ChatMessage(
       fromUser: false,
-      basis: '총예산 ${formatManwon(total)}${_known.guests != null ? ' · 하객 ${_known.guests}명' : ''}',
-      text: '추천 배분이에요.\n'
-          '${plan.map((e) => '• ${e.$1.label} ${e.$2}만원 (${e.$1.budgetShare}%)').join('\n')}\n'
-          '• 대관·기타 ${total * 5 ~/ 100}만원 (5%)\n\n'
-          '공공예식장은 대관료가 무료이거나 저렴한 곳이 많아, 아낀 비용을 다른 항목에 쓸 수 있어요.',
-      sources: const ['앱 기본 배분 비율 (조정 가능)'],
-      quickReplies: _withSave(const [
-        QuickReply('드레스 추천', text: '예산 안에서 드레스 추천해줘'),
-        QuickReply('무료 공공예식장', text: '공공예식장 추천해줘'),
-      ]),
+      basis: '총예산 ${formatManwon(total)} · 준비 항목에 정한 금액',
+      text: '준비 항목에 정해 둔 금액이에요.\n'
+          '${withAmount.map(line).join('\n')}\n\n'
+          '• 계약·결제 완료 ${formatManwon(confirmed)} · 계약 전 ${formatManwon(planned)}\n'
+          '• 총예산 ${formatManwon(total)}에서 ${left >= 0 ? '남은 예산 ${formatManwon(left)}' : '${formatManwon(-left)} 초과'}'
+          '${missing.isEmpty ? '' : '\n\n아직 금액을 정하지 않은 항목: ${missing.join(', ')}'}',
+      sources: const ['내 체크리스트'],
+      quickReplies: actions,
     );
   }
 
@@ -793,9 +817,13 @@ class ConsultAgent implements ChatAgent {
         : (await ConsultTools.searchVenues(sido: _known.sido!, guests: _known.guests)).take(2).toList();
     final policies = (await ConsultTools.matchPolicies(_known)).take(3).toList();
     final budget = _known.budget;
-    final top3 = budget == null ? const [] : ConsultTools.budgetPlan(budget).take(3).toList();
+    final used = _app.confirmedTotal + _app.plannedTotal;
+    final budgetLine = budget == null || used == 0
+        ? null
+        : '💰 예산: 준비 항목에 정한 금액 ${formatManwon(used)} · '
+            '${budget - used >= 0 ? '남은 예산 ${formatManwon(budget - used)}' : '${formatManwon(used - budget)} 초과'}';
     final tasks = ConsultTools.nextTasks(count: 2);
-    _lookupNote = '예식장 검색 · 정책 판정 · 예산 배분 · 할 일 도구의 결과를 모아 정리';
+    _lookupNote = '예식장 검색 · 정책 판정 · 내 예산 현황 · 할 일 도구의 결과를 모아 정리';
 
     return ChatMessage(
       fromUser: false,
@@ -804,7 +832,7 @@ class ConsultAgent implements ChatAgent {
         if (venues.isNotEmpty)
           '🏛 공공예식장: ${venues.map((v) => '${v.name}(${v.capacityLabel}, ${v.feeLabel})').join(', ')}',
         if (policies.isNotEmpty) '🎁 받을 수 있는 정책: ${policies.map((m) => m.policy.name).join(', ')}',
-        if (top3.isNotEmpty) '💰 예산 배분: ${top3.map((e) => '${e.$1.label} ${e.$2}만원').join(', ')} …',
+        if (budgetLine != null) budgetLine,
         if (tasks.isNotEmpty) '✅ 지금 할 일: ${tasks.map((t) => t.title).join(', ')}',
         '\n궁금한 부분을 눌러 자세히 보거나, 편하게 물어보세요.',
       ].join('\n'),

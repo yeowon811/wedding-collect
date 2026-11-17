@@ -9,7 +9,7 @@ enum ConsultIntent {
   policy, // 지원 정책
   venue, // 공공예식장
   vendor, // 업체(드레스·스냅 등)
-  budget, // 예산 배분
+  budget, // 내 예산 현황 (준비 항목에 정한 금액)
   schedule, // 준비 순서·일정
   help, // 무엇을 물어볼지 모름
 }

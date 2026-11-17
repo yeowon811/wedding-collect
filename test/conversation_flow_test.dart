@@ -64,6 +64,27 @@ void main() {
     app.updateItem(dress, clearAmount: true);
   });
 
+  test('예산 질문은 준비 항목에 정한 금액·합계·남은 예산을 보여준다', () async {
+    final app = AppState.instance;
+    final dress = app.itemFor(VendorCategory.dress)!;
+    final food = app.itemFor(VendorCategory.meal)!;
+    for (final i in app.items) {
+      app.updateItem(i, clearAmount: true);
+    }
+    final empty = await ConsultAgent().reply('예산 어떻게 나누면 돼?');
+    expect(empty.text, contains('아직 준비 항목에 금액을 정하지 않았어요'));
+    expect(empty.quickReplies.first.action, 'open_checklist');
+
+    app.updateItem(dress, amount: 200);
+    app.updateItem(food, amount: 900);
+    final m = await ConsultAgent().reply('예산 어떻게 나누면 돼?');
+    expect(m.text, contains('드레스 200만원'));
+    expect(m.text, contains('남은 예산 1,900만원'));
+    expect(m.text, isNot(contains('%')));
+    app.updateItem(dress, clearAmount: true);
+    app.updateItem(food, clearAmount: true);
+  });
+
   test('이어서 하기: 저장된 대화로 기억을 되살려 "첫 번째 거"를 찾는다', () async {
     final first = ConsultAgent();
     final user = const ChatMessage(fromUser: true, text: '서울 공공예식장 추천해줘');

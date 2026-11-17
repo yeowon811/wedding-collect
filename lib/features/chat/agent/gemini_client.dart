@@ -90,7 +90,7 @@ class GeminiClient {
 사용자의 질문(과 방금 앱이 되물은 항목)을 읽고 정해진 JSON으로만 답한다. 설명 문장은 쓰지 않는다.
 
 - intent: policy(지원 정책·대출·장려금), venue(공공예식장·예식 장소), vendor(드레스·스튜디오·식대 등 업체),
-  budget(예산 배분·비용), schedule(준비 순서·일정·뭐부터), recommend(전체 추천), help(그 외·인사·잘 모르겠음)
+  budget(내 예산 현황·비용), schedule(준비 순서·일정·뭐부터), recommend(전체 추천), help(그 외·인사·잘 모르겠음)
 - topic(정책 분야, 정책 질문일 때만): wedding(예식 지원), cash(장려금·축하금), housing(주거·신혼집·전세·대출·이자),
   health(건강·임신), education, etc
 - item(업체 항목, 업체 질문일 때만): 질문과 함께 주는 "항목 목록" 중 하나의 영문 이름
