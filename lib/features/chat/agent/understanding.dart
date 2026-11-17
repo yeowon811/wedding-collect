@@ -24,13 +24,29 @@ class Understanding {
     this.facts = const UserProfile(),
     this.topic,
     this.item,
+    this.refIndex,
+    this.filter,
   });
 
   final ConsultIntent intent;
   final UserProfile facts; // 질문에서 새로 알게 된 정보 (예: "20대" → 만 20~29세)
   final PolicyCategory? topic; // 정책 분야 (예: "신혼생활" → 주거)
   final VendorCategory? item; // 업체 항목 (예: "드레스")
+  final int? refIndex; // 이전 답변 목록의 몇 번째 항목을 가리키는지 (1부터, "두 번째 거" → 2)
+  final String? filter; // 이전 결과를 거르는 조건 ([kResultFilters] 중 하나)
+
+  Understanding withItem(VendorCategory item) => Understanding(
+        intent: intent,
+        facts: facts,
+        topic: topic,
+        item: item,
+        refIndex: refIndex,
+        filter: filter,
+      );
 }
+
+/// 이전 결과를 거르는 조건: 무료 / 하객 수용 / 더 싼 곳 / 사진 있음
+const kResultFilters = ['free', 'fits_guests', 'cheaper', 'has_photo'];
 
 /// 질문 이해 단계. 지금은 규칙(키워드·정규식), 나중에는 LLM이 같은 결과를 만들면 된다.
 abstract class Understander {

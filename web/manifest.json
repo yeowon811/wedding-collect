@@ -1,11 +1,11 @@
 {
-    "name": "wedding_collect",
-    "short_name": "wedding_collect",
+    "name": "결혼 준비 도우미",
+    "short_name": "결혼 준비",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#3B5BDB",
+    "description": "공공예식장·청년 결혼 지원 정책·업체를 찾고 AI와 결혼 준비를 상담하는 앱",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

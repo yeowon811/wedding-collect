@@ -49,3 +49,6 @@ app.*.map.json
 
 # App Check 디버그 토큰 (flutter run/build --dart-define-from-file=secrets.json)
 secrets.json
+
+# Firebase 배포 캐시
+.firebase/

@@ -131,7 +131,7 @@ class Venue {
   bool get isFree => rentalFee == 0;
   bool isAiImage(String url) => aiImages.contains(url);
 
-  /// 목록 카드 대표 사진: 실제 사진을 먼저, 없으면 AI 생성 이미지
+  /// 목록 카드 대표 사진 (실제 사진이 있으면 AI 생성 이미지는 데이터 변환 때 이미 뺌)
   String? get coverImage =>
       images.where((u) => !aiImages.contains(u)).firstOrNull ??
       images.firstOrNull;

@@ -1,3 +1,7 @@
+import 'package:flutter/material.dart' show Icons, IconData;
+
+import '../features/chat/agent/gemini_client.dart';
+import '../features/chat/chat_agent.dart';
 import 'app_state.dart';
 import 'models/review.dart';
 import 'models/user_profile.dart';
@@ -84,7 +88,65 @@ class UserDataCodec {
           'context': r.context,
         },
     ],
+    'chatUpdatedAt': _date(s.chatUpdatedAt),
+    'chat': [
+      for (var k = 0; k < s.chat.length; k++)
+        _encodeMessage(s.chat[k], last: k == s.chat.length - 1),
+    ],
   };
+
+  /// 대화 메시지 1개. 사용자 문장의 전화번호·이메일은 가려서 저장한다.
+  /// 선택 버튼은 마지막 메시지의 "질문으로 보내는 버튼"만 남긴다 (되묻기 상태는 저장하지 않음).
+  static Map<String, Object?> _encodeMessage(ChatMessage m, {required bool last}) => {
+        'u': m.fromUser,
+        'text': m.fromUser ? GeminiClient.maskPersonalInfo(m.text) : m.text,
+        if (m.basis != null) 'basis': m.basis,
+        if (m.sources.isNotEmpty) 'sources': m.sources,
+        if (m.aiWritten) 'ai': true,
+        if (m.isQuestion) 'q': true,
+        if (m.trace.isNotEmpty) 'trace': m.trace,
+        if (m.cards.isNotEmpty)
+          'cards': [
+            for (final c in m.cards)
+              {'title': c.title, 'subtitle': c.subtitle, 'badge': c.badge, 'ref': c.ref},
+          ],
+        if (last)
+          'replies': [
+            for (final r in m.quickReplies)
+              if (r.text != null && r.slot == null && r.action == null) {'label': r.label, 'text': r.text},
+          ],
+      };
+
+  static IconData _iconFor(String? ref) => switch (ref?.split(':').first) {
+        'venue' => Icons.location_city,
+        'policy' => Icons.volunteer_activism,
+        'vendor' => Icons.storefront_outlined,
+        _ => Icons.description_outlined,
+      };
+
+  static ChatMessage _decodeMessage(Map m) => ChatMessage(
+        fromUser: m['u'] == true,
+        text: m['text'] as String? ?? '',
+        basis: m['basis'] as String?,
+        sources: ((m['sources'] as List?) ?? const []).cast<String>(),
+        aiWritten: m['ai'] == true,
+        isQuestion: m['q'] == true,
+        trace: ((m['trace'] as List?) ?? const []).cast<String>(),
+        cards: [
+          for (final c in ((m['cards'] as List?) ?? const []).cast<Map>())
+            ChatCard(
+              title: c['title'] as String? ?? '',
+              subtitle: c['subtitle'] as String? ?? '',
+              badge: c['badge'] as String?,
+              ref: c['ref'] as String?,
+              icon: _iconFor(c['ref'] as String?),
+            ),
+        ],
+        quickReplies: [
+          for (final r in ((m['replies'] as List?) ?? const []).cast<Map>())
+            QuickReply(r['label'] as String, text: r['text'] as String),
+        ],
+      );
 
   /// 저장된 Map을 앱 상태에 적용한다. 시연용 업체는 ID로 다시 찾는다 (없어진 업체는 건너뜀).
   static void apply(
@@ -191,6 +253,10 @@ class UserDataCodec {
       consultations: consultations,
       contracts: contracts,
       myReviews: reviews,
+      chat: [
+        for (final m in ((d['chat'] as List?) ?? const []).cast<Map>()) _decodeMessage(m),
+      ],
+      chatUpdatedAt: _parseDate(d['chatUpdatedAt']),
     );
   }
 }

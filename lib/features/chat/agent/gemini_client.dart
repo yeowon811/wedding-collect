@@ -104,6 +104,18 @@ class GeminiClient {
   - homeless: 무주택이면 true, 집이 있으면 false
 - expecting이 주어지면 사용자의 짧은 답("서울", "27", "네")을 그 항목의 값으로 읽는다.
   이때 다른 목적의 새 질문이 아니면 intent는 "answer"로 한다.
+
+질문 앞에 "이전 대화"가 주어질 수 있다. 이번 질문을 이해하는 데만 쓴다.
+- 질문이 생략된 경우("그럼 부산은?", "200명이면?", "메이크업은?", "신혼부부는?") 이전 대화의
+  intent·topic·item을 이어받고, 질문에 새로 나온 값만 facts에 넣는다.
+- 질문이 새 목적을 분명히 말하면("드레스 추천해줘", "예산은 어떻게 나눠?", "정책 알려줘") 이전 대화를 이어받지 않는다.
+  인사·감사 같은 말은 help.
+- facts에는 이번 질문에 나온 값만 넣는다. 단 "처음에 말한 지역"처럼 이전 대화의 값을 직접 가리키면 그 값을 넣는다.
+- refIndex: 이전 답변 목록의 몇 번째 항목을 가리키는지(1부터). "두 번째 거"→2, "마지막"→그 목록의 마지막 번호,
+  "거기/그거/그 정책"처럼 하나를 가리키면 1. 여러 목록이 있으면 질문이 가리키는 목록을 고르고, intent도 그 목록의
+  목적으로 한다(예식장 목록이면 venue). 가리키지 않으면 null.
+- filter: 이전 결과를 거르는 조건. free(무료), fits_guests(하객이 다 들어가는 곳), cheaper(더 싼 곳),
+  has_photo(사진 있는 곳). 없으면 null.
 ''';
 
   static String get _itemList =>
@@ -115,6 +127,8 @@ class GeminiClient {
       'topic': Schema.enumString(
           enumValues: PolicyCategory.values.map((e) => e.name).toList(), nullable: true),
       'item': Schema.string(nullable: true),
+      'refIndex': Schema.integer(nullable: true),
+      'filter': Schema.enumString(enumValues: kResultFilters, nullable: true),
       'facts': Schema.object(
         properties: {
           'sido': Schema.enumString(enumValues: kSidoList, nullable: true),
@@ -131,20 +145,23 @@ class GeminiClient {
         ],
       ),
     },
-    optionalProperties: ['topic', 'item'],
+    optionalProperties: ['topic', 'item', 'refIndex', 'filter'],
   );
 
   /// 질문을 이해해 [Understanding]으로 돌려준다. intent가 "answer"면 [Understanding.intent]는
   /// [ConsultIntent.help]로 두고 [isAnswer]를 true로 한다. 실패하면 null.
-  Future<({Understanding u, bool isAnswer})?> understand(String text, {Slot? expecting}) async {
+  /// [context]: 이전 대화 (원문 몇 턴 또는 요약 상태). 개인정보 형태는 가려서 보낸다.
+  Future<({Understanding u, bool isAnswer})?> understand(String text,
+      {Slot? expecting, String? context, Duration? timeout}) async {
     try {
       final prompt = [
         '항목 목록: $_itemList',
+        if (context != null && context.isNotEmpty) '이전 대화:\n${maskPersonalInfo(context)}\n',
         if (expecting != null) 'expecting: ${expecting.name}',
         '질문: ${maskPersonalInfo(text)}',
       ].join('\n');
       final res = await _understandModel
-          .generateContent([Content.text(prompt)]).timeout(_timeout);
+          .generateContent([Content.text(prompt)]).timeout(timeout ?? _timeout);
       final raw = res.text;
       if (raw == null) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -190,6 +207,11 @@ class GeminiClient {
         item: VendorCategory.values
             .where((e) => e.name == json['item'] && e.budgetShare > 0)
             .firstOrNull,
+        refIndex: switch (json['refIndex']) {
+          final num n when n >= 1 && n <= 10 => n.toInt(),
+          _ => null,
+        },
+        filter: kResultFilters.contains(json['filter']) ? json['filter'] as String : null,
         facts: UserProfile(
           sido: sido is String && kSidoList.contains(sido) ? sido : null,
           age: age,

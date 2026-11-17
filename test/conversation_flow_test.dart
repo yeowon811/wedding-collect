@@ -1,0 +1,59 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wedding_collect/data/app_state.dart';
+import 'package:wedding_collect/data/models/user_profile.dart';
+import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
+import 'package:wedding_collect/features/chat/chat_agent.dart';
+
+/// 대화 흐름: 이전 대화를 이어받는 질문을 (Gemini 없이 규칙만으로도) 제대로 처리하는지
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => AppState.instance.saveProfile(const UserProfile(
+        sido: '서울',
+        age: 29,
+        stage: MarriageStage.engaged,
+        guests: 150,
+        budget: 3000,
+      )));
+  tearDown(() => AppState.instance.resetProfile());
+
+  test('"두 번째 거", "그중에 무료만", "그럼 부산은?"을 이전 대화로 이해한다', () async {
+    final agent = ConsultAgent();
+    final list = await agent.reply('서울 공공예식장 추천해줘');
+    expect(list.cards.length, 3);
+
+    final second = await agent.reply('두 번째 거 자세히 알려줘');
+    expect(second.text, contains(list.cards[1].title));
+    expect(second.cards.single.ref, list.cards[1].ref);
+    expect(second.trace.any((t) => t.startsWith('대화 흐름') && t.contains('2번째')), isTrue);
+
+    // 상세 답변 뒤에도 "세 번째"는 같은 예식장 목록을 가리킨다
+    final third = await agent.reply('세 번째 거는?');
+    expect(third.text, contains(list.cards[2].title));
+
+    final free = await agent.reply('그중에 무료인 곳만');
+    expect(free.trace.any((t) => t.contains('대관료 무료인 곳')), isTrue);
+
+    final busan = await agent.reply('그럼 부산은?');
+    expect(busan.basis, contains('부산'));
+    expect(busan.cards.first.ref, startsWith('venue:'));
+  });
+
+  test('업체 질문 뒤 "더 싼 데는 없어?"는 같은 항목을 싼 순으로 다시 고른다', () async {
+    final agent = ConsultAgent();
+    await agent.reply('드레스 추천해줘');
+    final cheaper = await agent.reply('더 싼 데는 없어?');
+    expect(cheaper.text, contains('예상 비용이 낮은 순'));
+    expect(cheaper.cards.first.ref, startsWith('vendor:'));
+  });
+
+  test('이어서 하기: 저장된 대화로 기억을 되살려 "첫 번째 거"를 찾는다', () async {
+    final first = ConsultAgent();
+    final user = const ChatMessage(fromUser: true, text: '서울 공공예식장 추천해줘');
+    final answer = await first.reply(user.text);
+
+    final resumed = ConsultAgent()..restore([user, answer]);
+    final pick = await resumed.reply('첫 번째 거 자세히');
+    expect(pick.text, contains(answer.cards.first.title));
+  });
+}

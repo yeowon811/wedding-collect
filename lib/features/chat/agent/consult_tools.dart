@@ -37,12 +37,15 @@ class ConsultTools {
     required String sido,
     required int totalBudget,
     required int guests,
+    bool cheapest = false, // true면 예상 비용이 낮은 순 ("더 싼 데")
   }) async {
     final budget = totalBudget * item.budgetShare ~/ 100;
     final all = (await Repos.vendor.demoVendors())
         .where((v) => v.sido == sido && v.category == item)
         .toList()
-      ..sort((a, b) => b.rating.compareTo(a.rating));
+      ..sort((a, b) => cheapest
+          ? a.estimate(guests: guests).compareTo(b.estimate(guests: guests))
+          : b.rating.compareTo(a.rating));
     final fit = all.where((v) => v.estimate(guests: guests) <= budget).toList();
     return ((fit.isNotEmpty ? fit : all).take(3).toList(), fit.length, all.length, budget);
   }

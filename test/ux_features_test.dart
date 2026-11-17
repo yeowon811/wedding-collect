@@ -39,7 +39,7 @@ void main() {
     final m = await agent.reply('공공예식장 추천해줘');
     expect(m.trace.length, 4);
     expect(m.trace[0], startsWith('질문 이해 · 목적 공공예식장'));
-    expect(m.trace[0], contains('규칙(키워드)'));
+    expect(m.trace[0], contains('규칙(키워드'));
     expect(m.trace[1], contains('서울'));
     expect(m.trace[2], startsWith('데이터 조회 · 서울 공공예식장'));
     expect(m.trace[3], contains('Gemini 미연결'));

@@ -6,7 +6,9 @@ import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
 import 'agent/gemini_client.dart';
+import '../../core/widgets/inputs.dart';
 import 'chat_agent.dart';
+import 'chat_card_link.dart';
 import 'profile_setup_view.dart';
 
 /// AI 상담: 내 정보 입력 → 첫 추천 → 질문 → (필요하면 되묻기) → 답변
@@ -18,9 +20,9 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  // 시안을 바꿔 화면이 새로 만들어져도 대화가 남도록 보관
-  static final List<ChatMessage> _messages = [];
+  // 대화는 AppState에 두어 계정에 저장한다. 에이전트는 대화가 새로 시작될 때(chatEpoch)마다 새로 만든다.
   static ChatAgent _agent = ConsultAgent(llm: GeminiClient.instance);
+  static int _agentEpoch = -1;
 
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -29,12 +31,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
   AppState get _app => AppState.instance;
   bool get _needsProfile => !_app.profileDone && !_app.profileSkipped;
+  List<ChatMessage> get _messages => _app.chat;
+
+  /// 대화가 새로 시작됐으면(로그아웃·새 상담·다른 계정 불러오기) 에이전트도 새로
+  void _syncAgent() {
+    if (_agentEpoch != _app.chatEpoch) {
+      _agent = ConsultAgent(llm: GeminiClient.instance);
+      _agentEpoch = _app.chatEpoch;
+      // 이미 대화가 있으면(이어서 하기·다시 들어옴) 최근 대화 기억을 되살린다
+      if (_app.chat.isNotEmpty) _agent.restore(_app.chat);
+    }
+  }
 
 
   @override
   void initState() {
     super.initState();
-    if (!_needsProfile && _messages.isEmpty) _begin();
+    _syncAgent();
+    if (!_needsProfile && _messages.isEmpty && !_app.chatFromSaved) _begin();
   }
 
   @override
@@ -46,25 +60,42 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _run(Future<ChatMessage> Function() task, {ChatMessage? userMessage}) async {
     if (_busy) return;
-    setState(() {
-      if (userMessage != null) _messages.add(userMessage);
-      _busy = true;
-    });
+    if (userMessage != null) _app.addChat(userMessage);
+    setState(() => _busy = true);
     _scrollDown();
     final answer = await task();
     _agent.step.value = null;
     if (!mounted) return;
-    setState(() {
-      _messages.add(answer);
-      _busy = false;
-    });
+    _app.addChat(answer);
+    setState(() => _busy = false);
     _scrollDown();
   }
 
   /// 상담 시작 (내 정보가 있으면 첫 추천)
   void _begin() {
     _agent = ConsultAgent(llm: GeminiClient.instance);
+    _agentEpoch = _app.chatEpoch;
     _run(_agent.start);
+  }
+
+  /// 새 상담: 지난 대화를 지우고 처음부터
+  Future<void> _newChat() async {
+    if (_messages.length > 1) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('새 상담을 시작할까요?'),
+          content: const Text('지금까지의 대화는 지워져요. 내 정보는 그대로 남아요.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('새로 시작')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    _app.clearChat();
+    if (!_needsProfile) _begin();
   }
 
   void _send(String text) {
@@ -92,6 +123,14 @@ class _ChatScreenState extends State<ChatScreen> {
       listenable: _app,
       builder: (context, _) {
         final setup = _needsProfile || _editingProfile;
+        final resume = !setup && _app.chatFromSaved;
+        _syncAgent();
+        // 다른 계정을 불러와 대화가 비었으면 새로 시작
+        if (!setup && !resume && !_busy && _messages.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_busy && _messages.isEmpty && !_needsProfile) _begin();
+          });
+        }
         return Scaffold(
           // 대화 영역은 아주 연한 회색 위에 흰 말풍선 (시안 A)
           backgroundColor: setup ? null : const Color(0xFFF9FAFB),
@@ -99,6 +138,12 @@ class _ChatScreenState extends State<ChatScreen> {
             title: const Text('AI 상담'),
             actions: [
               const AccountButton(),
+              if (!setup && !resume)
+                IconButton(
+                  tooltip: '새 상담 시작',
+                  icon: const Icon(Icons.add_comment_outlined),
+                  onPressed: _newChat,
+                ),
               if (!setup)
                 IconButton(
                   tooltip: '내 정보',
@@ -113,7 +158,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
             ],
           ),
-          body: setup ? _setupView() : _chatView(),
+          body: setup ? _setupView() : (resume ? _resumeView() : _chatView()),
         );
       },
     );
@@ -123,7 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
         editing: _editingProfile,
         onDone: () {
           setState(() => _editingProfile = false);
-          _messages.add(const ChatMessage(fromUser: false, text: '내 정보를 저장했어요. 새로 추천해 드릴게요.'));
+          _app.addChat(const ChatMessage(fromUser: false, text: '내 정보를 저장했어요. 새로 추천해 드릴게요.'));
           _begin();
         },
         onSkip: _editingProfile
@@ -133,6 +178,68 @@ class _ChatScreenState extends State<ChatScreen> {
                 _begin();
               },
       );
+
+  /// 저장된 대화가 있을 때: 이어서 하기 / 새로 시작하기
+  Widget _resumeView() {
+    final at = _app.chatUpdatedAt;
+    final lastQuestion = _messages.lastWhere((m) => m.fromUser, orElse: () => _messages.last).text;
+    final when = at == null ? '' : '${at.month}월 ${at.day}일 ${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
+    return Column(children: [
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          children: [
+            Text('지난 상담이 있어요',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+            const SizedBox(height: 6),
+            Text('이어서 하거나 새로 시작할 수 있어요.',
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${when.isEmpty ? '' : '$when · '}메시지 ${_messages.length}개',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Text('"$lastQuestion"',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.textPrimary)),
+              ]),
+            ),
+          ],
+        ),
+      ),
+      BottomActionBar(children: [
+        ActionPair(
+          secondary: OutlinedButton(
+            onPressed: () {
+              _app.clearChat();
+              _begin();
+            },
+            child: const Text('새로 시작하기'),
+          ),
+          primary: FilledButton(
+            onPressed: () {
+              _app.resumeChat();
+              _agent.restore(_app.chat);
+              _app.addChat(const ChatMessage(
+                fromUser: false,
+                text: '지난 상담을 이어서 할게요. 궁금한 걸 물어보세요.',
+              ));
+              _scrollDown();
+            },
+            child: const Text('이어서 하기'),
+          ),
+        ),
+      ]),
+    ]);
+  }
 
   Widget _chatView() {
     final summary = _app.profile.summary;
@@ -360,9 +467,10 @@ class _ResultCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: c.open == null
+        onTap: c.open == null && c.ref == null
             ? null
-            : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => c.open!())),
+            : () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => c.open?.call() ?? ChatCardLink(ref: c.ref!))),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

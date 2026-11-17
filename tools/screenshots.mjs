@@ -38,7 +38,7 @@ const send = (method, params = {}) => new Promise((r) => { pending.set(++id, r);
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 for (const spec of paths) {
   const [p, click] = spec.split('|');
-  await send('Page.navigate', { url: `http://localhost:8095/${p}` });
+  await send('Page.navigate', { url: (process.env.BASE_URL ?? 'http://localhost:8095/') + p });
   // Flutter가 뜰 때까지 기다린다 (flt-glass-pane 또는 flutter-view가 생기고 조금 더)
   for (let i = 0; i < 60; i++) {
     const r = await send('Runtime.evaluate', { expression: '!!document.querySelector("flutter-view, flt-glass-pane")', returnByValue: true });

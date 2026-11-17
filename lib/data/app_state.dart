@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../features/chat/chat_agent.dart';
 import 'models/review.dart';
 import 'models/user_profile.dart';
 import 'models/vendor.dart';
@@ -59,6 +60,8 @@ class AppState extends ChangeNotifier {
     List<Consultation> consultations = const [],
     Map<VendorCategory, (DemoVendor, int)> contracts = const {},
     List<Review> myReviews = const [],
+    List<ChatMessage> chat = const [],
+    DateTime? chatUpdatedAt,
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -88,6 +91,46 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(myReviews);
     compare.clear();
+    this.chat
+      ..clear()
+      ..addAll(chat);
+    this.chatUpdatedAt = chatUpdatedAt;
+    chatFromSaved = chat.isNotEmpty; // 저장된 대화가 있으면 이어갈지 먼저 묻는다
+    chatEpoch++;
+    notifyListeners();
+  }
+
+  // ───────────────────────── AI 상담 대화 ─────────────────────────
+
+  static const chatLimit = 60; // 계정에 남기는 최근 메시지 수
+
+  /// 상담 대화 (계정에 저장, 최근 [chatLimit]개)
+  final List<ChatMessage> chat = [];
+  DateTime? chatUpdatedAt;
+
+  /// 저장된 대화를 불러왔고, 이어서 할지·새로 시작할지 아직 고르지 않음
+  bool chatFromSaved = false;
+
+  /// 대화를 새로 시작할 때마다 증가 → 상담 에이전트도 새로 만든다
+  int chatEpoch = 0;
+
+  void addChat(ChatMessage m) {
+    chat.add(m);
+    if (chat.length > chatLimit) chat.removeRange(0, chat.length - chatLimit);
+    chatUpdatedAt = DateTime.now();
+    notifyListeners();
+  }
+
+  void resumeChat() {
+    chatFromSaved = false;
+    notifyListeners();
+  }
+
+  void clearChat() {
+    chat.clear();
+    chatUpdatedAt = null;
+    chatFromSaved = false;
+    chatEpoch++;
     notifyListeners();
   }
 

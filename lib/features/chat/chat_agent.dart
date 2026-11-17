@@ -8,6 +8,7 @@ class ChatCard {
     required this.icon,
     this.badge,
     this.open,
+    this.ref,
   });
 
   final String title;
@@ -15,6 +16,7 @@ class ChatCard {
   final IconData icon;
   final String? badge;
   final Widget Function()? open; // 상세 화면
+  final String? ref; // 저장용 연결 정보: 'venue:H078', 'policy:<ID>', 'vendor:D0001' (다시 열 때 상세 화면을 찾음)
 }
 
 /// 답변 아래에 보여주는 선택 버튼.
@@ -97,4 +99,7 @@ abstract class ChatAgent {
 
   /// 사용자가 누른 선택 버튼
   Future<ChatMessage> choose(QuickReply reply);
+
+  /// "이어서 하기": 저장된 대화로 최근 대화 기억(요약 상태)을 되살린다
+  void restore(List<ChatMessage> messages);
 }

@@ -7,12 +7,14 @@ import '../../../data/models/policy.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
 import '../../../data/models/wedding_plan.dart';
+import '../../../data/repositories/repositories.dart';
 import '../../policy/policy_detail_screen.dart';
 import '../../policy/policy_matcher.dart';
 import '../../vendor/demo_vendor_detail_screen.dart';
 import '../../venue/venue_detail_screen.dart';
 import '../chat_agent.dart';
 import 'consult_tools.dart';
+import 'conversation_context.dart';
 import 'gemini_client.dart';
 import 'understanding.dart';
 
@@ -39,6 +41,51 @@ class ConsultAgent implements ChatAgent {
   // "왜 이렇게 답했나요?"에 쓰는 기록
   String _nluNote = ''; // 질문을 누가(규칙/Gemini) 이해했는지
   String _lookupNote = ''; // 어떤 데이터를 어떻게 골랐는지
+  String _flowNote = ''; // 대화 흐름을 어떻게 썼는지 (이전 목록의 몇 번째, 조건 등)
+
+  /// 최근 대화 기억: 턴마다 목적·조건·보여준 목록. 질문 이해 때 최근 3턴 요약을 함께 보낸다
+  /// (평가: 요약 3턴 + 규칙 보완이 32/32로 가장 좋음, docs/ai-eval/README.md)
+  final List<Turn> _turns = [];
+  final List<List<ChatCard>> _turnCards = []; // 각 턴에 보여준 결과 카드 ("두 번째 거" 찾기용)
+  static const _memoryTurns = 3;
+
+  void _remember(Turn t, List<ChatCard> cards) {
+    _turns.add(t);
+    _turnCards.add(cards);
+    while (_turns.length > 6) {
+      _turns.removeAt(0);
+      _turnCards.removeAt(0);
+    }
+  }
+
+  @override
+  void restore(List<ChatMessage> messages) {
+    _turns.clear();
+    _turnCards.clear();
+    var lastUser = '';
+    for (final m in messages) {
+      if (m.fromUser) {
+        lastUser = m.text;
+        continue;
+      }
+      if (m.isQuestion) continue;
+      final kind = m.cards.isEmpty ? null : m.cards.first.ref?.split(':').first;
+      _remember(
+        Turn(
+          user: lastUser,
+          bot: m.text,
+          intent: switch (kind) {
+            'venue' => ConsultIntent.venue,
+            'policy' => ConsultIntent.policy,
+            'vendor' => ConsultIntent.vendor,
+            _ => ConsultIntent.help,
+          },
+          results: [for (final c in m.cards) c.title],
+        ),
+        m.cards,
+      );
+    }
+  }
 
   static const _intentLabel = {
     ConsultIntent.recommend: '전체 추천',
@@ -109,6 +156,7 @@ class ConsultAgent implements ChatAgent {
         return _process(u);
       }
       _known = _known.merge(u.facts);
+      if (_asking == Slot.item && u.item != null) _pending = _pending!.withItem(u.item!);
       if (!_isFilled(_asking!, _pending!)) {
         return _ask(_asking!, _pending!, retry: true);
       }
@@ -122,20 +170,27 @@ class ConsultAgent implements ChatAgent {
   /// ① 질문 이해: Gemini가 있으면 Gemini, 실패하거나 없으면 규칙.
   /// 규칙으로 뽑은 값도 함께 써서, Gemini가 놓친 값은 규칙 결과로 채운다.
   Future<({Understanding u, bool isAnswer})> _understand(String text, {Slot? expecting}) async {
-    final rule = _nlu.parse(text, expecting: expecting);
-    final ai = await _llm?.understand(text, expecting: expecting);
+    final plain = _nlu.parse(text, expecting: expecting);
+    // 되묻기 답("서울")이 아니면 대화 흐름 규칙도 적용 ("두 번째", "그중에 무료", "그럼 부산은?")
+    final rule = expecting == null ? ContextRules.apply(plain, text, _turns) : plain;
+    final context = _turns.isEmpty ? null : ConversationContext.state(_turns, _memoryTurns, known: _known);
+    final ai = await _llm?.understand(text, expecting: expecting, context: context);
+    final flow = context == null ? '' : ' · 최근 ${_turns.length.clamp(1, _memoryTurns)}턴 대화 요약을 함께 봄';
     if (ai == null) {
-      _nluNote = _llm == null ? '규칙(키워드)으로 이해' : 'Gemini 응답 없음 → 규칙(키워드)으로 이해';
+      _nluNote = (_llm == null ? '규칙(키워드·대화 흐름)으로 이해' : 'Gemini 응답 없음 → 규칙(키워드·대화 흐름)으로 이해');
       return (u: rule, isAnswer: false);
     }
-    _nluNote = 'Gemini가 이해 (정해진 형식·값 범위 검사 후 사용, 놓친 값은 규칙으로 보완)';
+    _nluNote = 'Gemini가 이해$flow (정해진 형식·값 범위 검사 후 사용, 놓친 값은 규칙으로 보완)';
+    final intent = ai.u.intent;
     return (
       isAnswer: ai.isAnswer,
       u: Understanding(
-        intent: ai.u.intent,
-        facts: rule.facts.merge(ai.u.facts),
-        topic: ai.u.topic ?? (ai.u.intent == ConsultIntent.policy ? rule.topic : null),
-        item: ai.u.item ?? (ai.u.intent == ConsultIntent.vendor ? rule.item : null),
+        intent: intent,
+        facts: plain.facts.merge(ai.u.facts),
+        topic: ai.u.topic ?? (intent == ConsultIntent.policy ? rule.topic : null),
+        item: ai.u.item ?? (intent == ConsultIntent.vendor ? rule.item : null),
+        refIndex: ai.u.refIndex ?? rule.refIndex,
+        filter: ai.u.filter ?? rule.filter,
       ),
     );
   }
@@ -168,6 +223,10 @@ class ConsultAgent implements ChatAgent {
           text: '이번 대화에서 알려주신 정보를 내 정보에 저장했어요. 다음 상담과 정책·업체 탭에도 반영돼요.',
         );
     }
+    if (r.slot == Slot.item.name && _pending != null) {
+      _pending = _pending!.withItem(VendorCategory.values.byName(r.value as String));
+      return _process(_pending!);
+    }
     if (r.slot != null && _pending != null) {
       _known = _known.merge(_valueToFacts(Slot.values.byName(r.slot!), r.value));
       return _process(_pending!);
@@ -180,6 +239,14 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _process(Understanding u) async {
     _known = _known.merge(u.facts);
+    _flowNote = '';
+    if (u.refIndex != null) {
+      final picked = _pickFromHistory(u);
+      if (picked != null) {
+        _clearPending();
+        return _finish(u, build: () => _refAnswer(u, picked.$1, picked.$2, picked.$3));
+      }
+    }
     final missing = _missing(u);
     if (missing.isNotEmpty) {
       _pending = u;
@@ -193,10 +260,11 @@ class ConsultAgent implements ChatAgent {
   }
 
   /// ④ 데이터 조회 → ⑤ 답변 작성 + "왜 이렇게 답했나요?" 기록
-  Future<ChatMessage> _finish(Understanding u, {List<String> skipped = const []}) async {
+  Future<ChatMessage> _finish(Understanding u,
+      {List<String> skipped = const [], Future<ChatMessage> Function()? build}) async {
     step.value = AgentStep.lookup;
     _lookupNote = '';
-    final m = await _answer(u);
+    final m = await (build?.call() ?? _answer(u));
     if (_llm != null) step.value = AgentStep.write;
     final out = await _polish(m);
     final what = [
@@ -205,8 +273,22 @@ class ConsultAgent implements ChatAgent {
       if (u.item != null) '항목 ${u.item!.label}',
     ].join(' · ');
     final used = (m.basis?.isNotEmpty ?? false) ? m.basis! : (_known.summary.isEmpty ? '없음' : _known.summary);
+    // 대화 기억: 몇 번째 항목 답변은 목록을 바꾸지 않는다 (다음 "세 번째 거"도 같은 목록을 가리키게)
+    _remember(
+      Turn(
+        user: _question,
+        bot: out.text,
+        intent: u.intent,
+        topic: u.topic,
+        item: u.item,
+        sido: _known.sido,
+        results: build != null ? const [] : [for (final c in m.cards) c.title],
+      ),
+      build != null ? const [] : m.cards,
+    );
     return out.copyWith(trace: [
       '질문 이해 · $what — $_nluNote',
+      if (_flowNote.isNotEmpty) '대화 흐름 · $_flowNote',
       '사용한 정보 · $used${skipped.isEmpty ? '' : ' (모른다고 하신 정보: ${skipped.join(', ')} → 없이 진행)'}',
       if (_lookupNote.isNotEmpty) '데이터 조회 · $_lookupNote',
       '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : _llm.lastRewriteNote}',
@@ -250,6 +332,7 @@ class ConsultAgent implements ChatAgent {
           ],
         ConsultIntent.venue => [Slot.sido, Slot.guests],
         ConsultIntent.vendor => [
+            if (u.item == null) Slot.item,
             Slot.sido,
             Slot.budget,
             if (u.item == VendorCategory.meal || u.item == VendorCategory.invitation) Slot.guests,
@@ -350,7 +433,10 @@ class ConsultAgent implements ChatAgent {
             QuickReply('아직 미정', slot: s.name, value: -1),
           ],
         ),
-      Slot.item => ('어떤 항목을 찾으세요?', const <QuickReply>[]),
+      Slot.item => (
+          '어떤 항목을 찾으세요?',
+          [for (final c in VendorCategory.planItems) QuickReply(c.label, slot: s.name, value: c.name)],
+        ),
     };
     final prefix = retry ? '죄송해요, 잘 알아듣지 못했어요. 아래에서 골라 주시거나 다시 적어 주세요.\n' : '';
     final known = _known.summary;
@@ -375,8 +461,8 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _answer(Understanding u) async => switch (u.intent) {
         ConsultIntent.policy => _policyAnswer(u),
-        ConsultIntent.venue => _venueAnswer(),
-        ConsultIntent.vendor => _vendorAnswer(u.item!),
+        ConsultIntent.venue => _venueAnswer(filter: u.filter),
+        ConsultIntent.vendor => _vendorAnswer(u.item!, cheapest: u.filter == 'cheaper'),
         ConsultIntent.budget => _budgetAnswer(),
         ConsultIntent.schedule => _scheduleAnswer(),
         ConsultIntent.recommend => _recommendAnswer(),
@@ -435,6 +521,7 @@ class ConsultAgent implements ChatAgent {
             icon: Icons.volunteer_activism,
             badge: m.level == MatchLevel.likely ? '해당 가능성 높음' : '조건 확인 필요',
             open: () => PolicyDetailScreen(match: m),
+            ref: 'policy:${m.policy.id}',
           ),
       ],
       sources: const ['청년 결혼 지원 정책 177건 (복지로·온통청년·지자체 공고)'],
@@ -446,11 +533,37 @@ class ConsultAgent implements ChatAgent {
     );
   }
 
-  Future<ChatMessage> _venueAnswer() async {
+  static const _filterLabel = {
+    'free': '대관료 무료인 곳',
+    'fits_guests': '하객이 다 들어가는 곳',
+    'has_photo': '사진이 있는 곳',
+    'cheaper': '대관료가 낮은 곳',
+  };
+
+  Future<ChatMessage> _venueAnswer({String? filter}) async {
     final sido = _known.sido!;
     final guests = _known.guests;
-    final list = await ConsultTools.searchVenues(sido: sido, guests: guests);
+    var list = await ConsultTools.searchVenues(sido: sido, guests: guests);
     _lookupNote = '$sido 공공예식장 ${list.length}곳 → 하객 수용 · 무료 · 예약 가능 순으로 정렬';
+    if (filter != null && _filterLabel.containsKey(filter)) {
+      final before = list.length;
+      list = switch (filter) {
+        'free' => list.where((v) => v.isFree).toList(),
+        'fits_guests' => guests == null ? list : list.where((v) => v.fits(guests) == true).toList(),
+        'has_photo' => list.where((v) => v.images.isNotEmpty).toList(),
+        _ => ([...list.where((v) => v.rentalFee != null)]..sort((a, b) => a.rentalFee!.compareTo(b.rentalFee!))),
+      };
+      _flowNote = '이전 질문을 이어서 "${_filterLabel[filter]}"만 다시 고름 ($before곳 → ${list.length}곳)';
+      if (list.isEmpty) {
+        return ChatMessage(
+          fromUser: false,
+          basis: '$sido · ${_filterLabel[filter]}',
+          text: '$sido 공공예식장 중 ${_filterLabel[filter]}은(는) 등록된 정보로는 찾지 못했어요. '
+              '정원·요금을 모르는 곳이 있어 기관에 확인하면 더 있을 수 있어요.',
+          sources: const ['전국 공공예식장 현황'],
+        );
+      }
+    }
     if (list.isEmpty) {
       return ChatMessage(
         fromUser: false,
@@ -480,6 +593,7 @@ class ConsultAgent implements ChatAgent {
             icon: Icons.location_city,
             badge: guests != null && v.fits(guests) == true ? '하객 수용' : (v.isLimited ? '기간 제한' : '예약 가능'),
             open: () => VenueDetailScreen(venue: v),
+            ref: 'venue:${v.id}',
           ),
       ],
       sources: const ['전국 공공예식장 현황 · 정원·요금·사진: 공유누리·서울마이웨딩 수집'],
@@ -490,19 +604,21 @@ class ConsultAgent implements ChatAgent {
     );
   }
 
-  Future<ChatMessage> _vendorAnswer(VendorCategory item) async {
+  Future<ChatMessage> _vendorAnswer(VendorCategory item, {bool cheapest = false}) async {
     final sido = _known.sido!;
     final total = _known.budget ?? _app.plan.budget;
     final guests = _known.guests ?? _app.plan.guests;
-    final (picks, inBudget, count, budget) =
-        await ConsultTools.searchVendors(item: item, sido: sido, totalBudget: total, guests: guests);
-    _lookupNote = '$sido ${item.label} 시연용 업체 $count곳 → 추천 예산 $budget만원 안 $inBudget곳, 평점순';
+    final (picks, inBudget, count, budget) = await ConsultTools.searchVendors(
+        item: item, sido: sido, totalBudget: total, guests: guests, cheapest: cheapest);
+    _lookupNote = '$sido ${item.label} 시연용 업체 $count곳 → 추천 예산 $budget만원 안 $inBudget곳, '
+        '${cheapest ? '예상 비용 낮은 순' : '평점순'}';
+    if (cheapest) _flowNote = '이전 질문을 이어서 더 싼 곳부터 다시 고름';
     return ChatMessage(
       fromUser: false,
       basis: '$sido · 총예산 ${formatManwon(total)}${_known.budget == null ? '(기본값)' : ''} · 하객 $guests명',
       text: '총예산 중 ${item.label} 추천 예산은 $budget만원(${item.budgetShare}%)이에요.\n'
           '$sido ${item.label} 업체 $count곳 중 예산 안은 $inBudget곳이에요. '
-          '${inBudget == 0 ? '예산 안 업체가 없어 평점순으로 보여드릴게요.' : '평점순으로 골랐어요.'}\n\n'
+          '${cheapest ? '예상 비용이 낮은 순으로 골랐어요.' : (inBudget == 0 ? '예산 안 업체가 없어 평점순으로 보여드릴게요.' : '평점순으로 골랐어요.')}\n\n'
           '${picks.map((v) => '• ${v.name.replaceFirst('[시연] ', '')} — ${v.priceText}, 예상 ${v.estimate(guests: guests)}만원, ★${v.rating}').join('\n')}\n\n'
           '(가격·평점은 시연용 가상 데이터예요)',
       cards: [
@@ -513,6 +629,7 @@ class ConsultAgent implements ChatAgent {
             icon: item.icon,
             badge: v.estimate(guests: guests) <= budget ? '예산 안' : '예산 초과',
             open: () => DemoVendorDetailScreen(vendor: v),
+            ref: 'vendor:${v.id}',
           ),
       ],
       sources: const ['시연용 가상 업체 데이터'],
@@ -520,6 +637,88 @@ class ConsultAgent implements ChatAgent {
         QuickReply('예산 배분 보기', text: '예산 어떻게 나누면 돼?'),
         QuickReply('메이크업도 추천', text: '메이크업 추천해줘'),
       ]),
+    );
+  }
+
+  /// 질문이 가리키는 이전 목록을 찾는다: 같은 목적의 가장 최근 목록 (목적을 모르면 가장 최근 목록)
+  (int turn, int index, ChatCard card)? _pickFromHistory(Understanding u) {
+    for (var i = _turns.length - 1; i >= 0; i--) {
+      final sameKind = u.intent == ConsultIntent.help || _turns[i].intent == u.intent;
+      if (!sameKind || _turnCards[i].isEmpty) continue;
+      final cards = _turnCards[i];
+      final idx = u.refIndex! - 1;
+      if (idx < 0 || idx >= cards.length) return null;
+      return (i, idx, cards[idx]);
+    }
+    return null;
+  }
+
+  /// "두 번째 거 자세히": 이전 목록의 그 항목을 데이터에서 다시 찾아 자세히 답한다
+  Future<ChatMessage> _refAnswer(Understanding u, int turn, int index, ChatCard card) async {
+    final ago = _turns.length - 1 - turn;
+    _flowNote = '${ago == 0 ? '직전' : '$ago턴 전'} 답변 목록의 ${index + 1}번째 "${card.title}"를 가리킨다고 이해';
+    final [kind, id] = (card.ref ?? ':').split(':');
+    switch (kind) {
+      case 'venue':
+        final v = (await Repos.venue.loadAll()).where((v) => v.id == id).firstOrNull;
+        if (v == null) break;
+        _lookupNote = '공공예식장 데이터에서 ${v.name} 정보 조회';
+        return ChatMessage(
+          fromUser: false,
+          basis: '이전 목록 ${index + 1}번째',
+          text: '${v.name} 정보예요.\n'
+              '• 지역: ${v.region}\n'
+              '• 정원: ${v.capacityLabel}\n'
+              '• 대관료: ${v.feeLabel}\n'
+              '• 예약: ${v.bookingMethod}\n'
+              '${v.parking != null ? '• 주차: ${v.parking}\n' : ''}'
+              '• 문의: ${v.bookingContact}\n\n'
+              '자세한 신청 방법과 사진은 아래 카드를 눌러 확인하세요.',
+          cards: [card],
+          sources: const ['전국 공공예식장 현황 · 정원·요금·사진: 공유누리·서울마이웨딩 수집'],
+          quickReplies: const [
+            QuickReply('관련 지원 정책', text: '예식 지원 정책 알려줘'),
+            QuickReply('식대 업체 추천', text: '식대 업체 추천해줘'),
+          ],
+        );
+      case 'policy':
+        final all = await Repos.policy.loadAll();
+        final p = all.where((p) => p.id == id).firstOrNull;
+        if (p == null) break;
+        final m = PolicyMatcher.judge(all, PolicyProfile.fromUser(_known)).matches.where((m) => m.policy.id == id).firstOrNull;
+        _lookupNote = '정책 데이터에서 ${p.name} 조회 + 규칙으로 대상 판정';
+        return ChatMessage(
+          fromUser: false,
+          basis: '이전 목록 ${index + 1}번째',
+          text: '${p.name} (${p.regionLabel} · ${p.category.label})\n'
+              '${m == null ? '• 지금 정보로는 대상이 아닐 수 있어요. 조건을 기관에 확인해 주세요.\n' : '• 해당 이유: ${m.reasons.join(', ')}\n'}'
+              '${m != null && m.checks.isNotEmpty ? '• 확인할 것: ${m.checks.join(', ')}\n' : ''}'
+              '• 지원 자격(원문): ${p.eligibility.length > 140 ? '${p.eligibility.substring(0, 140)}…' : p.eligibility}\n\n'
+              '신청은 아래 카드를 눌러 "신청 페이지 열기"에서 할 수 있어요. 최종 대상 여부는 담당 기관에서 확인해 주세요.',
+          cards: [card],
+          sources: const ['청년 결혼 지원 정책 177건 (복지로·온통청년·지자체 공고)'],
+        );
+      case 'vendor':
+        final v = (await Repos.vendor.demoVendors()).where((v) => v.id == id).firstOrNull;
+        if (v == null) break;
+        final guests = _known.guests ?? _app.plan.guests;
+        _lookupNote = '시연용 업체 데이터에서 ${v.name} 조회';
+        return ChatMessage(
+          fromUser: false,
+          basis: '이전 목록 ${index + 1}번째',
+          text: '${v.name.replaceFirst('[시연] ', '')} 정보예요.\n'
+              '• 가격: ${v.priceText} (하객 $guests명 기준 예상 ${v.estimate(guests: guests)}만원)\n'
+              '• 평점: ★${v.rating} (후기 ${v.reviewCount}개)\n'
+              '• 포함: ${v.packageItems.join(', ')}\n\n'
+              '후기와 상담 신청은 아래 카드를 눌러 확인하세요. (가격·평점은 시연용 가상 데이터예요)',
+          cards: [card],
+          sources: const ['시연용 가상 업체 데이터'],
+        );
+    }
+    return ChatMessage(
+      fromUser: false,
+      text: '"${card.title}" 정보를 찾지 못했어요. 아래 카드를 눌러 확인해 주세요.',
+      cards: [card],
     );
   }
 
@@ -598,6 +797,7 @@ class ConsultAgent implements ChatAgent {
             icon: Icons.location_city,
             badge: '예식장',
             open: () => VenueDetailScreen(venue: v),
+            ref: 'venue:${v.id}',
           ),
         for (final m in policies)
           ChatCard(
@@ -606,6 +806,7 @@ class ConsultAgent implements ChatAgent {
             icon: Icons.volunteer_activism,
             badge: m.level == MatchLevel.likely ? '해당 가능성 높음' : '조건 확인 필요',
             open: () => PolicyDetailScreen(match: m),
+            ref: 'policy:${m.policy.id}',
           ),
       ],
       sources: const ['공공예식장 현황 · 청년 결혼 지원 정책 177건 · 예식일 기준 체크리스트'],
