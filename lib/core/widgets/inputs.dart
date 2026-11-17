@@ -175,7 +175,7 @@ class StepperField extends StatelessWidget {
   }
 }
 
-/// 자주 쓰는 값 칩 + "직접 입력". 목록에 없는 값을 고르면 "직접 입력 · 120명"처럼 칩에 그 값이 함께 보인다.
+/// 자주 쓰는 값 칩 + "직접 입력". 목록에 없는 값을 넣으면 "직접 입력" 칩이 선택된 상태가 된다.
 class PresetPicker extends StatelessWidget {
   const PresetPicker({
     super.key,
@@ -208,8 +208,8 @@ class PresetPicker extends StatelessWidget {
         for (final p in presets)
           ChoiceChip(label: Text(format(p)), selected: value == p, onSelected: (_) => onChanged(p)),
         ChoiceChip(
-          // 직접 넣은 값도 "직접 입력" 칩임을 알 수 있게: "직접 입력 · 120명"
-          label: Text(custom ? '직접 입력 · ${format(value!)}' : '직접 입력'),
+          // 목록에 없는 값을 직접 넣었으면 "직접 입력" 칩이 선택된 상태로 보인다 (이름은 그대로)
+          label: const Text('직접 입력'),
           selected: custom,
           avatar: Icon(Icons.edit_outlined, size: 16, color: custom ? Colors.white : AppColors.textBody),
           onSelected: (_) async {
