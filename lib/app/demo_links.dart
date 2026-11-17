@@ -4,7 +4,6 @@ import '../data/app_state.dart';
 import '../data/models/user_profile.dart';
 import '../data/repositories/repositories.dart';
 import '../features/checklist/task_calendar_screen.dart';
-import '../features/estimate/estimate_screen.dart';
 import '../features/favorites/favorites_screen.dart';
 import '../features/policy/policy_detail_screen.dart';
 import '../features/policy/policy_matcher.dart';
@@ -17,7 +16,7 @@ import '../features/venue/venue_detail_screen.dart';
 /// - `?venue=H078`    : 예식장 상세
 /// - `?vendor=<ID>`   : 시연용 업체 상세
 /// - `?policy=<번호>` : 맞춤 정책 목록의 N번째 정책 상세 (0부터)
-/// - `?page=simulator` / `favorites` / `calendar` / `estimate` : 비용 시뮬레이터 / 찜 목록 / 할 일 캘린더 / 견적서
+/// - `?page=simulator` / `favorites` / `calendar` : 비용 시뮬레이터 / 찜 목록 / 할 일 캘린더
 class DemoLinks {
   DemoLinks._();
 
@@ -61,8 +60,6 @@ class DemoLinks {
       page = const FavoritesScreen();
     } else if (_q['page'] == 'calendar') {
       page = const TaskCalendarScreen();
-    } else if (_q['page'] == 'estimate') {
-      page = const EstimateScreen();
     }
     if (page != null && nav.mounted) {
       final p = page;

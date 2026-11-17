@@ -1,7 +1,6 @@
 import '../../data/candidates.dart';
 import '../../data/repositories/repositories.dart';
 import '../chat/chat_card_link.dart';
-import '../estimate/estimate_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -368,23 +367,14 @@ class _BudgetCard extends StatelessWidget {
           const SizedBox(height: 6),
           _line(AppColors.primary.withValues(alpha: 0.35), '예정 (금액만 적어 둔 항목)', planned),
           const SizedBox(height: 14),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen())),
-                child: const Text('비용 시뮬레이션'),
-              ),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const CostSimulatorScreen())),
+              child: const Text('결혼 비용 시뮬레이션'),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EstimateScreen())),
-                child: const Text('내 견적서 A·B안'),
-              ),
-            ),
-          ]),
+          ),
         ],
       ),
     );

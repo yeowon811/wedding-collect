@@ -7,9 +7,8 @@ import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/data/models/wedding_plan.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/user_data_codec.dart';
-import 'package:wedding_collect/features/estimate/estimate_screen.dart';
 
-/// 찜 = 후보 → 체크리스트, 예식장 정하기, 내 결혼 견적서(A·B안)
+/// 찜 = 후보 → 체크리스트, 예식장 체크리스트에 추가
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final s = AppState.instance;
@@ -41,7 +40,7 @@ void main() {
     expect(dress.status, ItemStatus.todo); // 후보가 없으면 다시 미정
   });
 
-  test('예식장을 정하면 체크리스트 예식장 항목에 이름·대관료가 들어가고 지역이 채워진다', () async {
+  test('예식장을 체크리스트에 추가하면 예식장 항목에 이름·대관료가 들어가고 지역이 채워진다', () async {
     final v = (await Repos.venue.loadAll()).firstWhere((v) => v.isFree && v.capacity != null);
     expect(s.items.any((i) => i.id == AppState.venueItemId), isFalse);
     s.chooseVenue(v);
@@ -58,37 +57,14 @@ void main() {
     expect(item.vendorName, isNull);
   });
 
-  test('견적서: A안은 실속 평균, B안은 일반 평균에서 시작하고 후보를 고르면 합계가 바뀐다', () async {
-    final calc = EstimateCalc(s, await Repos.vendor.options());
-    expect(EstimateRow.all.length, 12); // 예식장 + 준비 항목 11개
-    final a = calc.total('A');
-    final b = calc.total('B');
-    expect(a, lessThan(b));
-    expect(b, calc.generalTotal);
-
-    final demo = (await Repos.vendor.demoVendors()).firstWhere((v) => v.category == VendorCategory.dress);
-    s.toggleFavorite('vendor:${demo.id}');
-    final dressRow = EstimateRow.all.firstWhere((r) => r.key == 'dress');
-    final before = calc.chosen('A', dressRow).price!;
-    s.setEstimate('A', 'dress', 'ref:vendor:${demo.id}');
-    expect(calc.chosen('A', dressRow).label, demo.name.replaceFirst('[시연] ', ''));
-    expect(calc.total('A'), a - before + demo.estimate(guests: s.plan.guests));
-
-    // 찜을 풀면 그 칸은 기본(실속 평균)으로 돌아간다
-    s.toggleFavorite('vendor:${demo.id}');
-    expect(calc.total('A'), a);
-  });
-
-  test('예식장 선택·견적서 선택은 계정 저장 후 그대로 돌아온다', () async {
+  test('체크리스트에 추가한 예식장은 계정 저장 후 그대로 돌아온다', () async {
     final v = (await Repos.venue.loadAll()).first;
     s.chooseVenue(v);
-    s.setEstimate('B', 'meal', 'avg:public');
     final saved = jsonDecode(jsonEncode(UserDataCodec.encode(s))) as Map<String, dynamic>;
     s.resetAll();
     expect(s.chosenVenueId, isNull);
     UserDataCodec.apply(s, saved, await Repos.vendor.demoVendors());
     expect(s.chosenVenueId, v.id);
     expect(s.items.first.vendorName, v.name);
-    expect(s.estimates['B']?['meal'], 'avg:public');
   });
 }

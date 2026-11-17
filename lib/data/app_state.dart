@@ -68,7 +68,6 @@ class AppState extends ChangeNotifier {
     Set<String>? simSelected,
     bool simVoucher = false,
     String? chosenVenueId,
-    Map<String, Map<String, String>> estimates = const {},
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -110,9 +109,6 @@ class AppState extends ChangeNotifier {
     this.simSelected = simSelected == null ? null : {...simSelected};
     this.simVoucher = simVoucher;
     this.chosenVenueId = chosenVenueId;
-    this.estimates
-      ..clear()
-      ..addAll({for (final e in estimates.entries) e.key: {...e.value}});
     notifyListeners();
   }
 
@@ -144,7 +140,7 @@ class AppState extends ChangeNotifier {
 
   static const venueItemId = 'venue';
 
-  /// [이 곳으로 정하기]로 고른 예식장
+  /// 예식장 상세 [체크리스트에 추가]로 고른 예식장
   String? chosenVenueId;
 
   /// 체크리스트 맨 위 '예식장' 항목 (없으면 만든다)
@@ -157,7 +153,7 @@ class AppState extends ChangeNotifier {
     return item;
   }
 
-  /// 예식장 상세의 [이 곳으로 정하기]: 예식장 항목에 이름·대관료를 넣고, 지역을 입력 안 했으면 채운다
+  /// 예식장 상세의 [체크리스트에 추가]: 예식장 항목에 이름·대관료를 넣고, 지역을 입력 안 했으면 채운다
   void chooseVenue(Venue v) {
     chosenVenueId = v.id;
     favorites.add('venue:${v.id}');
@@ -184,15 +180,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ───────────────────────── 내 결혼 견적서 (A안·B안) ─────────────────────────
-
-  /// 'A'/'B' → 항목 키('venue', 'dress' …) → 고른 것 ('avg:public', 'avg:general', 'mine', 'none', 'ref:vendor:D0001')
-  final Map<String, Map<String, String>> estimates = {};
-
-  void setEstimate(String plan, String key, String choice) {
-    estimates.putIfAbsent(plan, () => {})[key] = choice;
-    notifyListeners();
-  }
 
   // ───────────────────────── 비용 시뮬레이터 ─────────────────────────
 

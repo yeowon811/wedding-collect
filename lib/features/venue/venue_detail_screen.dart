@@ -125,7 +125,7 @@ class VenueDetailScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('예식장 정보'), actions: [FavoriteButton(ref: 'venue:${venue.id}')]),
       // 주요 행동은 화면 아래에 고정 (스크롤하지 않아도 바로 누를 수 있게)
       bottomNavigationBar: BottomActionBar(children: [
-        // 체크리스트 '예식장' 항목으로 정하기 (이름·대관료·정원 확인이 들어감)
+        // 체크리스트 '예식장' 항목에 추가 (이름·대관료·정원 확인이 들어감)
         ListenableBuilder(
           listenable: AppState.instance,
           builder: (context, _) {
@@ -148,7 +148,7 @@ class VenueDetailScreen extends StatelessWidget {
                     }
                   },
                   icon: Icon(chosen ? Icons.check_circle : Icons.add_task, size: 18),
-                  label: Text(chosen ? '정한 예식장 (누르면 취소)' : '이 곳으로 정하기'),
+                  label: Text(chosen ? '체크리스트에 추가됨 (누르면 취소)' : '체크리스트에 추가'),
                 ),
               ),
             );
