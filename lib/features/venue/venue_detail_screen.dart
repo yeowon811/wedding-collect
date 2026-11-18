@@ -130,7 +130,7 @@ class VenueDetailScreen extends StatelessWidget {
           listenable: AppState.instance,
           builder: (context, _) {
             final app = AppState.instance;
-            final chosen = app.isFavorite('venue:${v.id}');
+            final chosen = app.inChecklist('venue:${v.id}');
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: SizedBox(
@@ -138,7 +138,7 @@ class VenueDetailScreen extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     if (chosen) {
-                      app.toggleFavorite('venue:${v.id}');
+                      app.toggleChecklist('venue:${v.id}');
                     } else {
                       app.chooseVenue(v);
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

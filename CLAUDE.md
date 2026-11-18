@@ -139,6 +139,7 @@
 - **담은 곳마다 상태·단계 막대 (2026-11-18):** 상태는 항목이 아니라 담은 곳(ref)마다 `AppState.placeStatus`(후보·상담 중·계약·결제 완료), 계약 금액 `placeAmount`, 계약일 `placeDate`, 직접 추가한 곳 `manualPlaces`(ManualPlace, ref `manual:id`) — 모두 계정 저장. 항목 상태 = 담은 곳 중 가장 앞선 단계(`recomputeItem`), 계약은 항목마다 한 곳(다른 곳은 상담 중으로), 계약한 곳 이름·금액이 항목에 들어가 예산 반영, 시연 업체면 contracts도 맞춤. 업체 [계약 완료 표시]·상담 신청·예식장 [체크리스트에 추가]도 이 규칙(예식장 '정하기'는 없앰, chosenVenueId는 계약한 예식장)
   - 목록(A안): 줄마다 '이름 · 금액'(계약) / '상담 n곳 · 후보 n곳' / '아직 담은 곳 없음' + `StageBar`(●●●○ 4칸, 색: 후보 파랑·상담 주황·계약 초록) + ›
   - 항목 상세: 계약 전엔 담은 곳 카드마다 상태 칩, 계약하면 그 한 곳만 초록 큰 카드(계약일, [결제 완료]·[계약 취소]·[금액 수정]) + '다른 후보 n곳 보기' 접힘. 아래 [+ 추가](직접 추가: 이름·금액)·[찾아보기], 작은 '항목 이름 변경·삭제'. '진행 상태·금액' 줄은 없앰
+- **찜과 체크리스트 분리 (2026-11-18):** 하트(`favorites`)는 찜 목록에만, 체크리스트 담은 곳은 `AppState.checklistRefs`(업체·예식장 상세 [체크리스트에 추가] = `toggleChecklist`, 상담 신청·계약 완료 표시도 여기에 담음). 후보 계산(`Candidates.forItem`)은 checklistRefs 기준. 담은 곳 카드의 하트 → ✕(`removePlace`, 찜은 그대로). 계정에 따로 저장, 예전 저장본(checklistRefs 없음)은 찜(정책 제외)을 체크리스트로 옮김. 위의 '찜 = 후보' 설명은 이 규칙으로 바뀜
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

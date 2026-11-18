@@ -2,7 +2,7 @@ import 'app_state.dart';
 import 'models/wedding_plan.dart';
 import 'repositories/repositories.dart';
 
-/// 체크리스트 준비 항목의 후보 한 곳 (찜한 업체·예식장)
+/// 체크리스트 준비 항목에 담은 한 곳 (업체·예식장·직접 추가)
 class CandidateInfo {
   const CandidateInfo({required this.ref, required this.name, required this.sub, this.price, required this.priceText});
 
@@ -13,12 +13,12 @@ class CandidateInfo {
   final String priceText;
 }
 
-/// 찜 = 후보. 준비 항목마다 찜한 업체·예식장을 모아 준다 (데이터를 읽어 둔 뒤 바로 계산)
+/// 준비 항목마다 체크리스트에 담은 업체·예식장(+직접 추가)을 모아 준다 (데이터를 읽어 둔 뒤 바로 계산)
 class Candidates {
   Candidates._();
 
   static List<CandidateInfo> forItem(PlanItem item, AppState s) {
-    final fav = s.favorites;
+    final fav = s.checklistRefs; // 체크리스트에 담은 곳 (찜과는 따로)
     if (item.id == AppState.venueItemId) {
       final venues = Repos.venue.cached ?? const [];
       return [

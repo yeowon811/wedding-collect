@@ -28,14 +28,14 @@ class RealVendorDetailScreen extends StatelessWidget {
             builder: (context, _) {
               final app = AppState.instance;
               final ref = 'real:${v.id}';
-              final on = app.isFavorite(ref);
+              final on = app.inChecklist(ref);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      app.toggleFavorite(ref);
+                      app.toggleChecklist(ref);
                       if (!on) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                           content: Text('체크리스트 준비 항목에 담았어요'),

@@ -53,6 +53,27 @@ void main() {
     s.resetAll();
   });
 
+  test('찜과 체크리스트는 따로 저장되고, 예전 저장본은 찜을 체크리스트로 옮긴다', () async {
+    final s = AppState.instance..resetAll();
+    s.toggleFavorite('vendor:D0001');
+    s.toggleFavorite('policy:P001');
+    s.toggleChecklist('vendor:D0002');
+    final saved = jsonDecode(jsonEncode(UserDataCodec.encode(s))) as Map<String, dynamic>;
+    s.resetAll();
+    UserDataCodec.apply(s, saved, await Repos.vendor.demoVendors());
+    expect(s.favorites, {'vendor:D0001', 'policy:P001'});
+    expect(s.checklistRefs, {'vendor:D0002'});
+    s.toggleFavorite('vendor:D0001'); // 찜을 빼도 체크리스트는 그대로
+    expect(s.inChecklist('vendor:D0002'), isTrue);
+
+    // 예전 저장본: checklistRefs가 없으면 찜(정책 제외)이 체크리스트에 담겨 있던 것
+    saved.remove('checklistRefs');
+    s.resetAll();
+    UserDataCodec.apply(s, saved, await Repos.vendor.demoVendors());
+    expect(s.checklistRefs, {'vendor:D0001'});
+    s.resetAll();
+  });
+
   test('시연 업체는 등급과 추가 옵션이 있고 가격이 기준가 주변이다', () async {
     final demo = await Repos.vendor.demoVendors();
     expect(demo.map((v) => v.tier).toSet(), {'실속', '표준', '프리미엄'});

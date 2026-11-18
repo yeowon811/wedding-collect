@@ -73,6 +73,7 @@ class AppState extends ChangeNotifier {
     Map<String, int> placeAmount = const {},
     Map<String, DateTime> placeDate = const {},
     List<ManualPlace> manualPlaces = const [],
+    Set<String>? checklistRefs, // null = 예전 저장본 (찜 = 체크리스트였음)
   }) {
     this.profile = profile;
     this.profileDone = profileDone;
@@ -125,8 +126,11 @@ class AppState extends ChangeNotifier {
     this.manualPlaces
       ..clear()
       ..addAll(manualPlaces);
+    this.checklistRefs
+      ..clear()
+      ..addAll(checklistRefs ?? {for (final f in favorites) if (!f.startsWith('policy:')) f});
     if (chosenVenueId != null) {
-      this.favorites.add('venue:$chosenVenueId');
+      this.checklistRefs.add('venue:$chosenVenueId');
       this.placeStatus.putIfAbsent('venue:$chosenVenueId', () => ItemStatus.consulting);
     }
     notifyListeners();
@@ -139,14 +143,26 @@ class AppState extends ChangeNotifier {
 
   bool isFavorite(String ref) => favorites.contains(ref);
 
+  /// 찜(하트)은 찜 목록에만 모은다. 체크리스트 준비 항목과는 따로 ([toggleChecklist])
   void toggleFavorite(String ref) {
-    final adding = !favorites.contains(ref);
-    if (adding) {
-      favorites.add(ref);
+    favorites.contains(ref) ? favorites.remove(ref) : favorites.add(ref);
+    notifyListeners();
+  }
+
+  // ───────────────────────── 체크리스트에 담은 곳 ─────────────────────────
+
+  /// 업체·예식장 상세의 [체크리스트에 추가]·상담 신청·계약으로 담은 곳 ('venue:'·'vendor:'·'real:')
+  final Set<String> checklistRefs = {};
+
+  bool inChecklist(String ref) => checklistRefs.contains(ref);
+
+  /// 체크리스트에 담기/빼기. 빼면 그 곳의 상태·금액도 지운다
+  void toggleChecklist(String ref) {
+    if (checklistRefs.add(ref)) {
       if (ref.startsWith('venue:')) ensureVenueItem(); // 예식장을 담으면 체크리스트에 '예식장' 항목
     } else {
       final affected = _itemsHolding(ref);
-      favorites.remove(ref);
+      checklistRefs.remove(ref);
       _forgetPlace(ref);
       for (final (item, name) in affected) {
         _afterPlaceRemoved(item, name);
@@ -155,6 +171,10 @@ class AppState extends ChangeNotifier {
     syncCandidateStatus();
     notifyListeners();
   }
+
+  /// 담은 곳 빼기 (직접 추가한 곳은 지운다)
+  void removePlace(PlanItem item, String ref) =>
+      ref.startsWith('manual:') ? removeManualPlace(item, ref) : toggleChecklist(ref);
 
   /// 이 곳을 담고 있는 항목과 그 곳의 이름
   List<(PlanItem, String)> _itemsHolding(String ref) => [
@@ -288,7 +308,7 @@ class AppState extends ChangeNotifier {
 
   /// 계약(결제)한 예식장 (없으면 null)
   String? get chosenVenueId {
-    for (final ref in favorites) {
+    for (final ref in checklistRefs) {
       if (ref.startsWith('venue:') && statusOfPlace(ref).isDone) return ref.substring(6);
     }
     return null;
@@ -306,7 +326,7 @@ class AppState extends ChangeNotifier {
 
   /// 예식장 상세의 [체크리스트에 추가]: 예식장 항목에 담고(후보), 지역을 입력 안 했으면 채운다
   void chooseVenue(Venue v) {
-    favorites.add('venue:${v.id}');
+    checklistRefs.add('venue:${v.id}');
     ensureVenueItem();
     if (!plan.hasSido) updatePlan(plan.copyWith(sido: v.sido));
     // '공공예식장 둘러보고 신청 기간 확인하기'는 끝낸 것으로
@@ -517,7 +537,7 @@ class AppState extends ChangeNotifier {
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
     // 상담 신청한 업체는 담은 곳에 들어가고 '상담 중'
     final ref = 'vendor:${c.vendor.id}';
-    favorites.add(ref);
+    checklistRefs.add(ref);
     if (statusOfPlace(ref).index < ItemStatus.consulting.index) placeStatus[ref] = ItemStatus.consulting;
     final item = itemFor(c.vendor.category);
     if (item != null) recomputeItem(item);
@@ -542,7 +562,7 @@ class AppState extends ChangeNotifier {
       );
       items.add(item);
     }
-    favorites.add('vendor:${v.id}');
+    checklistRefs.add('vendor:${v.id}');
     setPlaceStatus(item, 'vendor:${v.id}', ItemStatus.contracted); // 이름·금액·계약 표시는 recomputeItem
     if (item.vendorName == null) item.vendorName = name;
     item.amount ??= price;

@@ -8,7 +8,7 @@ import 'package:wedding_collect/data/models/wedding_plan.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/user_data_codec.dart';
 
-/// 찜 = 후보 → 체크리스트, 예식장 체크리스트에 추가
+/// 체크리스트에 담은 곳(찜과 따로) → 준비 항목, 예식장 체크리스트에 추가
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final s = AppState.instance;
@@ -21,22 +21,26 @@ void main() {
   });
   setUp(s.resetAll);
 
-  test('업체를 찜하면 체크리스트 항목의 후보가 되고 상태가 "후보"가 된다', () async {
+  test('업체를 체크리스트에 추가하면 항목의 후보가 되고, 찜(하트)은 체크리스트와 따로다', () async {
     final demo = (await Repos.vendor.demoVendors()).firstWhere((v) => v.category == VendorCategory.dress);
     final dress = s.itemFor(VendorCategory.dress)!;
-    s.toggleFavorite('vendor:${demo.id}');
+    s.toggleFavorite('vendor:${demo.id}'); // 찜만 하면 체크리스트는 그대로
+    expect(Candidates.forItem(dress, s), isEmpty);
+    expect(dress.status, ItemStatus.todo);
+    s.toggleChecklist('vendor:${demo.id}');
     expect(dress.status, ItemStatus.candidate);
+    expect(s.isFavorite('vendor:${demo.id}'), isTrue);
     final cands = Candidates.forItem(dress, s);
     expect(cands.single.price, demo.estimate(guests: s.plan.guests));
     expect(Candidates.summary(cands), startsWith('후보 1곳'));
 
     // 실제 스드메 업체도 드레스 후보 (가격은 문의)
     final real = (await Repos.vendor.realVendors()).firstWhere((v) => v.category == VendorCategory.directing);
-    s.toggleFavorite('real:${real.id}');
+    s.toggleChecklist('real:${real.id}');
     expect(Candidates.forItem(dress, s).length, 2);
 
-    s.toggleFavorite('vendor:${demo.id}');
-    s.toggleFavorite('real:${real.id}');
+    s.toggleChecklist('vendor:${demo.id}');
+    s.toggleChecklist('real:${real.id}');
     expect(dress.status, ItemStatus.todo); // 후보가 없으면 다시 미정
   });
 
@@ -61,7 +65,7 @@ void main() {
     s.setPlaceStatus(item, 'venue:${v.id}', ItemStatus.consulting); // 계약 취소
     expect(item.status, ItemStatus.consulting);
     expect(item.vendorName, isNull);
-    s.toggleFavorite('venue:${v.id}'); // 빼기
+    s.toggleChecklist('venue:${v.id}'); // 체크리스트에서 빼기
     expect(item.status, ItemStatus.todo);
   });
 
@@ -69,7 +73,7 @@ void main() {
     final dresses = (await Repos.vendor.demoVendors()).where((v) => v.category == VendorCategory.dress).take(2).toList();
     final dress = s.itemFor(VendorCategory.dress)!;
     for (final v in dresses) {
-      s.toggleFavorite('vendor:${v.id}');
+      s.toggleChecklist('vendor:${v.id}');
     }
     final a = 'vendor:${dresses[0].id}', b = 'vendor:${dresses[1].id}';
     s.setPlaceStatus(dress, a, ItemStatus.consulting);

@@ -1,5 +1,4 @@
 import '../../app/main_shell.dart';
-import '../../core/widgets/favorite_button.dart';
 import '../vendor/vendor_screen.dart';
 import '../../data/candidates.dart';
 import '../../data/repositories/repositories.dart';
@@ -630,16 +629,12 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
                               style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         ]),
                       ),
-                      if (c.ref.startsWith('manual:'))
-                        IconButton(
-                          tooltip: '빼기',
-                          onPressed: () => state.removeManualPlace(item, c.ref),
-                          icon: Icon(Icons.close, color: AppColors.textHint),
-                        )
-                      else ...[
-                        FavoriteButton(ref: c.ref, size: 22),
-                        Icon(Icons.chevron_right, color: AppColors.textHint),
-                      ],
+                      IconButton(
+                        tooltip: '체크리스트에서 빼기',
+                        onPressed: () => state.removePlace(item, c.ref),
+                        icon: Icon(Icons.close, color: AppColors.textHint),
+                      ),
+                      if (!c.ref.startsWith('manual:')) Icon(Icons.chevron_right, color: AppColors.textHint),
                     ]),
                     const SizedBox(height: 8),
                     Wrap(spacing: 6, runSpacing: 6, children: [
