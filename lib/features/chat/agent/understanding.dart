@@ -277,8 +277,11 @@ class RuleUnderstander implements Understander {
     final askPolicy = _has(t, ['정책', '지원', '혜택', '장려금']);
     final both = askVenue && askPolicy && _has(t, ['이랑', '하고', '같이', '랑', '와', '과', '도']);
     final calc = ruleCalc(raw);
+    final dupApply = _has(t, ['동시에', '중복', '두군데', '두곳', '여러곳', '여러군데']) && _has(t, ['신청', '예약', '계약']);
     final kind = calc != null
         ? AskKind.calc
+        : dupApply
+            ? AskKind.general
         : _has(t, ['비교', '어디가나', '어느곳이', '뭐가나', '중에어디', '중어디'])
             ? AskKind.compare
             : _has(t, ['추가금', '총얼마', '총비용', '얼마들', '비용은', '보통얼마', '얼마정도', '얼마잡', '더싸', '진짜싸'])

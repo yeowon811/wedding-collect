@@ -3,6 +3,7 @@ import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/calc.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
+import 'package:wedding_collect/features/chat/agent/policy_text.dart';
 
 /// 예상 질문 평가(docs/ai-eval/predicted_report.md)에서 틀렸던 질문: 계획(질문 종류·조건)대로 도구를 쓰는지
 /// Gemini 없이 규칙만으로도 되는 부분을 확인한다.
@@ -83,5 +84,41 @@ void main() {
   test('H05 예식장이랑 정책 같이: 두 답을 이어 붙임', () async {
     final m = await ConsultAgent().reply('부산 공공예식장이랑 부산 결혼 지원 정책 같이 알려줘');
     expect(m.text, anyOf(contains('[공공예식장]'), contains('[지원 정책]')));
+  });
+
+  test('정책 원문 숫자 읽기', () {
+    expect(incomeCap('부부합산 연소득 7.5천만원 이하, 순자산 3.37억원 이하'), 7500);
+    expect(incomeCap('부부합산 연소득 1.3억원 이하(맞벌이 2억원 이하)'), 13000);
+    expect(maxAmount('(수도권 최대 3억원, 비수도권 2억원)'), 30000);
+    expect(maxAmount('비품비 최대 100만 원 지원'), 100);
+    expect(incomeFromQuestion('부부 합산 소득 7천만원이면'), 7000);
+    expect(manwonLabel(13000), '1억 3,000만원');
+  });
+
+  test('E01 거주: 이용 대상 원문과 지원 정책 거주 조건', () async {
+    final m = await ConsultAgent().reply('서울에 안 살아도 서울 공공예식장 쓸 수 있어?');
+    expect(m.text, contains('이용 대상'));
+    expect(m.text, contains('거주 조건'));
+  });
+
+  test('D02 내년 봄 토요일: 그 기간 토요일 전부 확인', () async {
+    final m = await ConsultAgent().reply('내년 봄 토요일에 되는 예식장 있어?');
+    expect(m.text, contains('봄(3~5월) 토요일'));
+    expect(m.cards.first.badge, contains('일 가능'));
+  });
+
+  test('E04 소득: 원문 소득 상한과 비교', () async {
+    final m = await ConsultAgent().reply('부부 합산 소득 7천만원이면 받을 수 있는 정책 뭐 있어?');
+    expect(m.text, contains('연소득 7,000만원 기준'));
+  });
+
+  test('I04 돈 많이 주는 순: 원문 최대 금액', () async {
+    final m = await ConsultAgent().reply('받을 수 있는 정책 중에 돈 제일 많이 주는 거 알려줘');
+    expect(m.text, contains('최대 금액'));
+  });
+
+  test('E02 비품비: 이름에 그 말이 있는 정책', () async {
+    final m = await ConsultAgent().reply('공공예식장 비품비 지원 정책 알려줘');
+    expect(m.cards.first.title, contains('더 아름다운 결혼식'));
   });
 }

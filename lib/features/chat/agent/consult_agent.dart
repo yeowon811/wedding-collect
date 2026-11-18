@@ -22,6 +22,7 @@ import 'consult_tools.dart';
 import 'conversation_context.dart';
 import 'calc.dart';
 import 'date_check.dart';
+import 'policy_text.dart';
 import 'venue_features.dart';
 import 'gemini_client.dart';
 import 'understanding.dart';
@@ -281,7 +282,7 @@ class ConsultAgent implements ChatAgent {
       // 날짜 조건은 앱이 예식 가능일로 판단하므로 '확인 못 함'에서 뺀다
       _unsupported = [
         for (final x in ai.u.unsupported)
-          if (!RegExp(r'날짜|일자|예약 가능|가능일|\d|주차|피로연|뷔페|케이터링|식사|야외|비용|얼마|추가금|비교|나아|계산|싸|무료|하객|사진|그중')
+          if (!RegExp(r'날짜|일자|예약 가능|가능일|\d|주차|피로연|뷔페|케이터링|식사|야외|비용|얼마|추가금|비교|나아|계산|싸|무료|하객|사진|그중|많이 주|금액|소득|연봉|봄|여름|가을|겨울|요일|주말')
               .hasMatch(x)) x,
       ];
     }
@@ -604,7 +605,10 @@ class ConsultAgent implements ChatAgent {
         ),
       Slot.item => (
           '어떤 항목을 찾으세요?',
-          [for (final c in VendorCategory.planItems) QuickReply(c.label, slot: s.name, value: c.name)],
+          [
+            const QuickReply('공공예식장', text: '대관료 무료 공공예식장 알려줘'),
+            for (final c in VendorCategory.planItems) QuickReply(c.label, slot: s.name, value: c.name),
+          ],
         ),
     };
     // 숫자는 [직접 입력], 예식일은 [날짜 고르기] (화면에서 입력 창을 띄움)
@@ -661,8 +665,31 @@ class ConsultAgent implements ChatAgent {
       matches = await ConsultTools.matchPolicies(_known);
       topicNote = '';
     }
+    // 질문에 소득이 있으면 원문의 소득 상한과 비교, "제일 많이 주는"이면 원문의 최대 금액 순
+    final income = incomeFromQuestion(_question);
+    final byAmount = RegExp(r'제일\s*많이|가장\s*많이|많이\s*주|금액.{0,4}(큰|많)|최대\s*얼마').hasMatch(_question);
+    final notes = <String>[];
+    if (income != null) {
+      final over = matches.where((m) => (incomeCap(m.policy.eligibility) ?? 1 << 30) < income).toList();
+      matches = matches.where((m) => !over.contains(m)).toList();
+      final noNumber = matches.where((m) => m.policy.hasIncomeLimit && incomeCap(m.policy.eligibility) == null).length;
+      notes.add('부부합산 연소득 ${manwonLabel(income)} 기준으로 원문의 소득 상한을 비교했어요. '
+          '상한을 넘는 ${over.length}건은 뺐어요${over.isEmpty ? '' : ' (${over.take(2).map((m) => m.policy.name).join(', ')}${over.length > 2 ? ' 외' : ''})'}'
+          '${noNumber > 0 ? ', 소득 조건이 숫자로 적혀 있지 않은 $noNumber건은 기관에 확인이 필요해요' : ''}.');
+    }
+    if (byAmount) {
+      matches = [...matches]..sort((a, b) => (maxAmount(b.policy.eligibility) ?? -1).compareTo(maxAmount(a.policy.eligibility) ?? -1));
+      final withAmount = matches.where((m) => maxAmount(m.policy.eligibility) != null).length;
+      notes.add('원문에 적힌 "최대 금액" 순이에요 (금액이 적힌 정책 $withAmount건). '
+          '대출·이자 지원의 금액은 받는 돈이 아니라 빌릴 수 있는 한도라서 현금 지원과 성격이 달라요.');
+    }
+    String extra(PolicyMatch m) => [
+          if (income != null && incomeCap(m.policy.eligibility) != null) '소득 상한 연 ${manwonLabel(incomeCap(m.policy.eligibility)!)} (통과)',
+          if (byAmount && maxAmount(m.policy.eligibility) != null) '원문 최대 ${manwonLabel(maxAmount(m.policy.eligibility)!)}',
+        ].map((x) => ' / $x').join();
     final likely = matches.where((m) => m.level == MatchLevel.likely).length;
     _lookupNote = '정책 데이터를 정해진 규칙으로 판정 → 해당 가능 ${matches.length}건 '
+        '${income != null ? '· 원문 소득 상한과 비교 ' : ''}${byAmount ? '· 원문 최대 금액 순 ' : ''}'
         '(가능성 높음 $likely건)${topicNote.isEmpty ? '' : ' · ${topicNote.trim()} 분야만'}';
     final top = matches.take(3).toList();
     final region = _known.sido ?? '전국';
@@ -678,7 +705,7 @@ class ConsultAgent implements ChatAgent {
     final lines = [
       for (final m in top)
         '• ${m.policy.name}\n   ${m.reasons.take(2).join(', ')}'
-            '${m.checks.isEmpty ? '' : ' / 확인할 것: ${m.checks.take(2).join(', ')}'}',
+            '${m.checks.isEmpty ? '' : ' / 확인할 것: ${m.checks.take(2).join(', ')}'}${extra(m)}',
     ];
     final tips = [
       if (_known.isAgeRange) '정확한 만 나이를 알려주시면 나이 조건을 더 정확히 판단할 수 있어요.',
@@ -692,7 +719,7 @@ class ConsultAgent implements ChatAgent {
         if (_known.homeless != null) _known.homeless! ? '무주택' : '주택 보유'].join(' · '),
       text: matches.isEmpty
           ? '조건에 맞는 ${topicNote}정책을 찾지 못했어요. 지역이나 결혼 단계를 바꿔서 다시 찾아볼까요?'
-          : '받을 수 있는 ${topicNote}정책을 ${matches.length}건 찾았어요. '
+          : '${notes.isEmpty ? '' : '${notes.join('\n')}\n\n'}받을 수 있는 ${topicNote}정책을 ${matches.length}건 찾았어요. '
               '그중 $likely건은 조건이 잘 맞고, 나머지는 직접 확인할 조건이 있어요.\n\n'
               '${lines.join('\n')}\n\n'
               '${tips.isEmpty ? '' : '${tips.join('\n')}\n'}'
@@ -797,6 +824,14 @@ class ConsultAgent implements ChatAgent {
 
   /// 바로 답할 수 있는 계획이면 답을 만드는 함수를 돌려준다 (없으면 기존 흐름: 필요한 정보 되묻기 → 목적별 답변)
   Future<Future<ChatMessage> Function()?> _directAnswer(Understanding u) async {
+    // "서울에 안 살아도 서울 공공예식장 쓸 수 있어?" → 이용 대상 원문 + 지원 정책 거주 조건
+    final residencySido = u.facts.sido ?? _known.sido;
+    if (residencySido != null && _isResidencyQuestion) return () => _residencyAnswer(residencySido);
+    // "내년 봄 토요일" → 그 계절의 그 요일 전부를 예식 가능일 원문으로 확인
+    final season = _seasonDates(_question);
+    if (season != null && _known.sido != null && (u.intent == ConsultIntent.venue || _question.contains('예식장'))) {
+      return () => _venueSeasonAnswer(u, season.dates, season.label);
+    }
     final expr = u.calc ?? (u.kind == AskKind.calc ? ruleCalc(_question) : null);
     if (expr != null && evalExpr(expr) != null) return () async => _calcAnswer(expr);
     // 질문에 예식장 이름이 나오면 그 예식장 (둘 이상이면 비교)
@@ -823,9 +858,8 @@ class ConsultAgent implements ChatAgent {
     if (u.kind == AskKind.general && _llm != null) return () => _generalAnswer(u);
     if (u.kind == AskKind.cost) return () => _costAnswer(u);
     if (u.items.length > 1 && _known.sido != null) return () => _bundleAnswer(u);
-    if (u.intent == ConsultIntent.policy && u.names.isNotEmpty) {
-      final all = await Repos.policy.loadAll();
-      final hit = all.where((p) => u.names.any((n) => n.length >= 2 && normName(p.name).contains(normName(n)))).toList();
+    if (u.intent == ConsultIntent.policy && u.kind != AskKind.general) {
+      final hit = await _policyHits(u);
       if (hit.length == 1) return () async => _policyDetailAnswer(hit.first);
     }
     return null;
@@ -834,6 +868,140 @@ class ConsultAgent implements ChatAgent {
   /// "거기 어때?"인데 가리킬 이전 답변 목록이 없음
   bool get _noReferent =>
       _turnCards.every((c) => c.isEmpty) && RegExp(r'^(거기|그거|그곳|저기|여기)').hasMatch(_question.trim());
+
+  bool get _isResidencyQuestion =>
+      RegExp(r'안\s*살|살지\s*않|거주하지\s*않|거주\s*안|타\s*지역|다른\s*지역\s*(사람|주민)|외지|주민이\s*아니|주소.{0,4}(달라|다르|없)')
+          .hasMatch(_question) &&
+      RegExp(r'예식장|식장|쓸 수|이용|신청|지원').hasMatch(_question);
+
+  /// 거주 조건: 예식장 이용 대상 원문(전체·개인 / 관내자·주민 우선 등) + 그 시도 예식 지원 정책의 거주 조건 원문
+  Future<ChatMessage> _residencyAnswer(String sido) async {
+    final all = await ConsultTools.searchVenues(sido: sido, guests: null);
+    final local = RegExp(r'관내|주민|임직원|시민\s*우선|구민|도민|시민만');
+    bool restricted(Venue v) =>
+        local.hasMatch('${v.target ?? ''} ${v.extraInfo ?? ''} ${v.reservationInfo ?? ''} ${v.selection ?? ''}');
+    final rs = all.where(restricted).toList();
+    final open = all.where((v) => !restricted(v) && v.target != null).length;
+    final unknown = all.length - rs.length - open;
+    final policies = (await Repos.policy.loadAll())
+        .where((p) => p.sido == sido && p.category == PolicyCategory.wedding && RegExp(r'거주|주민|주소').hasMatch(p.eligibility))
+        .toList();
+    _lookupNote = '$sido 공공예식장 ${all.length}곳의 이용 대상·안내 원문(관내·주민·임직원 우선 등) + $sido 예식 지원 정책 ${policies.length}건의 거주 조건 원문';
+    return ChatMessage(
+      fromUser: false,
+      basis: '$sido 공공예식장 이용 대상 · 예식 지원 정책 거주 조건',
+      text: '$sido에 살지 않아도 되는지 앱 데이터의 이용 대상·안내 원문으로 확인했어요.\n'
+          '• 이용 대상이 "전체·개인" 등으로 적혀 있고 거주 제한 문구가 없는 곳: $open곳\n'
+          '• 주민·관내자·임직원 우선이나 한정이라고 적힌 곳: ${rs.length}곳'
+          '${rs.isEmpty ? '' : ' (${rs.take(3).map((v) => v.name).join(', ')}${rs.length > 3 ? ' 외' : ''})'}\n'
+          '• 이용 대상 정보가 없는 곳: $unknown곳 → 기관에 확인해 주세요\n'
+          '${policies.isEmpty ? '' : '\n다만 지원금·비품 지원은 거주 조건이 있어요.\n${policies.take(2).map((p) => '• ${p.name}: ${snippetAround(p.eligibility, RegExp(r'거주|주민|주소')) ?? ''}').join('\n')}\n'}'
+          '\n예식장 이용 가능 여부와 지원금 대상은 따로예요. 최종 확인은 각 기관에서 해 주세요.',
+      cards: [
+        for (final p in policies.take(2))
+          ChatCard(
+            title: p.name,
+            subtitle: '${p.regionLabel} · ${p.category.label}',
+            icon: Icons.volunteer_activism,
+            badge: '거주 조건',
+            open: () => PolicyDetailScreen(match: PolicyMatch(p, MatchLevel.check, const [], const [])),
+            ref: 'policy:${p.id}',
+          ),
+        for (final v in rs.take(1)) _venueCard(v, badge: '주민 우선·한정'),
+      ],
+      sources: const ['전국 공공예식장 현황 (이용 대상·안내 원문)', '청년 결혼 지원 정책 177건'],
+      quickReplies: [QuickReply('$sido 예식장 보기', text: '$sido 공공예식장 추천해줘')],
+    );
+  }
+
+  /// 예식장 원문(기타 안내·예약 방법·선별 방법)에서 특정 말이 적힌 곳
+  Future<String?> _venueTextNotes(RegExp word) async {
+    final all = await Repos.venue.loadAll();
+    final hits = [
+      for (final v in all)
+        if (snippetAround('${v.extraInfo ?? ''} ${v.reservationInfo ?? ''} ${v.selection ?? ''}', word, before: 25, after: 35)
+            case final s?)
+          '• ${v.name}: $s',
+    ];
+    if (hits.isEmpty) return null;
+    return '앱 데이터(예식장 안내 원문)에 관련 내용이 적힌 곳:\n${hits.take(3).join('\n')}';
+  }
+
+  /// 질문 속 단어가 이름에 들어간 정책 (Gemini가 뽑은 이름 + 질문의 세 글자 이상 단어)
+  Future<List<Policy>> _policyHits(Understanding u) async {
+    const stop = {'공공예식장', '신혼부부', '예비부부', '지원받', '지원금', '받는다던데', '어떻게', '알려줘', '정책', '결혼'};
+    final words = {
+      for (final n in u.names) if (n.length >= 2) normName(n),
+      for (final m in RegExp(r'[가-힣A-Za-z]{3,}').allMatches(_question))
+        if (!stop.any((w) => m[0]!.contains(w))) normName(m[0]!),
+    };
+    if (words.isEmpty) return const [];
+    final all = await Repos.policy.loadAll();
+    return all.where((p) => p.sido == '전국' || p.sido == _known.sido).where((p) => words.any((w) => normName(p.name).contains(w))).toList();
+  }
+
+  /// "내년 봄 토요일" → 그 계절의 그 요일 날짜들
+  ({List<DateTime> dates, String label})? _seasonDates(String q) {
+    final s = RegExp(r'(봄|여름|가을|겨울)').firstMatch(q)?[1];
+    if (s == null) return null;
+    final months = switch (s) { '봄' => [3, 4, 5], '여름' => [6, 7, 8], '가을' => [9, 10, 11], _ => [12, 1, 2] };
+    final days = q.contains('토요일') || RegExp(r'토\s*(요일)?에').hasMatch(q)
+        ? [DateTime.saturday]
+        : q.contains('일요일')
+            ? [DateTime.sunday]
+            : q.contains('평일')
+                ? [1, 2, 3, 4, 5]
+                : [DateTime.saturday, DateTime.sunday];
+    final now = DateTime.now();
+    var year = q.contains('내년') ? now.year + 1 : now.year;
+    if (!q.contains('내년') && months.last < now.month && s != '겨울') year++;
+    final dates = <DateTime>[];
+    for (final m in months) {
+      final y = (s == '겨울' && m <= 2) ? year + 1 : year;
+      for (var d = DateTime(y, m, 1); d.month == m; d = d.add(const Duration(days: 1))) {
+        if (days.contains(d.weekday) && d.isAfter(now)) dates.add(d);
+      }
+    }
+    final dayLabel = days.length == 1 ? (days.first == 6 ? '토요일' : '일요일') : (days.length == 2 ? '주말' : '평일');
+    return dates.isEmpty ? null : (dates: dates, label: '$year년 $s(${months.first}~${months.last}월) $dayLabel');
+  }
+
+  /// 계절·요일 질문: 날짜마다 예식 가능일 원문을 규칙으로 확인 → 가능한 날이 있는 곳
+  Future<ChatMessage> _venueSeasonAnswer(Understanding u, List<DateTime> dates, String label) async {
+    final sido = _known.sido!;
+    final pool = await _venuePool(u);
+    final counts = <Venue, int>{};
+    var unknown = 0, none = 0;
+    for (final v in pool.list) {
+      final fits = dates.map((d) => ruleJudgeDate(v, d).fit).toList();
+      final ok = fits.where((f) => f == DateFit.possible).length;
+      if (ok > 0) {
+        counts[v] = ok;
+      } else if (fits.every((f) => f == DateFit.impossible)) {
+        none++;
+      } else {
+        unknown++;
+      }
+    }
+    final ranked = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    _lookupNote = '$label ${dates.length}일 × $sido 공공예식장 ${pool.list.length}곳의 예식 가능일 원문을 규칙(월 범위·요일·불가일)으로 확인';
+    final cards = [for (final v in ranked) _venueCard(v, badge: '${counts[v]}/${dates.length}일 가능')];
+    final more = _startMore(cards, '$label 가능한 $sido 공공예식장', tab: 0);
+    return ChatMessage(
+      fromUser: false,
+      basis: '$sido · $label (${dates.length}일)',
+      text: '${pool.notes.isEmpty ? '' : '${pool.notes.join('\n')}\n'}'
+          '$label ${dates.length}일을 예식장마다 예식 가능일 원문으로 확인했어요.\n'
+          '• 그중 하루라도 예식이 가능한 곳: ${ranked.length}곳\n'
+          '• 그 기간엔 예식이 없는 곳: $none곳\n'
+          '• 원문만으로는 알 수 없는 곳(지정일·협의·정보 없음): $unknown곳\n\n'
+          '${ranked.take(3).map((v) => '• ${v.name}: ${dates.length}일 중 ${counts[v]}일 가능 (${v.capacityLabel} · ${v.feeLabel})').join('\n')}\n\n'
+          '날짜를 하나 정하면 그날 기준으로 다시 확인해 드려요. 이미 찬 날짜는 앱에서 알 수 없어요.',
+      cards: cards.take(3).toList(),
+      sources: const ['전국 공공예식장 현황 · 예식 가능일 원문'],
+      quickReplies: [...more, const QuickReply('날짜 골라서 다시 보기', slot: 'weddingDate', action: 'input')],
+    );
+  }
 
   /// 짧은 후속 질문("12/20에 되는 곳은?")은 바로 앞 예식장 답변의 조건(무료·제외·주차 등)을 이어받는다
   Understanding _carryVenueConds(Understanding u) {
@@ -1016,6 +1184,19 @@ class ConsultAgent implements ChatAgent {
     // 그 분야 정책이 내 지역에 없으면 (예: 서울엔 결혼 장려금 없음) 받을 수 있는 다른 정책을 보여 주고 그렇게 말한다
     final topicEmpty = policies.isEmpty && u.intent == ConsultIntent.policy && u.topic != null && _known.sido != null;
     if (topicEmpty) policies = (await ConsultTools.matchPolicies(_known)).take(3).toList();
+    if (u.intent == ConsultIntent.policy && _known.sido != null) {
+      // "비품비 지원" 처럼 정책 이름에 있는 말을 물으면 그 정책을 먼저
+      final hits = await _policyHits(u);
+      if (hits.isNotEmpty) {
+        final judged = PolicyMatcher.judge(await Repos.policy.loadAll(), PolicyProfile.fromUser(_known)).matches;
+        final hitMatches = [
+          for (final p in hits.take(2))
+            judged.where((m) => m.policy.id == p.id).firstOrNull ?? PolicyMatch(p, MatchLevel.check, const [], const []),
+        ];
+        policies = [...hitMatches, ...policies.where((m) => !hits.any((p) => p.id == m.policy.id))].take(3).toList();
+      }
+    }
+    final dupNotes = RegExp(r'동시|중복|두\s*(군데|곳)|여러\s*(곳|군데)').hasMatch(_question) ? await _venueTextNotes(RegExp(r'중복|동시\s*(신청|접수|예약)')) : null;
     final policyHead = topicEmpty
         ? '${u.topic!.label} 분야 정책은 ${_known.sido} 기준으로 앱 데이터에 없어요. 대신 받을 수 있는 정책'
         : '앱 데이터에서 ${_known.sido} 기준으로 찾은 관련 정책';
@@ -1027,7 +1208,7 @@ class ConsultAgent implements ChatAgent {
     return ChatMessage(
       fromUser: false,
       basis: '일반 안내 · 앱 데이터가 아니에요${policies.isEmpty ? '' : ' (아래 정책 카드는 앱 데이터)'}',
-      text: '$text${facts == null ? '' : '\n\n$facts'}'
+      text: '$text${facts == null || dupNotes != null ? '' : '\n\n$facts'}${dupNotes == null ? '' : '\n\n$dupNotes'}'
           '${policies.isEmpty ? '' : '\n\n$policyHead:\n${policies.map((m) => '• ${m.policy.name}').join('\n')}'}',
       aiWritten: true,
       cards: [
