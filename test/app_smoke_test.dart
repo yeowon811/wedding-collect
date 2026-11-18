@@ -327,8 +327,12 @@ void main() {
       expect(m.quickReplies.map((r) => r.label), contains('서울'));
       expect(m.basis, contains('만 20~29세'));
 
-      // 버튼으로 답 → 혼인신고 여부를 묻는다
+      // 버튼으로 답 → 이어서 시·군·구를 묻는다 (서울 → 강남구 …)
       m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '서울'));
+      expect(agent.asking, Slot.sigungu);
+      expect(m.text, contains('서울의 어느 시·군·구'));
+      expect(m.quickReplies.map((r) => r.label), containsAll(['강남구', '송파구', '잘 모르겠어요']));
+      m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '강남구'));
       expect(agent.asking, Slot.stage);
 
       // 글로 답해도 된다

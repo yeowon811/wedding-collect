@@ -43,3 +43,27 @@ const kSigunguBySido = <String, List<String>>{
     '통영시', '하동군', '함안군', '함양군', '합천군'],
   '제주': ['서귀포시', '제주시'],
 };
+
+/// 문장에서 시·군·구 찾기. [sido]를 알면 그 안에서만, 모르면 전국에서 하나로 정해질 때만.
+/// "강남구"뿐 아니라 "강남"처럼 끝 글자(구·시·군)를 뺀 말도 찾는다.
+(String sido, String sigungu)? findSigungu(String text, {String? sido}) {
+  final hits = <(String, String)>[];
+  for (final e in kSigunguBySido.entries) {
+    if (sido != null && e.key != sido) continue;
+    for (final g in e.value) {
+      final stem = g.length > 2 ? g.substring(0, g.length - 1) : g;
+      if (text.contains(g) || (stem.length >= 2 && text.contains(stem))) hits.add((e.key, g));
+    }
+  }
+  // "중구"·"동구"처럼 여러 시도에 있는 이름은 시도를 모르면 정하지 않는다
+  final unique = {for (final h in hits) h};
+  if (unique.length != 1) {
+    // 같은 이름을 다 포함하는 더 긴 이름 하나만 남으면 그걸로 ("동대문구" vs "동구")
+    final longest = unique.toList()..sort((a, b) => b.$2.length.compareTo(a.$2.length));
+    if (longest.length > 1 && longest[0].$2.length > longest[1].$2.length && longest[0].$2.contains(longest[1].$2)) {
+      return longest[0];
+    }
+    return null;
+  }
+  return unique.first;
+}

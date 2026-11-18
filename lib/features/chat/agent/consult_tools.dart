@@ -14,9 +14,11 @@ class ConsultTools {
   ConsultTools._();
 
   /// 공공예식장: 하객 수 수용 → 무료 → 예약 가능 순. 정원을 모르는 곳은 뒤로, 확실히 작은 곳은 맨 뒤.
-  static Future<List<Venue>> searchVenues({required String sido, int? guests}) async {
+  static Future<List<Venue>> searchVenues({required String sido, int? guests, String? sigungu}) async {
     final all = await Repos.venue.loadAll();
+    // 내 시군구 예식장을 먼저 (그다음 하객 수용 · 무료 · 예약 가능 순)
     int score(Venue v) =>
+        (sigungu == null || v.sigungu == sigungu ? 0 : 16) +
         (guests == null ? 0 : (v.fits(guests) == true ? 0 : (v.fits(guests) == null ? 4 : 8))) +
         (v.isFree ? 0 : 2) +
         (v.isLimited ? 1 : 0);

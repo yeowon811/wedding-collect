@@ -100,6 +100,7 @@ class ConsultAgent implements ChatAgent {
 
   static const _slotLabel = {
     Slot.sido: '지역',
+    Slot.sigungu: '시·군·구',
     Slot.age: '나이',
     Slot.stage: '결혼 단계',
     Slot.marriedYears: '혼인 연차',
@@ -115,6 +116,9 @@ class ConsultAgent implements ChatAgent {
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
   late UserProfile _known = _app.profileDone ? _app.profile : const UserProfile();
   late UserProfile _seenApp = _app.profile; // 마지막으로 본 앱의 내 정보
+
+  /// 이번 질문에서 방금 지역(시도)을 되물어 답을 받았는지 → 그때만 이어서 시·군·구를 묻는다
+  bool _sidoJustAsked = false;
 
   /// 체크리스트·내 정보 화면에서 바뀐 결혼 정보만 대화 기억에 반영 (대화에서 말한 값은 덮지 않음)
   void _syncFromApp() {
@@ -172,6 +176,7 @@ class ConsultAgent implements ChatAgent {
         return _process(u);
       }
       _known = _known.merge(u.facts);
+      if (_asking == Slot.sido) _sidoJustAsked = true;
       if (_asking == Slot.item && u.item != null) _pending = _pending!.withItem(u.item!);
       if (!_isFilled(_asking!, _pending!)) {
         return _ask(_asking!, _pending!, retry: true);
@@ -179,6 +184,7 @@ class ConsultAgent implements ChatAgent {
       return _process(_pending!);
     }
     _question = text;
+    _sidoJustAsked = false;
     step.value = AgentStep.understand;
     return _process((await _understand(text)).u);
   }
@@ -194,15 +200,16 @@ class ConsultAgent implements ChatAgent {
     final flow = context == null ? '' : ' · 최근 ${_turns.length.clamp(1, _memoryTurns)}턴 대화 요약을 함께 봄';
     if (ai == null) {
       _nluNote = (_llm == null ? '규칙(키워드·대화 흐름)으로 이해' : 'Gemini 응답 없음 → 규칙(키워드·대화 흐름)으로 이해');
-      return (u: rule, isAnswer: false);
+      return (u: _withTown(rule, text), isAnswer: false);
     }
     _nluNote = 'Gemini가 이해$flow (정해진 형식·값 범위 검사 후 사용, 놓친 값은 규칙으로 보완)';
     final intent = ai.u.intent;
+    final town = _townFacts(text, plain.facts.merge(ai.u.facts));
     return (
-      isAnswer: ai.isAnswer,
+      isAnswer: ai.isAnswer || (expecting == Slot.sigungu && town.sigungu != null),
       u: Understanding(
         intent: intent,
-        facts: plain.facts.merge(ai.u.facts),
+        facts: town,
         topic: ai.u.topic ?? (intent == ConsultIntent.policy ? rule.topic : null),
         item: ai.u.item ?? (intent == ConsultIntent.vendor ? rule.item : null),
         refIndex: ai.u.refIndex ?? rule.refIndex,
@@ -210,6 +217,23 @@ class ConsultAgent implements ChatAgent {
       ),
     );
   }
+
+  /// 문장 속 시·군·구 ("강남구 살아요", "수원이에요") → 지역 정보에 보탠다 (이미 아는 시도 안에서 먼저 찾음)
+  UserProfile _townFacts(String text, UserProfile facts) {
+    if (facts.sigungu != null) return facts;
+    final hit = findSigungu(text, sido: facts.sido ?? _known.sido) ?? (facts.sido == null ? findSigungu(text) : null);
+    if (hit == null) return facts;
+    return facts.merge(UserProfile(sido: hit.$1, sigungu: hit.$2));
+  }
+
+  Understanding _withTown(Understanding u, String text) => Understanding(
+        intent: u.intent,
+        facts: _townFacts(text, u.facts),
+        topic: u.topic,
+        item: u.item,
+        refIndex: u.refIndex,
+        filter: u.filter,
+      );
 
   /// ⑤ 답변 문장: 앱이 만든 답변(데이터 결과)을 Gemini가 질문에 맞게 다시 쓴다.
   /// 원문에 없는 숫자가 나오면 Gemini 문장을 버리고 원래 문장을 쓴다.
@@ -247,6 +271,7 @@ class ConsultAgent implements ChatAgent {
       return _process(_pending!);
     }
     if (r.slot != null && _pending != null) {
+      if (r.slot == Slot.sido.name) _sidoJustAsked = true;
       _known = _known.merge(_valueToFacts(Slot.values.byName(r.slot!), r.value));
       return _process(_pending!);
     }
@@ -344,12 +369,13 @@ class ConsultAgent implements ChatAgent {
   List<Slot> _required(Understanding u) => switch (u.intent) {
         ConsultIntent.policy => [
             Slot.sido,
+            Slot.sigungu,
             Slot.age,
             Slot.stage,
             if (_known.stage == MarriageStage.married) Slot.marriedYears,
             if (u.topic == PolicyCategory.housing || u.topic == null) Slot.homeless,
           ],
-        ConsultIntent.venue => [Slot.sido, Slot.guests],
+        ConsultIntent.venue => [Slot.sido, Slot.sigungu, Slot.guests],
         ConsultIntent.vendor => [
             if (u.item == null) Slot.item,
             Slot.sido,
@@ -358,7 +384,7 @@ class ConsultAgent implements ChatAgent {
           ],
         ConsultIntent.budget => [Slot.budget],
         ConsultIntent.schedule => [Slot.weddingDate],
-        ConsultIntent.recommend => [Slot.sido, Slot.age, Slot.stage, Slot.guests, Slot.budget],
+        ConsultIntent.recommend => [Slot.sido, Slot.sigungu, Slot.age, Slot.stage, Slot.guests, Slot.budget],
         ConsultIntent.help => const [],
       };
 
@@ -367,6 +393,11 @@ class ConsultAgent implements ChatAgent {
 
   bool _isFilled(Slot s, Understanding u) => switch (s) {
         Slot.sido => _known.sido != null,
+        // 시군구는 선택: 시도를 모르거나 시군구가 하나뿐이면 묻지 않는다
+        Slot.sigungu => !_sidoJustAsked ||
+            _known.sigungu != null ||
+            _known.sido == null ||
+            (kSigunguBySido[_known.sido]?.length ?? 0) <= 1,
         Slot.age => _known.age != null,
         Slot.stage => _known.stage != null,
         Slot.marriedYears => _known.marriedYears != null,
@@ -379,6 +410,7 @@ class ConsultAgent implements ChatAgent {
 
   UserProfile _valueToFacts(Slot s, Object? v) => switch (s) {
         Slot.sido => UserProfile(sido: v as String),
+        Slot.sigungu => UserProfile(sido: _known.sido, sigungu: v as String),
         Slot.age => UserProfile(age: (v as List<int>)[0], ageMax: v.length > 1 ? v[1] : null),
         Slot.stage => UserProfile(stage: MarriageStage.values.byName(v as String)),
         Slot.marriedYears => UserProfile(marriedYears: v as int),
@@ -399,6 +431,10 @@ class ConsultAgent implements ChatAgent {
       Slot.sido => (
           '$why 사는 지역에 따라 달라져요. 어느 지역에 살고 계세요?',
           [for (final sido in kSidoList) QuickReply(sido, slot: s.name, value: sido)],
+        ),
+      Slot.sigungu => (
+          '${_known.sido}의 어느 시·군·구에 사세요? 그 지역 정책·예식장까지 정확히 찾아 드려요. 글로 적어 주셔도 돼요.',
+          [for (final g in kSigunguBySido[_known.sido] ?? const <String>[]) QuickReply(g, slot: s.name, value: g)],
         ),
       Slot.age => (
           '만 나이를 알려주세요. 나이 조건(예: 만 19~39세)이 있는 정책이 많아요. 숫자로 적어 주셔도 돼요.',
@@ -457,6 +493,12 @@ class ConsultAgent implements ChatAgent {
           [for (final c in VendorCategory.planItems) QuickReply(c.label, slot: s.name, value: c.name)],
         ),
     };
+    // 숫자는 [직접 입력], 예식일은 [날짜 고르기] (화면에서 입력 창을 띄움)
+    final input = switch (s) {
+      Slot.age || Slot.guests || Slot.budget || Slot.marriedYears => QuickReply('직접 입력', slot: s.name, action: 'input'),
+      Slot.weddingDate => QuickReply('날짜 고르기', slot: s.name, action: 'input'),
+      _ => null,
+    };
     final prefix = retry ? '죄송해요, 잘 알아듣지 못했어요. 아래에서 골라 주시거나 다시 적어 주세요.\n' : '';
     final known = _known.summary;
     return ChatMessage(
@@ -464,7 +506,7 @@ class ConsultAgent implements ChatAgent {
       isQuestion: true,
       text: '$prefix$q${remaining != null && remaining > 1 ? '\n(확인할 것 $remaining개 중 하나예요)' : ''}',
       basis: known.isEmpty ? null : '지금까지 알려주신 정보: $known',
-      quickReplies: [...options, const QuickReply('잘 모르겠어요', action: 'skip_ask')],
+      quickReplies: [...options, ?input, const QuickReply('잘 모르겠어요', action: 'skip_ask')],
     );
   }
 
@@ -562,8 +604,8 @@ class ConsultAgent implements ChatAgent {
   Future<ChatMessage> _venueAnswer({String? filter}) async {
     final sido = _known.sido!;
     final guests = _known.guests;
-    var list = await ConsultTools.searchVenues(sido: sido, guests: guests);
-    _lookupNote = '$sido 공공예식장 ${list.length}곳 → 하객 수용 · 무료 · 예약 가능 순으로 정렬';
+    var list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: _known.sigungu);
+    _lookupNote = '$sido 공공예식장 ${list.length}곳 → ${_known.sigungu != null ? '${_known.sigungu} 먼저 · ' : ''}하객 수용 · 무료 · 예약 가능 순으로 정렬';
     if (filter != null && _filterLabel.containsKey(filter)) {
       final before = list.length;
       list = switch (filter) {
@@ -829,7 +871,9 @@ class ConsultAgent implements ChatAgent {
   Future<ChatMessage> _recommendAnswer() async {
     final venues = _known.sido == null
         ? const []
-        : (await ConsultTools.searchVenues(sido: _known.sido!, guests: _known.guests)).take(2).toList();
+        : (await ConsultTools.searchVenues(sido: _known.sido!, guests: _known.guests, sigungu: _known.sigungu))
+            .take(2)
+            .toList();
     final policies = (await ConsultTools.matchPolicies(_known)).take(3).toList();
     final budget = _known.budget;
     final used = _app.confirmedTotal + _app.plannedTotal;

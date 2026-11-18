@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/format.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
@@ -105,8 +107,67 @@ class _ChatScreenState extends State<ChatScreen> {
     _run(() => _agent.reply(q), userMessage: ChatMessage(fromUser: true, text: q));
   }
 
-  void _choose(QuickReply r) =>
-      _run(() => _agent.choose(r), userMessage: ChatMessage(fromUser: true, text: r.label));
+  Future<void> _choose(QuickReply r) async {
+    if (r.action == 'input') {
+      final filled = await _askInput(r.slot!);
+      if (filled == null || !mounted) return;
+      r = filled;
+    }
+    _run(() => _agent.choose(r), userMessage: ChatMessage(fromUser: true, text: r.label));
+  }
+
+  /// 되묻기의 [직접 입력]·[날짜 고르기]: 값을 받아 선택 버튼처럼 넘긴다
+  Future<QuickReply?> _askInput(String slot) async {
+    if (slot == 'weddingDate') {
+      final today = DateTime.now();
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: today.add(const Duration(days: 180)),
+        firstDate: today,
+        lastDate: today.add(const Duration(days: 365 * 3)),
+        helpText: '예식일을 골라 주세요',
+      );
+      if (picked == null) return null;
+      final days = DateTime(picked.year, picked.month, picked.day)
+          .difference(DateTime(today.year, today.month, today.day))
+          .inDays;
+      return QuickReply('예식일 ${formatDate(picked)}', slot: slot, value: days);
+    }
+    final (title, unit, min, max) = switch (slot) {
+      'age' => ('만 나이', '세', 19, 60),
+      'guests' => ('하객 수', '명', 10, 2000),
+      'budget' => ('총예산', '만원', 100, 100000),
+      _ => ('혼인 연차', '년', 1, 30),
+    };
+    final c = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(suffixText: unit, hintText: '$min~$max'),
+          onSubmitted: (_) => Navigator.pop(d, true),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('확인')),
+        ],
+      ),
+    );
+    final n = int.tryParse(c.text);
+    if (ok != true || n == null) return null;
+    final v = n.clamp(min, max);
+    return switch (slot) {
+      'age' => QuickReply('만 $v세', slot: slot, value: [v]),
+      'budget' => QuickReply(formatManwon(v), slot: slot, value: v),
+      'marriedYears' => QuickReply('혼인 $v년차', slot: slot, value: v),
+      _ => QuickReply('$v$unit', slot: slot, value: v),
+    };
+  }
 
   void _scrollDown() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -310,9 +371,14 @@ class _ChatScreenState extends State<ChatScreen> {
                           for (final r in m.quickReplies)
                             ActionChip(
                               label: Text(r.label),
-                              avatar: r.action == 'save_profile'
-                                  ? Icon(Icons.bookmark_add_outlined, size: 16, color: AppColors.primary)
-                                  : null,
+                              avatar: switch (r.action) {
+                                'save_profile' => Icon(Icons.bookmark_add_outlined, size: 16, color: AppColors.primary),
+                                'input' => Icon(
+                                    r.slot == 'weddingDate' ? Icons.calendar_month_outlined : Icons.edit_outlined,
+                                    size: 16,
+                                    color: AppColors.primary),
+                                _ => null,
+                              },
                               backgroundColor: Colors.white,
                               side: const BorderSide(color: Color(0xFFD1D6DB)),
                               labelStyle: TextStyle(

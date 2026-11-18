@@ -1063,7 +1063,10 @@ class _TimelineCard extends StatelessWidget {
 
   Future<void> _addTask(BuildContext context) {
     final title = TextEditingController();
-    final dMinusField = TextEditingController();
+    DateTime? due; // 언제까지 (캘린더에서 고름)
+    final plan = state.plan;
+    final wedding = DateTime(plan.weddingDate.year, plan.weddingDate.month, plan.weddingDate.day);
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1090,12 +1093,29 @@ class _TimelineCard extends StatelessWidget {
                   ),
                   FormSection(
                     title: '언제까지',
-                    hint: '예식일 며칠 전까지 할지 숫자로 입력해 주세요.',
-                    child: TextField(
-                      controller: dMinusField,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(hintText: '예: 30', prefixText: '예식 ', suffixText: '일 전'),
+                    hint: plan.hasDate ? '누르면 캘린더가 열려요. 예식일 전 날짜를 골라 주세요.' : '예식일을 먼저 입력해 주세요 (위 결혼 정보).',
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: !plan.hasDate
+                            ? null
+                            : () async {
+                                final last = wedding.isBefore(today) ? today : wedding;
+                                final picked = await showDatePicker(
+                                  context: ctx,
+                                  initialDate: due ?? (today.isAfter(last) ? last : today),
+                                  firstDate: today.isAfter(last) ? last : today,
+                                  lastDate: last,
+                                  helpText: '언제까지 할까요?',
+                                );
+                                if (picked != null) setSheet(() => due = picked);
+                              },
+                        icon: const Icon(Icons.calendar_month_outlined, size: 20),
+                        label: Text(due == null
+                            ? '날짜 고르기'
+                            : '${formatDateWithDay(due!)}까지 · 예식 D-${wedding.difference(due!).inDays}'),
+                      ),
                     ),
                   ),
                 ]),
@@ -1105,9 +1125,8 @@ class _TimelineCard extends StatelessWidget {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () {
-                      final dMinus = int.tryParse(dMinusField.text);
-                      if (title.text.trim().isEmpty || dMinus == null || dMinus > 1000) return;
-                      state.addTask(title.text, dMinus);
+                      if (title.text.trim().isEmpty || due == null) return;
+                      state.addTask(title.text, wedding.difference(due!).inDays);
                       Navigator.pop(ctx);
                     },
                     child: const Text('추가'),

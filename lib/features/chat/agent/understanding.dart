@@ -15,7 +15,7 @@ enum ConsultIntent {
 }
 
 /// 답변에 필요한 정보 항목
-enum Slot { sido, age, stage, marriedYears, guests, budget, item, homeless, weddingDate }
+enum Slot { sido, sigungu, age, stage, marriedYears, guests, budget, item, homeless, weddingDate }
 
 /// 질문 하나를 이해한 결과
 class Understanding {

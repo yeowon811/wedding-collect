@@ -103,6 +103,7 @@ class GeminiClient {
   - guests: 하객 수, budget: 총예산(만원 단위, "3천만원"=3000)
   - homeless: 무주택이면 true, 집이 있으면 false
 - expecting이 주어지면 사용자의 짧은 답("서울", "27", "네")을 그 항목의 값으로 읽는다.
+- expecting이 sigungu이면 "강남구", "수원이요" 같은 답은 isAnswer=true (시군구 값은 앱이 직접 읽는다).
   이때 다른 목적의 새 질문이 아니면 intent는 "answer"로 한다.
 
 질문 앞에 "이전 대화"가 주어질 수 있다. 이번 질문을 이해하는 데만 쓴다.
