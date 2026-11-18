@@ -1,4 +1,5 @@
 import '../../../core/utils/region.dart';
+import 'calc.dart';
 import '../../../data/models/policy.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
@@ -17,7 +18,20 @@ enum ConsultIntent {
 /// 답변에 필요한 정보 항목
 enum Slot { sido, sigungu, age, stage, marriedYears, guests, budget, item, homeless, weddingDate }
 
-/// 질문 하나를 이해한 결과
+/// 질문 종류: 무엇을 해 달라는 질문인가 (목적과 별개)
+enum AskKind {
+  list, // 찾아 줘·추천 (기본)
+  detail, // 특정 예식장·정책·업체 하나에 대해
+  compare, // 둘 이상 비교
+  cost, // 비용 수준·추가금·예산이 충분한지 (업체_요소 단가표)
+  calc, // 질문에 준 숫자로 계산
+  general, // 앱 데이터가 아닌 일반 지식·방법·제도 설명
+}
+
+/// 예식장 조건 중 원문으로 거르는 것
+const kVenueNeeds = ['parking', 'reception', 'outdoor'];
+
+/// 질문 하나를 이해한 결과 (= 답을 만들 계획: 어떤 도구를 어떤 조건으로 쓸지)
 class Understanding {
   const Understanding({
     required this.intent,
@@ -28,7 +42,26 @@ class Understanding {
     this.filter,
     this.date,
     this.unsupported = const [],
+    this.kind = AskKind.list,
+    this.names = const [],
+    this.exclude = const [],
+    this.needs = const [],
+    this.items = const [],
+    this.itemBudget,
+    this.calc,
+    this.monthsLeft,
+    this.also,
   });
+
+  final AskKind kind;
+  final List<String> names; // 질문에 나온 예식장·정책·업체 이름
+  final List<String> exclude; // 빼 달라는 시군구
+  final List<String> needs; // 예식장 원문 조건 ([kVenueNeeds])
+  final List<VendorCategory> items; // 업체 항목 여러 개 (스드메 = 촬영·드레스·메이크업)
+  final int? itemBudget; // 그 항목(들)에 쓸 금액 상한 (만원)
+  final String? calc; // 계산식 (원 단위, 예: 65000*150)
+  final int? monthsLeft; // 예식까지 남은 개월
+  final ConsultIntent? also; // 함께 물은 두 번째 목적
 
   final ConsultIntent intent;
   final DateTime? date; // 질문 속 예식·예약 날짜 (예: "12/20")
@@ -39,13 +72,56 @@ class Understanding {
   final int? refIndex; // 이전 답변 목록의 몇 번째 항목을 가리키는지 (1부터, "두 번째 거" → 2)
   final String? filter; // 이전 결과를 거르는 조건 ([kResultFilters] 중 하나)
 
-  Understanding withItem(VendorCategory item) => Understanding(
+  Understanding withItem(VendorCategory item) => copyWith(item: item);
+
+  Understanding copyWith({
+    ConsultIntent? intent,
+    UserProfile? facts,
+    PolicyCategory? topic,
+    VendorCategory? item,
+    int? refIndex,
+    String? filter,
+    AskKind? kind,
+  }) =>
+      Understanding(
+        intent: intent ?? this.intent,
+        facts: facts ?? this.facts,
+        topic: topic ?? this.topic,
+        item: item ?? this.item,
+        refIndex: refIndex ?? this.refIndex,
+        filter: filter ?? this.filter,
+        date: date,
+        unsupported: unsupported,
+        kind: kind ?? this.kind,
+        names: names,
+        exclude: exclude,
+        needs: needs,
+        items: items,
+        itemBudget: itemBudget,
+        calc: calc,
+        monthsLeft: monthsLeft,
+        also: also,
+      );
+
+  /// 규칙 결과(plan 필드)를 Gemini 결과에 보탠다: Gemini가 비운 것만 채움
+  Understanding withPlanFrom(Understanding r) => Understanding(
         intent: intent,
         facts: facts,
         topic: topic,
         item: item,
         refIndex: refIndex,
         filter: filter,
+        date: date ?? r.date,
+        unsupported: unsupported,
+        kind: kind != AskKind.list ? kind : r.kind,
+        names: names.isNotEmpty ? names : r.names,
+        exclude: exclude.isNotEmpty ? exclude : r.exclude,
+        needs: {...needs, ...r.needs}.toList(),
+        items: items.isNotEmpty ? items : r.items,
+        itemBudget: itemBudget ?? r.itemBudget,
+        calc: calc ?? r.calc,
+        monthsLeft: monthsLeft ?? r.monthsLeft,
+        also: also ?? r.also,
       );
 }
 
@@ -71,6 +147,11 @@ class RuleUnderstander implements Understander {
     VendorCategory.suit: ['정장', '턱시도', '수트'],
     VendorCategory.hanbok: ['한복'],
     VendorCategory.makeup: ['메이크업', '화장'],
+  };
+
+  /// 묶음 이름 → 항목 여러 개
+  static const _bundles = <String, List<VendorCategory>>{
+    '스드메': [VendorCategory.studio, VendorCategory.dress, VendorCategory.makeup],
   };
 
   static const _topicWords = <PolicyCategory, List<String>>{
@@ -123,7 +204,7 @@ class RuleUnderstander implements Understander {
     }
 
     MarriageStage? stage;
-    if (_has(t, ['예비부부', '예비신혼', '결혼예정', '결혼할', '결혼준비', '아직결혼', '혼인신고전'])) {
+    if (_has(t, ['예비부부', '예비신혼', '결혼예정', '결혼할', '결혼준비', '아직결혼', '혼인신고전', '혼인신고안', '신고안했'])) {
       stage = MarriageStage.engaged;
     } else if (_has(t, ['혼인신고했', '결혼했', '신혼부부', '혼인신고후', '년차'])) {
       stage = MarriageStage.married;
@@ -155,8 +236,10 @@ class RuleUnderstander implements Understander {
     if (_has(t, ['무주택', '집이없', '집없'])) homeless = true;
     if (_has(t, ['집이있', '집있', '유주택', '주택보유'])) homeless = false;
 
-    VendorCategory? item;
+    final items = [for (final e in _bundles.entries) if (t.contains(e.key)) ...e.value];
+    VendorCategory? item = items.isEmpty ? null : items.first;
     for (final e in _itemWords.entries) {
+      if (item != null) break;
       if (_has(t, e.value.map((w) => w.replaceAll(' ', '')).toList())) {
         item = e.key;
         break;
@@ -173,11 +256,11 @@ class RuleUnderstander implements Understander {
 
     // ── 목적 판단 ──
     final ConsultIntent intent;
-    if (_has(t, ['정책', '지원', '혜택', '받을수있', '장려금', '축하금', '대출', '이자'])) {
+    if (_has(t, ['정책', '지원', '혜택', '받을수있', '장려금', '축하금', '대출', '이자']) || (topic != null && item == null)) {
       intent = ConsultIntent.policy;
-    } else if (item != null) {
+    } else if (item != null && !_has(t, ['예식장', '식장', '공공예식'])) {
       intent = ConsultIntent.vendor;
-    } else if (_has(t, ['예식장', '식장', '공공예식', '장소', '대관'])) {
+    } else if (_has(t, ['예식장', '식장', '공공예식', '장소', '대관', '할곳', '할데', '작은결혼식', '스몰웨딩'])) {
       intent = ConsultIntent.venue;
     } else if (_has(t, ['예산', '얼마', '비용', '돈'])) {
       intent = ConsultIntent.budget;
@@ -189,8 +272,34 @@ class RuleUnderstander implements Understander {
       intent = ConsultIntent.help;
     }
 
+    // ── 계획(질문 종류·조건) ──
+    final calc = ruleCalc(raw);
+    final kind = calc != null
+        ? AskKind.calc
+        : _has(t, ['비교', '어디가나', '어느곳이', '뭐가나', '중에어디', '중어디'])
+            ? AskKind.compare
+            : _has(t, ['추가금', '총얼마', '총비용', '얼마들', '비용은', '보통얼마', '얼마정도', '얼마잡', '더싸', '진짜싸'])
+                ? AskKind.cost
+                : AskKind.list;
+    final months = RegExp(r'(\d{1,2})\s*개월\s*(?:남|뒤|후)').firstMatch(raw);
+    final yearLeft = RegExp(r'(\d)\s*년\s*(?:남|뒤|후)').firstMatch(raw);
+    final needs = [
+      if (t.contains('주차')) 'parking',
+      if (_has(t, ['피로연', '출장뷔페', '케이터링', '도시락'])) 'reception',
+      if (_has(t, ['야외', '잔디', '가든'])) 'outdoor',
+    ];
+    final ex = RegExp(r'([가-힣]{1,5}(?:구|시|군))\s*(?:은|는)?\s*(?:말고|빼고|제외)').firstMatch(raw);
+    final budgetCap = RegExp(r'(\d+)\s*만\s*원?\s*(?:안|이하|이내|까지|내로|아래)').firstMatch(raw);
+
     return Understanding(
       intent: intent,
+      kind: kind,
+      calc: calc,
+      items: items,
+      needs: needs,
+      exclude: ex == null ? const [] : [ex[1]!],
+      itemBudget: budgetCap == null ? null : int.parse(budgetCap[1]!),
+      monthsLeft: months != null ? int.parse(months[1]!) : (yearLeft != null ? int.parse(yearLeft[1]!) * 12 : null),
       facts: UserProfile(
         sido: sido,
         age: age,

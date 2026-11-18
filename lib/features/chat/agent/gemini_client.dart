@@ -118,7 +118,22 @@ class GeminiClient {
 - filter: 이전 결과를 거르는 조건. free(무료), fits_guests(하객이 다 들어가는 곳), cheaper(더 싼 곳),
   has_photo(사진 있는 곳). 없으면 null.
 - date: 질문에 예식·예약 날짜가 나오면 YYYY-MM-DD. 연도가 없으면 "오늘" 이후 가장 가까운 그 날짜. 없으면 null.
+- 답을 만들 계획도 함께 채운다 (앱이 이 계획대로 데이터 도구를 부른다):
+  - kind: list(찾아 줘·추천, 기본), detail(특정 예식장·정책·업체 하나에 대해 묻기, "거기"처럼 이전 목록을 가리키는 것도),
+    compare(둘 이상 비교: "A랑 B 중 어디가 나아"), cost(비용 수준·추가금·예산이 충분한지·"보통 얼마"·"일반 웨딩홀보다 싸?"),
+    calc(질문에 준 숫자로 계산: "1인 6만5천원에 150명이면"), general(앱 데이터로 답할 질문이 아닌 일반 지식·방법·제도·마음 고민:
+    "정찰제가 뭐야", "계약 전에 뭐 물어봐", "혼인신고 서류", "공공예식장 별로라던데", "두 곳 동시에 신청해도 돼?")
+  - names: 질문에 나온 예식장·정책·업체 이름 그대로 (없으면 빈 배열)
+  - exclude: 빼 달라는 시·군·구 이름 ("강남구 말고" → ["강남구"])
+  - needs: 예식장 조건 중 parking(주차), reception(피로연·식사·출장뷔페·케이터링), outdoor(야외)
+  - items: 업체 항목이 여러 개면 모두 ("스드메" = studio, dress, makeup). 하나면 item만 써도 된다.
+  - itemBudget: 그 항목(들)에 쓸 금액 상한, 만원 ("200만원 안으로" → 200). 총예산이 아니면 facts.budget에 넣지 않는다.
+  - calc: kind가 calc면 원 단위 숫자와 + - * / 로 된 식 ("6만5천원에 150명" → "65000*150")
+  - monthsLeft: 예식까지 남은 개월 ("6개월 남았는데" → 6)
+  - also: 질문이 목적 두 개를 함께 물으면 두 번째 목적 ("부산 예식장이랑 정책 같이" → intent venue, also policy)
+- stage: "혼인신고 안 했/전"이면 engaged.
 - unsupported: 질문에 나온 조건 중 앱 데이터로 확인할 수 없는 것을 짧은 말로(최대 3개). 없으면 빈 배열.
+  주차·피로연·야외·날짜·비용·비교·계산은 앱이 확인하므로 넣지 않는다.
   앱이 아는 것: 지역·시군구, 하객 수·정원, 대관료·무료 여부, 사진 유무, 예식 가능일(일부 예식장의 원문), 예약 방식,
   업체 항목·가격대·평점, 정책 대상 조건(지역·나이·혼인·무주택), 내 예산·할 일.
   예: "역에서 가까운", "주차 넓은", "야외 정원", "후기 좋은 예식장", "당일 날씨" → unsupported.
@@ -138,6 +153,15 @@ class GeminiClient {
       'filter': Schema.enumString(enumValues: kResultFilters, nullable: true),
       'date': Schema.string(nullable: true),
       'unsupported': Schema.array(items: Schema.string()),
+      'kind': Schema.enumString(enumValues: AskKind.values.map((e) => e.name).toList()),
+      'names': Schema.array(items: Schema.string()),
+      'exclude': Schema.array(items: Schema.string()),
+      'needs': Schema.array(items: Schema.enumString(enumValues: kVenueNeeds)),
+      'items': Schema.array(items: Schema.string()),
+      'itemBudget': Schema.integer(nullable: true),
+      'calc': Schema.string(nullable: true),
+      'monthsLeft': Schema.integer(nullable: true),
+      'also': Schema.enumString(enumValues: ConsultIntent.values.map((e) => e.name).toList(), nullable: true),
       'facts': Schema.object(
         properties: {
           'sido': Schema.enumString(enumValues: kSidoList, nullable: true),
@@ -154,7 +178,10 @@ class GeminiClient {
         ],
       ),
     },
-    optionalProperties: ['topic', 'item', 'refIndex', 'filter', 'date', 'unsupported'],
+    optionalProperties: [
+      'topic', 'item', 'refIndex', 'filter', 'date', 'unsupported',
+      'kind', 'names', 'exclude', 'needs', 'items', 'itemBudget', 'calc', 'monthsLeft', 'also',
+    ],
   );
 
   /// 질문을 이해해 [Understanding]으로 돌려준다. intent가 "answer"면 [Understanding.intent]는
@@ -171,8 +198,7 @@ class GeminiClient {
         if (expecting != null) 'expecting: ${expecting.name}',
         '질문: ${maskPersonalInfo(text)}',
       ].join('\n');
-      final res = await _understandModel
-          .generateContent([Content.text(prompt)]).timeout(timeout ?? _timeout);
+      final res = await _call(_understandModel, prompt, timeout ?? _timeout);
       final raw = res.text;
       if (raw == null) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -224,6 +250,20 @@ class GeminiClient {
         },
         filter: kResultFilters.contains(json['filter']) ? json['filter'] as String : null,
         date: _validDate(json['date']),
+        kind: AskKind.values.where((e) => e.name == json['kind']).firstOrNull ?? AskKind.list,
+        names: _strings(json['names'], max: 4),
+        exclude: _strings(json['exclude'], max: 3),
+        needs: [for (final x in _strings(json['needs'], max: 3)) if (kVenueNeeds.contains(x)) x],
+        items: [
+          for (final x in _strings(json['items'], max: 5))
+            ...VendorCategory.values.where((e) => e.name == x && e.budgetShare > 0),
+        ],
+        itemBudget: switch (json['itemBudget']) { final num n when n >= 1 && n <= 100000 => n.toInt(), _ => null },
+        calc: json['calc'] is String && RegExp(r'^[\d\s.+\-*/()]{3,60}$').hasMatch(json['calc'] as String)
+            ? json['calc'] as String
+            : null,
+        monthsLeft: switch (json['monthsLeft']) { final num n when n >= 0 && n <= 60 => n.toInt(), _ => null },
+        also: ConsultIntent.values.where((e) => e.name == json['also'] && e.name != intentName).firstOrNull,
         unsupported: [
           for (final x in (json['unsupported'] as List?) ?? const [])
             if (x is String && x.trim().isNotEmpty && x.length <= 30) x.trim(),
@@ -240,6 +280,24 @@ class GeminiClient {
         ),
       ),
     );
+  }
+
+  static List<String> _strings(Object? v, {required int max}) => [
+        for (final x in (v as List?) ?? const [])
+          if (x is String && x.trim().isNotEmpty && x.length <= 40) x.trim(),
+      ].take(max).toList();
+
+  /// 무료 사용량(분당 요청 수)을 넘으면 잠깐 쉬고 한 번만 다시 묻는다
+  static Future<GenerateContentResponse> _call(GenerativeModel model, String prompt, Duration timeout) async {
+    try {
+      return await model.generateContent([Content.text(prompt)]).timeout(timeout);
+    } catch (e) {
+      final m = '$e'.toLowerCase();
+      if (!(m.contains('quota') || m.contains('429') || m.contains('exhausted') || m.contains('rate'))) rethrow;
+      debugPrint('Gemini 사용량 초과 → 3초 뒤 다시 시도');
+      await Future<void>.delayed(const Duration(seconds: 3));
+      return model.generateContent([Content.text(prompt)]).timeout(timeout);
+    }
   }
 
   /// 'YYYY-MM-DD' → 날짜 (오늘부터 3년 안만)
@@ -293,12 +351,12 @@ class GeminiClient {
     final key = '${date.year}-${date.month}-${date.day}';
     final cache = _dateCache.putIfAbsent(key, () => {});
     final todo = {for (final e in items.entries) if (!cache.containsKey(e.key)) e.key: e.value};
-    // 12곳씩 나눠 동시에 묻는다 (한 번에 많이 보내면 느리고 시간 초과가 잦음)
+    // 한 번에 묻는다 (나눠서 동시에 부르면 분당 사용량을 금방 넘음)
     final keys = todo.keys.toList();
-    final parts = await Future.wait([
-      for (var i = 0; i < keys.length; i += 12)
-        _judgeBatch(date, {for (final k in keys.skip(i).take(12)) k: todo[k]!}),
-    ]);
+    final parts = [
+      for (var i = 0; i < keys.length; i += 80)
+        await _judgeBatch(date, {for (final k in keys.skip(i).take(80)) k: todo[k]!}),
+    ];
     if (parts.isNotEmpty && parts.every((p) => p == null)) return null;
     for (final p in parts) {
       if (p != null) cache.addAll(p);
@@ -315,7 +373,7 @@ class GeminiClient {
         '날짜: ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} (${wd[date.weekday - 1]}요일)',
         for (final e in items.entries) '- id ${e.key}: ${e.value}',
       ].join('\n');
-      final res = await _dateModel.generateContent([Content.text(prompt)]).timeout(const Duration(seconds: 15));
+      final res = await _call(_dateModel, prompt, const Duration(seconds: 30));
       final raw = res.text;
       if (raw == null) return null;
       final out = <String, ({String status, String reason})>{};
@@ -357,11 +415,32 @@ class GeminiClient {
 (받을 수 있는 정책, 공공예식장 추천, 업체 추천, 예산 배분, 준비 순서)을 안내한다.
 ''';
 
+  static const _generalPrompt = '''
+너는 결혼 준비 앱의 상담사다. 아래 질문은 앱 데이터(예식장·정책·업체 목록)로 답할 질문이 아니라 일반 지식·방법·제도·고민에 대한 질문이다.
+- 일반적으로 알려진 내용을 4~7줄로, "• " 목록 위주로 답한다. 존댓말(해요체), 인사말 없이.
+- 특정 업체명·예식장명·정책명, 구체적인 금액·날짜·비율·법 조항 번호는 쓰지 않는다 (앱 데이터가 아니라 틀릴 수 있음).
+- 제도·법·계약처럼 바뀔 수 있는 내용은 마지막 줄에 "정확한 내용은 공식 안내(기관·계약서)에서 확인해 주세요."를 붙인다.
+- 고민·감정 질문이면 먼저 짧게 공감하고, 할 수 있는 일을 제안한다.
+- 마크다운 굵게(**)·제목(#)·표는 쓰지 않는다.
+''';
+
+  /// 앱 데이터가 아닌 일반 지식 질문 → Gemini 일반 안내 (숫자가 섞이면 버림). 실패하면 null
+  Future<String?> general(String question) async {
+    try {
+      final res = await _call(_writeModel, '$_generalPrompt\n질문: ${maskPersonalInfo(question)}', _timeout);
+      final text = res.text?.trim();
+      if (text == null || text.isEmpty) return null;
+      if (RegExp(r'\d{2,}').hasMatch(text)) return null;
+      return text.replaceAll('**', '');
+    } catch (e) {
+      debugPrint('Gemini 일반 지식 답변 실패: $e');
+      return null;
+    }
+  }
+
   /// Gemini가 쓴 원래 문장 (검사 전). 평가용으로도 쓴다. 실패하면 null.
   Future<String?> rewriteRaw({required String question, required String draft}) async {
-    final res = await _writeModel.generateContent([
-      Content.text('질문: ${maskPersonalInfo(question)}\n\n조회 결과:\n$draft'),
-    ]).timeout(_timeout);
+    final res = await _call(_writeModel, '질문: ${maskPersonalInfo(question)}\n\n조회 결과:\n$draft', _timeout);
     final text = res.text?.trim();
     return text == null || text.isEmpty ? null : text;
   }
@@ -397,9 +476,7 @@ class GeminiClient {
   /// 데이터 조회가 필요 없는 일반 질문에 대한 짧은 안내. 실패하면 null.
   Future<String?> chat(String question) async {
     try {
-      final res = await _writeModel.generateContent([
-        Content.text('$_helpPrompt\n질문: ${maskPersonalInfo(question)}'),
-      ]).timeout(_timeout);
+      final res = await _call(_writeModel, '$_helpPrompt\n질문: ${maskPersonalInfo(question)}', _timeout);
       final text = res.text?.trim();
       if (text == null || text.isEmpty) return null;
       // 일반 안내에는 숫자를 쓰지 않게 했으므로 숫자가 섞이면 쓰지 않는다

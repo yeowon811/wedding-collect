@@ -114,9 +114,8 @@ class ContextRules {
         (pointsBack || ref != null || short) &&
         !RegExp(r'고마|감사|안녕').hasMatch(t);
 
-    return Understanding(
+    return u.copyWith(
       intent: inherit ? prev.intent : u.intent,
-      facts: u.facts,
       topic: u.topic ?? (inherit ? prev.topic : null),
       item: u.item ?? (inherit || (u.intent == ConsultIntent.vendor && prev?.intent == ConsultIntent.vendor) ? prev?.item : null),
       refIndex: ref,
