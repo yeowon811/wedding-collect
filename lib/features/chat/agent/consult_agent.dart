@@ -281,7 +281,7 @@ class ConsultAgent implements ChatAgent {
       // 날짜 조건은 앱이 예식 가능일로 판단하므로 '확인 못 함'에서 뺀다
       _unsupported = [
         for (final x in ai.u.unsupported)
-          if (!RegExp(r'날짜|일자|예약 가능|가능일|\d|주차|피로연|뷔페|케이터링|식사|야외|비용|얼마|추가금|비교|나아|계산|싸')
+          if (!RegExp(r'날짜|일자|예약 가능|가능일|\d|주차|피로연|뷔페|케이터링|식사|야외|비용|얼마|추가금|비교|나아|계산|싸|무료|하객|사진|그중')
               .hasMatch(x)) x,
       ];
     }
@@ -375,7 +375,7 @@ class ConsultAgent implements ChatAgent {
       _known = _known.merge(UserProfile(weddingDate: DateTime.now().add(Duration(days: u.monthsLeft! * 30))));
     }
     u = _carryVenueConds(u);
-    if (u.refIndex == null) {
+    if (u.refIndex == null || _noReferent) {
       final direct = await _directAnswer(u);
       if (direct != null) {
         _clearPending();
@@ -807,6 +807,19 @@ class ConsultAgent implements ChatAgent {
       return () => _compareAnswer(named.take(3).toList(), u);
     }
     if (named.length == 1 && u.kind != AskKind.general) return () async => _venueDetailAnswer(named.first, u);
+    if (named.isEmpty && u.names.isEmpty && _noReferent) {
+      return () async {
+        _lookupNote = '"거기"가 가리킬 이전 답변이 없어 되물음';
+        return const ChatMessage(
+          fromUser: false,
+          text: '어느 곳을 말씀하시는 걸까요? 예식장이나 업체 이름을 알려 주시거나, 먼저 추천을 받아 보세요.',
+          quickReplies: [
+            QuickReply('공공예식장 추천', text: '공공예식장 추천해줘'),
+            QuickReply('받을 수 있는 정책', text: '받을 수 있는 정책 알려줘'),
+          ],
+        );
+      };
+    }
     if (u.kind == AskKind.general && _llm != null) return () => _generalAnswer(u);
     if (u.kind == AskKind.cost) return () => _costAnswer(u);
     if (u.items.length > 1 && _known.sido != null) return () => _bundleAnswer(u);
@@ -817,6 +830,10 @@ class ConsultAgent implements ChatAgent {
     }
     return null;
   }
+
+  /// "거기 어때?"인데 가리킬 이전 답변 목록이 없음
+  bool get _noReferent =>
+      _turnCards.every((c) => c.isEmpty) && RegExp(r'^(거기|그거|그곳|저기|여기)').hasMatch(_question.trim());
 
   /// 짧은 후속 질문("12/20에 되는 곳은?")은 바로 앞 예식장 답변의 조건(무료·제외·주차 등)을 이어받는다
   Understanding _carryVenueConds(Understanding u) {
@@ -989,14 +1006,46 @@ class ConsultAgent implements ChatAgent {
   Future<ChatMessage> _generalAnswer(Understanding u) async {
     final text = await _llm!.general(_question);
     if (text == null) return _help();
-    final facts = RegExp(r'공공예식장|예식장|식장').hasMatch(_question) && _known.sido != null ? await _publicVenueFacts() : null;
-    _lookupNote = facts == null ? '앱 데이터로 답할 질문이 아니라 Gemini 일반 안내' : 'Gemini 일반 안내 + 공공예식장 데이터로 센 사실';
+    final facts = u.intent != ConsultIntent.policy && RegExp(r'공공예식장|예식장|식장').hasMatch(_question) && _known.sido != null
+        ? await _publicVenueFacts()
+        : null;
+    // 정책 이야기면 앱 정책 데이터에서 관련 정책을 함께 (지역을 알 때)
+    var policies = u.intent == ConsultIntent.policy && _known.sido != null
+        ? (await ConsultTools.matchPolicies(_known, topic: u.topic)).take(3).toList()
+        : const <PolicyMatch>[];
+    // 그 분야 정책이 내 지역에 없으면 (예: 서울엔 결혼 장려금 없음) 받을 수 있는 다른 정책을 보여 주고 그렇게 말한다
+    final topicEmpty = policies.isEmpty && u.intent == ConsultIntent.policy && u.topic != null && _known.sido != null;
+    if (topicEmpty) policies = (await ConsultTools.matchPolicies(_known)).take(3).toList();
+    final policyHead = topicEmpty
+        ? '${u.topic!.label} 분야 정책은 ${_known.sido} 기준으로 앱 데이터에 없어요. 대신 받을 수 있는 정책'
+        : '앱 데이터에서 ${_known.sido} 기준으로 찾은 관련 정책';
+    _lookupNote = policies.isNotEmpty
+        ? 'Gemini 일반 안내 + 정책 데이터 규칙 판정(${topicEmpty ? '${u.topic!.label} 분야 0건 → 전체' : u.topic?.label ?? '전체'} 상위 ${policies.length}건)'
+        : facts == null
+            ? '앱 데이터로 답할 질문이 아니라 Gemini 일반 안내'
+            : 'Gemini 일반 안내 + 공공예식장 데이터로 센 사실';
     return ChatMessage(
       fromUser: false,
-      basis: '일반 안내 · 앱 데이터가 아니에요',
-      text: '$text${facts == null ? '' : '\n\n$facts'}',
+      basis: '일반 안내 · 앱 데이터가 아니에요${policies.isEmpty ? '' : ' (아래 정책 카드는 앱 데이터)'}',
+      text: '$text${facts == null ? '' : '\n\n$facts'}'
+          '${policies.isEmpty ? '' : '\n\n$policyHead:\n${policies.map((m) => '• ${m.policy.name}').join('\n')}'}',
       aiWritten: true,
-      sources: ['Gemini 일반 지식 (앱 데이터 아님)', if (facts != null) '전국 공공예식장 현황 (앱 데이터)'],
+      cards: [
+        for (final m in policies)
+          ChatCard(
+            title: m.policy.name,
+            subtitle: '${m.policy.regionLabel} · ${m.policy.category.label}',
+            icon: Icons.volunteer_activism,
+            badge: m.level == MatchLevel.likely ? '해당 가능성 높음' : '조건 확인 필요',
+            open: () => PolicyDetailScreen(match: m),
+            ref: 'policy:${m.policy.id}',
+          ),
+      ],
+      sources: [
+        'Gemini 일반 지식 (앱 데이터 아님)',
+        if (facts != null) '전국 공공예식장 현황 (앱 데이터)',
+        if (policies.isNotEmpty) '청년 결혼 지원 정책 177건 (앱 데이터)',
+      ],
       quickReplies: _starterReplies,
     );
   }

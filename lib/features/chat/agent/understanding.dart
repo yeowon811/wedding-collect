@@ -121,7 +121,7 @@ class Understanding {
         itemBudget: itemBudget ?? r.itemBudget,
         calc: calc ?? r.calc,
         monthsLeft: monthsLeft ?? r.monthsLeft,
-        also: also ?? r.also,
+        also: also ?? (r.also == null ? null : (r.also == intent ? (r.intent == intent ? null : r.intent) : r.also)),
       );
 }
 
@@ -273,6 +273,9 @@ class RuleUnderstander implements Understander {
     }
 
     // ── 계획(질문 종류·조건) ──
+    final askVenue = _has(t, ['예식장', '식장', '공공예식']);
+    final askPolicy = _has(t, ['정책', '지원', '혜택', '장려금']);
+    final both = askVenue && askPolicy && _has(t, ['이랑', '하고', '같이', '랑', '와', '과', '도']);
     final calc = ruleCalc(raw);
     final kind = calc != null
         ? AskKind.calc
@@ -295,6 +298,7 @@ class RuleUnderstander implements Understander {
       intent: intent,
       kind: kind,
       calc: calc,
+      also: both ? (intent == ConsultIntent.policy ? ConsultIntent.venue : ConsultIntent.policy) : null,
       items: items,
       needs: needs,
       exclude: ex == null ? const [] : [ex[1]!],

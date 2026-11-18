@@ -74,4 +74,14 @@ void main() {
     final m = await ConsultAgent().reply('결혼식까지 6개월 남았는데 뭐부터 해야 돼?');
     expect(m.isQuestion, isFalse);
   });
+
+  test('J03 가리킬 답이 없는 "거기 어때?"는 되묻기', () async {
+    final m = await ConsultAgent().reply('거기 어때?');
+    expect(m.text, contains('어느 곳을 말씀하시는'));
+  });
+
+  test('H05 예식장이랑 정책 같이: 두 답을 이어 붙임', () async {
+    final m = await ConsultAgent().reply('부산 공공예식장이랑 부산 결혼 지원 정책 같이 알려줘');
+    expect(m.text, anyOf(contains('[공공예식장]'), contains('[지원 정책]')));
+  });
 }
