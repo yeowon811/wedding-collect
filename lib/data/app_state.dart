@@ -66,8 +66,6 @@ class AppState extends ChangeNotifier {
     List<ChatMessage> chat = const [],
     DateTime? chatUpdatedAt,
     Set<String> favorites = const {},
-    Set<String>? simSelected,
-    bool simVoucher = false,
     String? chosenVenueId, // 예전 저장본 (예식장 '정하기') → 담은 곳 '상담 중'으로 옮김
     Map<String, ItemStatus> placeStatus = const {},
     Map<String, int> placeAmount = const {},
@@ -112,8 +110,6 @@ class AppState extends ChangeNotifier {
     this.favorites
       ..clear()
       ..addAll(favorites);
-    this.simSelected = simSelected == null ? null : {...simSelected};
-    this.simVoucher = simVoucher;
     this.placeStatus
       ..clear()
       ..addAll(placeStatus);
@@ -335,20 +331,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-
-  // ───────────────────────── 비용 시뮬레이터 ─────────────────────────
-
-  /// 고른 항목 id (null이면 아직 손대지 않음 → 기본 채택 항목)
-  Set<String>? simSelected;
-
-  /// 지자체 지원금(바우처) 반영 여부
-  bool simVoucher = false;
-
-  void setSimulation({Set<String>? selected, bool? voucher}) {
-    if (selected != null) simSelected = {...selected};
-    if (voucher != null) simVoucher = voucher;
-    notifyListeners();
-  }
 
   // ───────────────────────── AI 상담 대화 ─────────────────────────
 

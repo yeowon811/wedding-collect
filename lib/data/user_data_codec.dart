@@ -67,8 +67,6 @@ class UserDataCodec {
     'doneTasks': s.doneTasks.toList(),
     'favorites': s.favorites.toList(),
     'checklistRefs': s.checklistRefs.toList(),
-    if (s.simSelected != null) 'simSelected': s.simSelected!.toList(),
-    'simVoucher': s.simVoucher,
     'placeStatus': {for (final e in s.placeStatus.entries) e.key: e.value.name},
     'placeAmount': s.placeAmount,
     'placeDate': {for (final e in s.placeDate.entries) e.key: _date(e.value)},
@@ -281,8 +279,6 @@ class UserDataCodec {
       chatUpdatedAt: _parseDate(d['chatUpdatedAt']),
       favorites: ((d['favorites'] as List?) ?? const []).cast<String>().toSet(),
       checklistRefs: (d['checklistRefs'] as List?)?.cast<String>().toSet(),
-      simSelected: (d['simSelected'] as List?)?.cast<String>().toSet(),
-      simVoucher: d['simVoucher'] == true,
       chosenVenueId: d['chosenVenueId'] as String?, // 예전 저장본
       placeStatus: {
         for (final e in ((d['placeStatus'] as Map?) ?? const {}).entries)

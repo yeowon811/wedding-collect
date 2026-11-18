@@ -73,7 +73,7 @@ void main() {
     }
     final empty = await ConsultAgent().reply('예산 어떻게 나누면 돼?');
     expect(empty.text, contains('아직 준비 항목에 금액을 정하지 않았어요'));
-    expect(empty.quickReplies.map((q) => q.action), containsAll(['open_simulator', 'open_checklist']));
+    expect(empty.quickReplies.map((q) => q.action), contains('open_checklist'));
 
     app.updateItem(dress, amount: 200);
     app.updateItem(food, amount: 900);

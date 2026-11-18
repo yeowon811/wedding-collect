@@ -18,7 +18,7 @@ class VendorRepository {
   List<DemoVendor>? get demoCached => _demo;
   List<WeddingOption>? get optionsCached => _options;
 
-  /// 비용 시뮬레이터 항목 22개
+  /// 웨딩 비용 항목 22개 (단가 기준)
   Future<List<WeddingOption>> options() async => _options ??= (await _json('wedding_options.json'))
       .cast<Map<String, dynamic>>()
       .map(WeddingOption.fromJson)

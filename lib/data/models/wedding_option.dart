@@ -1,4 +1,4 @@
-/// 비용 시뮬레이터 항목 (업체_요소.xlsx → tools/convert_options.py → assets/data/wedding_options.json)
+/// 웨딩 비용 항목 단가 (시연 업체 가격·추가 옵션의 기준, 업체_요소.xlsx → tools/convert_options.py → assets/data/wedding_options.json)
 /// 금액은 만원. 시연용 참고 금액이라 정확한 시세가 아니다.
 class WeddingOption {
   const WeddingOption({

@@ -4,52 +4,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
 import 'package:wedding_collect/data/user_data_codec.dart';
-import 'package:wedding_collect/features/simulator/cost_simulator_screen.dart';
 
-/// 비용 시뮬레이터 계산, 찜 저장, 시연 업체 추가 옵션
+/// 찜 저장, 시연 업체 추가 옵션
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('시뮬레이터: 기본 채택 항목 합계와 하객 수·지원금 반영', () async {
-    final options = await Repos.vendor.options();
-    expect(options.length, 22);
-    final defaults = {for (final o in options) if (o.defaultOn) o.id};
-    expect(defaults.length, 20);
-
-    final r100 = SimulationResult(options, defaults, 100, false);
-    expect(r100.saving, greaterThan(0)); // 공공예식장이 더 싸다
-    expect(r100.generalTotal, r100.chosen.fold<int>(0, (s, o) => s + o.averagePrice + o.hiddenExtra));
-
-    // 하객이 늘면 식대·답례품만큼 늘어난다
-    final r200 = SimulationResult(options, defaults, 200, false);
-    final meal = options.firstWhere((o) => o.id == 'meal');
-    final gift = options.firstWhere((o) => o.id == 'gift');
-    expect(r200.publicTotal - r100.publicTotal, meal.publicPrice + gift.publicPrice);
-
-    // 지원금은 공공 총액에서 100만원
-    expect(SimulationResult(options, defaults, 100, true).publicTotal, r100.publicTotal - kVoucher);
-    // 항목을 빼면 그만큼 줄어든다
-    final noDress = SimulationResult(options, {...defaults}..remove('dress'), 100, false);
-    expect(r100.publicTotal - noDress.publicTotal, options.firstWhere((o) => o.id == 'dress').publicPrice);
-  });
-
-  test('찜·시뮬레이터 선택은 계정 저장 후 그대로 돌아온다', () async {
+  test('찜은 계정 저장 후 그대로 돌아온다', () async {
     final s = AppState.instance..resetAll();
     s.toggleFavorite('venue:H078');
     s.toggleFavorite('real:V003');
     s.toggleFavorite('policy:P001');
     s.toggleFavorite('policy:P001'); // 다시 누르면 해제
-    s.setSimulation(selected: {'dress', 'meal'}, voucher: true);
 
     final saved = jsonDecode(jsonEncode(UserDataCodec.encode(s))) as Map<String, dynamic>;
     s.resetAll();
     expect(s.favorites, isEmpty);
-    expect(s.simSelected, isNull);
 
     UserDataCodec.apply(s, saved, await Repos.vendor.demoVendors());
     expect(s.favorites, {'venue:H078', 'real:V003'});
-    expect(s.simSelected, {'dress', 'meal'});
-    expect(s.simVoucher, isTrue);
     s.resetAll();
   });
 

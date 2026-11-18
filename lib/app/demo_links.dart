@@ -7,7 +7,6 @@ import '../features/checklist/task_calendar_screen.dart';
 import '../features/favorites/favorites_screen.dart';
 import '../features/policy/policy_detail_screen.dart';
 import '../features/policy/policy_matcher.dart';
-import '../features/simulator/cost_simulator_screen.dart';
 import '../features/vendor/demo_vendor_detail_screen.dart';
 import '../features/venue/venue_detail_screen.dart';
 
@@ -16,7 +15,7 @@ import '../features/venue/venue_detail_screen.dart';
 /// - `?venue=H078`    : 예식장 상세
 /// - `?vendor=<ID>`   : 시연용 업체 상세
 /// - `?policy=<번호>` : 맞춤 정책 목록의 N번째 정책 상세 (0부터)
-/// - `?page=simulator` / `favorites` / `calendar` : 비용 시뮬레이터 / 찜 목록 / 할 일 캘린더
+/// - `?page=favorites` / `calendar` : 찜 목록 / 할 일 캘린더
 class DemoLinks {
   DemoLinks._();
 
@@ -54,8 +53,6 @@ class DemoLinks {
       final matches = PolicyMatcher.match(all, PolicyProfile.fromUser(AppState.instance.profile));
       final i = int.tryParse(n) ?? 0;
       if (i < matches.length) page = PolicyDetailScreen(match: matches[i]);
-    } else if (_q['page'] == 'simulator') {
-      page = const CostSimulatorScreen();
     } else if (_q['page'] == 'favorites') {
       page = const FavoritesScreen();
     } else if (_q['page'] == 'calendar') {

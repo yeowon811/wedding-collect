@@ -770,7 +770,6 @@ class ConsultAgent implements ChatAgent {
     final left = total - confirmed - planned;
     _lookupNote = '체크리스트 준비 항목 ${_app.items.length}개 중 금액을 정한 ${withAmount.length}개 합산';
     const actions = [
-      QuickReply('비용 시뮬레이션', action: 'open_simulator'),
       QuickReply('체크리스트에서 금액 정하기', action: 'open_checklist'),
       QuickReply('무료 공공예식장', text: '공공예식장 추천해줘'),
     ];
