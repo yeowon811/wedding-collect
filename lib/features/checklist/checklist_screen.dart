@@ -36,8 +36,8 @@ class ChecklistScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 24),
           children: [
             _PlanCard(state: state),
-            _TimelineCard(state: state), // 할 일을 예산보다 위에
             _BudgetCard(state: state),
+            _TimelineCard(state: state),
             _ItemStatusCard(state: state),
             if (state.consultations.isNotEmpty) _ConsultationCard(state: state),
           ],

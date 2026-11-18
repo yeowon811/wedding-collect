@@ -171,7 +171,7 @@ void main() {
     final list = find.byType(Scrollable).last;
     await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
-    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 예산보다 위
+    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 준비 항목보다 위
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
     expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
     final app = AppState.instance;
