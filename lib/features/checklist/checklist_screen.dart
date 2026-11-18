@@ -709,7 +709,7 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
                   child: FilledButton(
                     onPressed: () =>
                         state.setPlaceStatus(item, c.ref, paid ? ItemStatus.contracted : ItemStatus.paid),
-                    child: Text(paid ? '결제 취소' : '결제 완료로'),
+                    child: Text(paid ? '결제 취소' : '결제 완료'),
                   ),
                 ),
                 const SizedBox(width: 8),
