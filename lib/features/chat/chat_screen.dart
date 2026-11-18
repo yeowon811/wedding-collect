@@ -373,6 +373,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               label: Text(r.label),
                               avatar: switch (r.action) {
                                 'save_profile' => Icon(Icons.bookmark_add_outlined, size: 16, color: AppColors.primary),
+                                'more' => Icon(Icons.expand_more, size: 16, color: AppColors.primary),
                                 'input' => Icon(
                                     r.slot == 'weddingDate' ? Icons.calendar_month_outlined : Icons.edit_outlined,
                                     size: 16,

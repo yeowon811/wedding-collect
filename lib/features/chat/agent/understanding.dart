@@ -26,9 +26,13 @@ class Understanding {
     this.item,
     this.refIndex,
     this.filter,
+    this.date,
+    this.unsupported = const [],
   });
 
   final ConsultIntent intent;
+  final DateTime? date; // 질문 속 예식·예약 날짜 (예: "12/20")
+  final List<String> unsupported; // 질문 속 조건 중 앱 데이터로 확인할 수 없는 것 (Gemini 판단)
   final UserProfile facts; // 질문에서 새로 알게 된 정보 (예: "20대" → 만 20~29세)
   final PolicyCategory? topic; // 정책 분야 (예: "신혼생활" → 주거)
   final VendorCategory? item; // 업체 항목 (예: "드레스")

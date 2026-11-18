@@ -117,6 +117,12 @@ class GeminiClient {
   목적으로 한다(예식장 목록이면 venue). 가리키지 않으면 null.
 - filter: 이전 결과를 거르는 조건. free(무료), fits_guests(하객이 다 들어가는 곳), cheaper(더 싼 곳),
   has_photo(사진 있는 곳). 없으면 null.
+- date: 질문에 예식·예약 날짜가 나오면 YYYY-MM-DD. 연도가 없으면 "오늘" 이후 가장 가까운 그 날짜. 없으면 null.
+- unsupported: 질문에 나온 조건 중 앱 데이터로 확인할 수 없는 것을 짧은 말로(최대 3개). 없으면 빈 배열.
+  앱이 아는 것: 지역·시군구, 하객 수·정원, 대관료·무료 여부, 사진 유무, 예식 가능일(일부 예식장의 원문), 예약 방식,
+  업체 항목·가격대·평점, 정책 대상 조건(지역·나이·혼인·무주택), 내 예산·할 일.
+  예: "역에서 가까운", "주차 넓은", "야외 정원", "후기 좋은 예식장", "당일 날씨" → unsupported.
+  날짜·예약 가능일 조건은 앱이 date로 판단하므로 unsupported에 넣지 않는다.
 ''';
 
   static String get _itemList =>
@@ -130,6 +136,8 @@ class GeminiClient {
       'item': Schema.string(nullable: true),
       'refIndex': Schema.integer(nullable: true),
       'filter': Schema.enumString(enumValues: kResultFilters, nullable: true),
+      'date': Schema.string(nullable: true),
+      'unsupported': Schema.array(items: Schema.string()),
       'facts': Schema.object(
         properties: {
           'sido': Schema.enumString(enumValues: kSidoList, nullable: true),
@@ -146,7 +154,7 @@ class GeminiClient {
         ],
       ),
     },
-    optionalProperties: ['topic', 'item', 'refIndex', 'filter'],
+    optionalProperties: ['topic', 'item', 'refIndex', 'filter', 'date', 'unsupported'],
   );
 
   /// 질문을 이해해 [Understanding]으로 돌려준다. intent가 "answer"면 [Understanding.intent]는
@@ -155,7 +163,9 @@ class GeminiClient {
   Future<({Understanding u, bool isAnswer})?> understand(String text,
       {Slot? expecting, String? context, Duration? timeout}) async {
     try {
+      final now = DateTime.now();
       final prompt = [
+        '오늘: ${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
         '항목 목록: $_itemList',
         if (context != null && context.isNotEmpty) '이전 대화:\n${maskPersonalInfo(context)}\n',
         if (expecting != null) 'expecting: ${expecting.name}',
@@ -213,6 +223,11 @@ class GeminiClient {
           _ => null,
         },
         filter: kResultFilters.contains(json['filter']) ? json['filter'] as String : null,
+        date: _validDate(json['date']),
+        unsupported: [
+          for (final x in (json['unsupported'] as List?) ?? const [])
+            if (x is String && x.trim().isNotEmpty && x.length <= 30) x.trim(),
+        ].take(3).toList(),
         facts: UserProfile(
           sido: sido is String && kSidoList.contains(sido) ? sido : null,
           age: age,
@@ -225,6 +240,97 @@ class GeminiClient {
         ),
       ),
     );
+  }
+
+  /// 'YYYY-MM-DD' → 날짜 (오늘부터 3년 안만)
+  static DateTime? _validDate(Object? v) {
+    if (v is! String) return null;
+    final d = DateTime.tryParse(v);
+    if (d == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return d.isBefore(today) || d.isAfter(today.add(const Duration(days: 365 * 3))) ? null : d;
+  }
+
+  // ───────────────────────── 예식장 날짜 판단 ─────────────────────────
+
+  static const _datePrompt = '''
+너는 결혼 준비 앱의 "예식 날짜 판단" 단계다. 날짜 하나와 예식장 목록(각각 id와 날짜 관련 원문)을 받는다.
+각 예식장에서 그 날짜에 예식을 할 수 있는지 **원문만 보고** 판단해 JSON 배열로 답한다.
+- possible: 원문의 예식 가능 기간·요일에 그 날짜가 들어가고, 불가일에 해당하지 않음
+- impossible: 그 날짜가 기간 밖이거나, 그 요일엔 예식이 없거나, 불가일에 해당함
+- unknown: 원문만으로 판단할 수 없음 (지정일 별도 공지, "문의", 정보 부족 등). 추측하지 않는다.
+  "상시운영"·"09:00~18:00" 같은 시설 운영 안내만 있고 예식 가능 기간·요일 안내가 없으면 unknown.
+- reason: 판단 근거를 원문에서 따와 20자 이내로 (예: "토·일만 예식", "추석 연휴 불가", "3~12월 운영")
+이미 예약이 찼는지는 알 수 없으므로 판단에 넣지 않는다.
+''';
+
+  static final _dateSchema = Schema.array(
+    items: Schema.object(properties: {
+      'id': Schema.string(),
+      'status': Schema.enumString(enumValues: ['possible', 'impossible', 'unknown']),
+      'reason': Schema.string(),
+    }),
+  );
+
+  GenerativeModel? _dateModelCache;
+  GenerativeModel get _dateModel => _dateModelCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system(_datePrompt),
+        generationConfig: GenerationConfig(
+          temperature: 0,
+          responseMimeType: 'application/json',
+          responseSchema: _dateSchema,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
+        ),
+      );
+
+  /// 날짜 [date]에 각 예식장([items]: id → 원문)에서 예식이 가능한지 Gemini가 원문을 읽고 판단.
+  /// 형식이 틀리거나 목록에 없는 id는 버린다. 실패하면 null.
+  Future<Map<String, ({String status, String reason})>?> judgeDates(DateTime date, Map<String, String> items) async {
+    if (items.isEmpty) return const {};
+    // 같은 날짜·예식장은 한 번 판단한 값을 그대로 (같은 질문에 답이 바뀌지 않게)
+    final key = '${date.year}-${date.month}-${date.day}';
+    final cache = _dateCache.putIfAbsent(key, () => {});
+    final todo = {for (final e in items.entries) if (!cache.containsKey(e.key)) e.key: e.value};
+    // 12곳씩 나눠 동시에 묻는다 (한 번에 많이 보내면 느리고 시간 초과가 잦음)
+    final keys = todo.keys.toList();
+    final parts = await Future.wait([
+      for (var i = 0; i < keys.length; i += 12)
+        _judgeBatch(date, {for (final k in keys.skip(i).take(12)) k: todo[k]!}),
+    ]);
+    if (parts.isNotEmpty && parts.every((p) => p == null)) return null;
+    for (final p in parts) {
+      if (p != null) cache.addAll(p);
+    }
+    return {for (final k in items.keys) if (cache[k] != null) k: cache[k]!};
+  }
+
+  final _dateCache = <String, Map<String, ({String status, String reason})>>{};
+
+  Future<Map<String, ({String status, String reason})>?> _judgeBatch(DateTime date, Map<String, String> items) async {
+    try {
+      const wd = ['월', '화', '수', '목', '금', '토', '일'];
+      final prompt = [
+        '날짜: ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} (${wd[date.weekday - 1]}요일)',
+        for (final e in items.entries) '- id ${e.key}: ${e.value}',
+      ].join('\n');
+      final res = await _dateModel.generateContent([Content.text(prompt)]).timeout(const Duration(seconds: 15));
+      final raw = res.text;
+      if (raw == null) return null;
+      final out = <String, ({String status, String reason})>{};
+      for (final x in (jsonDecode(raw) as List).cast<Map>()) {
+        final id = x['id'], st = x['status'], why = x['reason'];
+        if (id is String && items.containsKey(id) && st is String && ['possible', 'impossible', 'unknown'].contains(st)) {
+          final r = why is String ? why.trim() : '';
+          out[id] = (status: st, reason: r.length > 30 ? '${r.substring(0, 30)}…' : r);
+        }
+      }
+      return out;
+    } catch (e) {
+      debugPrint('Gemini 날짜 판단 실패: $e');
+      return null;
+    }
   }
 
   // ───────────────────────── ⑤ 답변 문장 ─────────────────────────
