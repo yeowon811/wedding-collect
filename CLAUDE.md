@@ -53,7 +53,7 @@
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
 
 ## 개발 환경 (현재 PC, 2026-11-19 옮김)
-- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 93개 통과 확인 (11-19)
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 95개 통과 확인 (11-19)
 - 이전 PC: `C:\Users\LG\flutter`, 에뮬레이터 `Medium_Phone_API_37.0`
 - NDK 28.2.13676358 설치함 (APK 빌드에 필요)
 - **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
@@ -161,6 +161,10 @@
   - 정책 '내 상황': 예식일(판정 설명), 초혼 여부(`FirstMarriage` 둘 다/한 명만/둘 다 재혼), 무주택, 부부 합산 연소득(원문 소득 상한과 비교). 정책 데이터 `firstMarriage`('one' 1명 이상 초혼 / 'both' 초혼 부부, 11건). 예비부부에겐 '혼인신고 후 N년 이내 신청 (예식일 기준 YYYY.M까지)' 안내
   - **AI 상담에서 말한 내 정보 자동 반영:** 사용자가 자기 이야기로 말한 값(`_noteSelf`: 나이·하객·예산·예식일·무주택·초혼·"혼인신고 했어요", 되묻기·버튼 답)은 턴이 끝날 때 내 정보 = 체크리스트 결혼 정보에 저장(`_applySelfFacts` → `updateProfileDraft`)하고 답변 끝에 '내 정보에 반영했어요: …' + [되돌리기](`undo_profile`, 반영 전 profile·plan 복원). 지역은 사는 곳을 말했을 때만(`_livingRegion`: "수원 살아요", "경기도 사는데 …"의 앞 지역) 또는 '어디 사세요?'에 답했을 때만 — "부산 예식장 알려줘"의 부산은 찾는 곳이라 저장 안 함. '3개월 뒤' 같은 어림 예식일은 저장 안 함. 테스트 `test/chat_profile_sync_test.dart`
   - 정책 분류 규칙 보완(`convert_policies.py`): 결혼자금·결혼비용·바우처 → 결혼 장려금, 신혼집·리모델링 → 주거, 엽산 → 건강 (함양 결혼자금 등 5건, 기타는 1건만 남음)
+- **예식장 AI 예시 후기 (2026-11-19):** 후기 기능이 들어갈 자리를 보여 주는 예시. Gemini가 예식장 공개 정보(정원·대관료·예약 방식·주차·피로연·실내외·이용 대상)만 보고 쓴 후기 2개씩, 240곳 483개 → `assets/data/venue_reviews.json` (별점 3~5, 태그 9종 중 1~2개)
+  - 생성: `flutter run -d chrome --dart-define-from-file=secrets.json -t tools/venue_review_gen_main.dart *> 로그` (6곳씩, 8초 간격, 정보에 없는 숫자가 있으면 버림, `--dart-define=ONLY=H001,...`로 일부만) → `python -I tools/save_venue_reviews.py 로그...`
+  - 화면: 예식장 상세 '후기' (`features/venue/widgets/venue_reviews.dart`): 예시 평균 별점, 맨 위 "AI로 작성된 후기입니다 … 실제 이용 후기가 아니에요" 각주, 'AI 예시 후기 N' (작성자·날짜·도움돼요 수는 만들지 않음), 사진 자리는 예식장 공식 사진 + 출처
+  - 실제 시설이라 오해 방지: 별점은 상세 화면에만, 목록 카드·정렬·AI 상담 답변에는 쓰지 않음. 테스트 `test/venue_review_test.dart` (전 예식장 후기 있음 · 후기 숫자가 그 예식장 정보에 있음)
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변, 예약 현황 판단, 탐색 질문 수정)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

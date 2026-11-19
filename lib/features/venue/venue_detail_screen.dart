@@ -16,6 +16,7 @@ import '../vendor/real_vendor_detail_screen.dart';
 import '../vendor/widgets/vendor_cards.dart';
 import '../../data/app_state.dart';
 import 'widgets/booking_calendar.dart';
+import 'widgets/venue_reviews.dart';
 import 'widgets/venue_image.dart';
 
 /// 이 예식장 지역에서 받을 수 있는 예식 관련 정책 (공공예식장 ↔ 정책 연결)
@@ -235,6 +236,7 @@ class VenueDetailScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text('문의 ${v.bookingContact}', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           const SizedBox(height: 28),
+          VenueReviewSection(venue: v),
           _RelatedPolicies(venue: v),
           _NearbyVendors(venue: v),
           const SizedBox(height: 16),

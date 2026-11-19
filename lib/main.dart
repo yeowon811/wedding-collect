@@ -15,5 +15,6 @@ Future<void> main() async {
   DemoLinks.applyProfile(); // 웹 ?demo=1 (시연용)
   // 예약 현황(작은 파일)을 미리 읽어 두면 예식장 상세의 달력이 늦게 튀어나오지 않는다. 실패해도 앱은 그대로
   Repos.booking.loadAll().ignore();
+  Repos.venueReview.loadAll().ignore();
   runApp(const WeddingCollectApp());
 }

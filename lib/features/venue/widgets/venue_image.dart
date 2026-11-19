@@ -53,13 +53,18 @@ class VenueImagePlaceholder extends StatelessWidget {
     return Container(
       color: AppColors.placeholder,
       alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.image_outlined, size: 36, color: AppColors.unknown),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.unknown)),
-        ],
+      // 작은 칸(후기 사진 썸네일 등)에서는 아이콘만
+      child: LayoutBuilder(
+        builder: (context, box) => box.maxHeight < 90
+            ? Icon(Icons.image_outlined, size: 24, color: AppColors.unknown)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.image_outlined, size: 36, color: AppColors.unknown),
+                  const SizedBox(height: 4),
+                  Text(label, style: const TextStyle(fontSize: 12, color: AppColors.unknown)),
+                ],
+              ),
       ),
     );
   }
