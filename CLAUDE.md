@@ -52,8 +52,9 @@
 - `user_profile`: 기기에만 저장 / `checklist_item`: 예식일 기준 체크리스트
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
 
-## 개발 환경 (현재 PC, 2026-11-15 확인)
-- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\LG\flutter`, Android SDK 36 + Android Studio, 에뮬레이터 `Medium_Phone_API_37.0`, Chrome. `flutter doctor` 이상 없음
+## 개발 환경 (현재 PC, 2026-11-19 옮김)
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio, Chrome. `flutter test` 65개 통과 확인
+- 이전 PC: `C:\Users\LG\flutter`, 에뮬레이터 `Medium_Phone_API_37.0`
 - NDK 28.2.13676358 설치함 (APK 빌드에 필요)
 - **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
 - Figma MCP는 나중에 시간 나면 연결해 보기로 함 (지금은 사용 안 함)
