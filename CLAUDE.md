@@ -23,6 +23,7 @@
 - 범위: **전국 단위.** 시연 지역은 일부러 아직 정하지 않음
 - 대전·제주에는 공공예식장이 없음 (확인 완료)
 - 업체 가격: 실제 업체(103곳)에는 **가격을 붙이지 않음.** 가격·패키지·상담 예약은 "시연용" 표시를 단 **가상 업체**로 보여줌
+- **사진 규칙 (2026-11-19 완화):** 프로토타입이므로 예식장 사진은 실제 그 예식장 사진이 아니어도 됨 (AI 생성·분위기 사진 허용, 예: 시안 6 룩북 사진). 정원·대관료·정책·예약 현황 같은 데이터 값은 계속 실제 데이터만. 소개서 출처 표에 'AI 생성 이미지'로 기재
 - AI 원칙: 가격과 대상 여부는 DB 값과 규칙으로 판정하고, AI는 정리·설명만 함. 출처와 확인 날짜를 표시. 모르는 값은 "확인 필요"로 표시
 - 정책: 자격 원문에서 AI로 구조화 항목(지역, 나이, 혼인 조건, 소득, 무주택, 지원 유형·금액)을 뽑은 뒤 사람이 검수
 - 수용 인원·대관료: 사용자가 나중에 수집해서 제공 예정 (11/21쯤까지). 그때까지 DB에서 비워 둘 수 있게 설계
@@ -53,7 +54,7 @@
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
 
 ## 개발 환경 (현재 PC, 2026-11-19 옮김)
-- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 101개 통과 확인 (11-19)
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 104개 통과 확인 (11-19)
 - 이전 PC: `C:\Users\LG\flutter`, 에뮬레이터 `Medium_Phone_API_37.0`
 - NDK 28.2.13676358 설치함 (APK 빌드에 필요)
 - **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
@@ -161,6 +162,7 @@
   - 정책 '내 상황': 예식일(판정 설명), 초혼 여부(`FirstMarriage` 둘 다/한 명만/둘 다 재혼), 무주택, 부부 합산 연소득(원문 소득 상한과 비교). 정책 데이터 `firstMarriage`('one' 1명 이상 초혼 / 'both' 초혼 부부, 11건). 예비부부에겐 '혼인신고 후 N년 이내 신청 (예식일 기준 YYYY.M까지)' 안내
   - **AI 상담에서 말한 내 정보 자동 반영:** 사용자가 자기 이야기로 말한 값(`_noteSelf`: 나이·하객·예산·예식일·무주택·초혼·"혼인신고 했어요", 되묻기·버튼 답)은 턴이 끝날 때 내 정보 = 체크리스트 결혼 정보에 저장(`_applySelfFacts` → `updateProfileDraft`)하고 답변 끝에 '내 정보에 반영했어요: …' + [되돌리기](`undo_profile`, 반영 전 profile·plan 복원). 지역은 사는 곳을 말했을 때만(`_livingRegion`: "수원 살아요", "경기도 사는데 …"의 앞 지역) 또는 '어디 사세요?'에 답했을 때만 — "부산 예식장 알려줘"의 부산은 찾는 곳이라 저장 안 함. '3개월 뒤' 같은 어림 예식일은 저장 안 함. 테스트 `test/chat_profile_sync_test.dart`
   - 정책 분류 규칙 보완(`convert_policies.py`): 결혼자금·결혼비용·바우처 → 결혼 장려금, 신혼집·리모델링 → 주거, 엽산 → 건강 (함양 결혼자금 등 5건, 기타는 1건만 남음)
+- **앱 시작 룩북 광고 (2026-11-19, 시안 6의 LAYER 1만):** 앱을 열면 첫 화면 위에 전체 화면 사진첩(`features/intro/lookbook_ad.dart`, `app.dart`의 `_IntroGate`). 사진 6장(시안 6 HTML에서 꺼낸 AI 생성 분위기 이미지, `assets/images/lookbook/`)마다 분위기가 맞는 실제 예식장(H084 꿈의숲 창녕위궁재사·H126 서울숲 포플러정원·H099 북서울미술관·H089 서울식물원 잔디마당·H105 서울시립대 자작마루·H147 서울역사박물관)의 이름·지역·대관료·정원(데이터) + 데이터에서 고른 한 줄. 3.8초 자동 넘김·밀어 넘기기·누르는 동안 멈춤·진행 막대. [터치하여 예식장 보기] → 그 예식장 상세, 위 X·아래 [닫기], [오늘 하루 보지 않기](shared_preferences `lookbook_hide_date`). 데이터를 기다리지 않고 사진부터 바로 띄움(첫 화면을 누르기 전에). 시연 링크(?demo·?venue 등)에서는 안 띄움, 테스트에서는 `LookbookAd.enabled = false`
 - **AI 상담 구 단위 거르기 (2026-11-19):** 질문에서 찾는 시·군·구(`_askedTown`: `findSigungus`로 문장 속 구를 모두 찾아 '말고·빼고'로 뺀 구를 제외한 첫 번째)는 그 구만 거른다("송파구만: 서울 74곳 → 3곳", 더 보기도 그 안에서). 그 구에 없으면 시도 전체 + 안내. 짧은 후속("그중에 무료만")은 앞의 구를 이어받고 "전체·다른 구"면 풀린다. 내 정보의 시군구(사는 곳)는 먼저 보여 주기만 함. 예식장 홈 '무료만' 보기: 위에 '무료 웨딩홀만 보고 있어요 [✕ 전체 보기로]' 띠, 칩에 ✕, 뒤로 가기 = 필터 끄기. 테스트 `test/district_filter_test.dart`, Gemini 확인 P31·P32
 - **예식장 AI 예시 후기 (2026-11-19):** 후기 기능이 들어갈 자리를 보여 주는 예시. Gemini가 예식장 공개 정보(정원·대관료·예약 방식·주차·피로연·실내외·이용 대상)만 보고 쓴 후기 2개씩, 240곳 483개 → `assets/data/venue_reviews.json` (별점 3~5, 태그 9종 중 1~2개)
   - 생성: `flutter run -d chrome --dart-define-from-file=secrets.json -t tools/venue_review_gen_main.dart *> 로그` (6곳씩, 8초 간격, 정보에 없는 숫자가 있으면 버림, `--dart-define=ONLY=H001,...`로 일부만) → `python -I tools/save_venue_reviews.py 로그...`

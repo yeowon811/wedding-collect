@@ -13,6 +13,7 @@ import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
 import 'package:wedding_collect/features/chat/agent/understanding.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
+import 'package:wedding_collect/features/intro/lookbook_ad.dart';
 
 /// 모든 탭을 열어 보고 주요 흐름이 오류 없이 그려지는지 확인한다.
 /// 테스트 환경에서는 에셋을 실제 비동기로 읽어야 하므로 미리 불러 둔다.
@@ -33,6 +34,7 @@ Future<void> back(WidgetTester tester) async {
 }
 
 void main() {
+  LookbookAd.enabled = false; // 앱 시작 광고는 따로 시험
   testWidgets('5개 탭이 모두 열린다', (tester) async {
     await _preload(tester);
     tester.view.physicalSize = const Size(1170, 2532);
