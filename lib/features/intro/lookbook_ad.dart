@@ -1,15 +1,15 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/demo_links.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/models/venue.dart';
 import '../../data/repositories/repositories.dart';
 import '../venue/venue_detail_screen.dart';
 
-/// 앱을 처음 열 때 띄우는 '룩북' 광고 (시안 6의 LAYER 1).
+/// 로그인(또는 둘러보기)하고 앱에 들어올 때 띄우는 '룩북' 광고 (시안 6의 LAYER 1). 앱을 켤 때 한 번.
 /// 사진은 분위기 이미지(AI 생성)이고, 이름·지역·대관료·정원은 실제 예식장 데이터에서 가져온다.
 /// [터치하여 예식장 보기] → 그 예식장 상세로 이동. 위 X로 닫기, [오늘 하루 보지 않기]는 기기에 날짜를 저장한다.
 class LookbookAd extends StatefulWidget {
@@ -20,6 +20,7 @@ class LookbookAd extends StatefulWidget {
 
   /// 테스트에서는 끈다
   static bool enabled = true;
+  static bool _shownThisRun = false; // 앱을 켤 때 한 번만 (로그아웃 후 다시 들어와도 또 띄우지 않음)
   static const _hideKey = 'lookbook_hide_date';
 
   /// 사진 ↔ 실제 예식장 (사진 분위기와 맞는 곳). highlight는 그 예식장 데이터(이용 안내·피로연)에서 고른 한 줄
@@ -41,8 +42,9 @@ class LookbookAd extends StatefulWidget {
   /// 앱이 뜨자마자(첫 화면을 누르기 전에) 보여 준다: 예식장 데이터를 기다리지 않고 사진부터,
   /// 이름·대관료는 데이터가 오면 채운다
   static Future<void> showIfNeeded(BuildContext context) async {
-    if (!enabled || DemoLinks.isDemoLink) return;
+    if (!enabled || DemoLinks.isDemoLink || _shownThisRun) return;
     if (await hiddenToday()) return;
+    _shownThisRun = true;
     if (!context.mounted) return;
     // 첫 사진을 미리 읽어 두면 빈 화면 없이 바로 보인다 (오래 걸리면 기다리지 않음)
     await Future.any([
@@ -54,7 +56,7 @@ class LookbookAd extends StatefulWidget {
     final picked = await showGeneralDialog<Venue>(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black,
+      barrierColor: Colors.white,
       transitionDuration: const Duration(milliseconds: 150),
       pageBuilder: (ctx, _, _) => LookbookAd(onOpenVenue: (v) => Navigator.of(ctx).pop(v)),
     );
@@ -145,45 +147,33 @@ class _LookbookAdState extends State<LookbookAd> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final cur = widget.slides[_index];
+    // 앱 테마(시안 A 클린 미니멀): 흰 바탕 · 진한 회색 글자 · 파랑 포인트
     return Material(
-      color: const Color(0xFF2C2926),
+      color: AppColors.surface,
       child: Stack(fit: StackFit.expand, children: [
-        // 지금 사진을 흐리게 깐 배경
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 700),
-          child: ImageFiltered(
-            key: ValueKey(cur.asset),
-            imageFilter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
-            child: ColorFiltered(
-              colorFilter: const ColorFilter.mode(Color(0x8C000000), BlendMode.darken),
-              child: Transform.scale(scale: 1.2, child: Image.asset(cur.asset, fit: BoxFit.cover)),
-            ),
-          ),
-        ),
         SafeArea(
           child: Column(children: [
             // 위: 로고 + 닫기(X)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 8, 10),
               child: Row(children: [
-                const Text('We Connect',
+                Text('We Connect',
                     style: TextStyle(
-                        color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                        color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
                 const Spacer(),
                 IconButton(
                   tooltip: '닫기',
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, color: Colors.white, size: 26),
+                  icon: Icon(Icons.close, color: AppColors.textPrimary, size: 26),
                 ),
               ]),
             ),
             // 가운데: 사진첩
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   child: Listener(
                     // 누르고 있는 동안 자동 넘김 멈춤
                     onPointerDown: (_) => _progress.stop(),
@@ -211,7 +201,7 @@ class _LookbookAdState extends State<LookbookAd> with SingleTickerProviderStateM
                         height: 3,
                         margin: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 8),
                         decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(2)),
+                            color: AppColors.fill, borderRadius: BorderRadius.circular(2)),
                         alignment: Alignment.centerLeft,
                         child: i < _index
                             ? const FractionallySizedBox(widthFactor: 1, child: _BarFill())
@@ -227,7 +217,7 @@ class _LookbookAdState extends State<LookbookAd> with SingleTickerProviderStateM
                   ),
                 const SizedBox(width: 10),
                 Text('${(_index + 1).toString().padLeft(2, '0')} / ${_count.toString().padLeft(2, '0')}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
               ]),
             ),
             // 맨 아래: 오늘 하루 보지 않기 · 닫기
@@ -240,13 +230,13 @@ class _LookbookAdState extends State<LookbookAd> with SingleTickerProviderStateM
                     await LookbookAd.hideToday();
                     nav.pop();
                   },
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                   child: const Text('오늘 하루 보지 않기', style: TextStyle(fontSize: 14)),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
                   child: const Text('닫기', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 ),
               ]),
@@ -299,13 +289,10 @@ class _LookbookAdState extends State<LookbookAd> with SingleTickerProviderStateM
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.92), fontSize: 15, height: 1.55)),
             const SizedBox(height: 16),
+            // 앱의 주 버튼 색(파랑)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(999)),
               child: const Text('터치하여 예식장 보기 →',
                   style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
             ),
@@ -321,6 +308,6 @@ class _BarFill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(2)),
+        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
       );
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import 'demo_links.dart';
+import '../features/intro/lookbook_ad.dart';
 import '../data/repositories/repositories.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/checklist/checklist_screen.dart';
@@ -30,7 +31,11 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     MainShell.tab.addListener(_onTab);
-    WidgetsBinding.instance.addPostFrameCallback((_) => DemoLinks.openDetail(Navigator.of(context)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DemoLinks.openDetail(Navigator.of(context));
+      // 로그인(또는 둘러보기)하고 앱에 들어오면 룩북 광고 (앱을 켤 때 한 번)
+      if (mounted) LookbookAd.showIfNeeded(context);
+    });
   }
 
   @override
