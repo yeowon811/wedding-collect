@@ -11,6 +11,7 @@ import '../../../data/models/policy.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
 import '../../../firebase_options.dart';
+import 'tool_planner.dart';
 import 'understanding.dart';
 
 /// Gemini(Firebase AI Logic, Gemini Developer API) 연결.
@@ -22,13 +23,14 @@ import 'understanding.dart';
 /// - 보내기 전에 전화번호·이메일 같은 개인정보 형태는 가린다.
 /// - 실패(네트워크·사용량 초과·형식 오류)하면 null을 돌려주고, 상담은 규칙 기반으로 이어간다.
 class GeminiClient {
-  GeminiClient._(this._understandModel, this._writeModel);
+  GeminiClient._(this._understandModel, this._writeModel, this._planModel);
 
   static const modelName = 'gemini-3.5-flash-lite';
   static const _timeout = Duration(seconds: 12);
 
   final GenerativeModel _understandModel;
   final GenerativeModel _writeModel;
+  final GenerativeModel _planModel; // 도구 고르기 (함수 호출)
 
   /// 앱 시작 때 [init]에 성공하면 채워진다. 테스트·오프라인에서는 null.
   static GeminiClient? instance;
@@ -56,6 +58,18 @@ class GeminiClient {
           generationConfig: GenerationConfig(
             temperature: 0.3,
             maxOutputTokens: 1024,
+            thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
+          ),
+        ),
+        // 도구 고르기: 반드시 도구 하나를 부르게 한다 (함수 호출). JSON 한 장(칸 30개)으로 받으면
+        // 엉뚱한 칸을 채워서(평가 2026-11-20) 도구마다 조건을 따로 둔 함수 호출을 쓴다
+        ai.generativeModel(
+          model: modelName,
+          systemInstruction: Content.system(ToolPlanner.prompt),
+          tools: [Tool.functionDeclarations(ToolPlanner.declarations)],
+          toolConfig: ToolConfig(functionCallingConfig: FunctionCallingConfig.any(ToolPlanner.tools.toSet())),
+          generationConfig: GenerationConfig(
+            temperature: 0,
             thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
           ),
         ),
@@ -205,6 +219,30 @@ class GeminiClient {
       return parseUnderstanding(json);
     } catch (e) {
       debugPrint('Gemini 질문 이해 실패: $e');
+      return null;
+    }
+  }
+
+  /// 마지막으로 Gemini가 고른 도구와 원래 인자 ("왜 이렇게 답했나요?"·평가용)
+  String? lastPlanRaw;
+
+  /// 새 구조: 질문 → 도구 하나와 조건 (검사 통과한 것만). 실패하면 null → 예전 방식으로 답한다
+  Future<AgentPlan?> plan(String text, {String? context, Duration? timeout}) async {
+    lastPlanRaw = null;
+    try {
+      final now = DateTime.now();
+      final prompt = [
+        '오늘: ${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} (${const ['월', '화', '수', '목', '금', '토', '일'][now.weekday - 1]})',
+        if (context != null && context.isNotEmpty) maskPersonalInfo(context),
+        '질문: ${maskPersonalInfo(text)}',
+      ].join('\n');
+      final res = await _call(_planModel, prompt, timeout ?? _timeout);
+      final call = res.functionCalls.firstOrNull;
+      if (call == null) return null;
+      lastPlanRaw = '${call.name} ${jsonEncode(call.args)}';
+      return ToolPlanner.parse(call.name, call.args.cast<String, Object?>());
+    } catch (e) {
+      debugPrint('Gemini 도구 고르기 실패: $e');
       return null;
     }
   }
@@ -429,7 +467,8 @@ class GeminiClient {
   /// 앱 데이터가 아닌 일반 지식 질문 → Gemini 일반 안내 (숫자가 섞이면 버림). 실패하면 null
   Future<String?> general(String question) async {
     try {
-      final res = await _call(_writeModel, '$_generalPrompt\n질문: ${maskPersonalInfo(question)}', _timeout);
+      // 일반 안내는 문장이 길어 시간이 더 걸린다 (12초면 자주 넘김, 2026-11-20)
+      final res = await _call(_writeModel, '$_generalPrompt\n질문: ${maskPersonalInfo(question)}', const Duration(seconds: 20));
       final text = res.text?.trim();
       if (text == null || text.isEmpty) return null;
       // 근거 없는 숫자를 만들지 않도록: 두 자리 이상 숫자는 질문에 나온 숫자만 허용 ("하객 150명이면…")

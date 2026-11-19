@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/format.dart';
@@ -24,6 +26,7 @@ import 'conversation_context.dart';
 import 'calc.dart';
 import 'date_check.dart';
 import 'policy_text.dart';
+import 'tool_planner.dart';
 import 'venue_features.dart';
 import 'gemini_client.dart';
 import 'understanding.dart';
@@ -133,6 +136,12 @@ class ConsultAgent implements ChatAgent {
 
   /// 이번 질문의 날짜 조건과, 앱 데이터로 확인할 수 없는 조건 (Gemini가 판단)
   DateTime? _askDate;
+  AgentPlan? _plan; // 새 구조: Gemini가 고른 도구와 조건 (null이면 예전 규칙 경로)
+  VenueQuery? _vq; // 예식장 검색 조건 (도구 경로)
+  bool _forceByAmount = false; // 정책: 금액 많은 순 (도구 경로)
+  bool _noLlmUnderstand = false; // 이번 질문은 규칙으로만 이해 (도구 고르기가 실패했을 때)
+  Future<({Understanding u, bool isAnswer})?>? _prefetched; // 도구 고르기와 함께 시작한 예전 방식의 이해
+  final List<({String q, String tool, Map<String, Object?> args})> _planLog = []; // 이전 도구 조건 (후속 질문용)
   ({List<DateTime> dates, String label})? _period; // 기간 질문의 날짜들 ("내년 3월")
   List<String> _unsupported = const [];
 
@@ -341,13 +350,179 @@ class ConsultAgent implements ChatAgent {
       if (!_isFilled(_asking!, _pending!)) {
         return _ask(_asking!, _pending!, retry: true);
       }
-      return _process(_pending!);
+      return _process(_pending!, plan: _plan);
     }
     if (_isMoreRequest(text)) return _moreAnswer();
     _question = text;
     _sidoJustAsked = false;
     step.value = AgentStep.understand;
+    if (_llm != null) {
+      // 도구 고르기와 예전 방식의 질문 이해를 동시에 시작한다: 도구 고르기가 늦거나 실패하면
+      // 이미 받아 둔 예전 이해로 바로 답한다 (Gemini를 차례로 두 번 기다리지 않게)
+      final context = _turns.isEmpty ? null : ConversationContext.state(_turns, _memoryTurns, known: _known);
+      _prefetched = _llm.understand(text, context: context);
+      final planned = await _planned(text);
+      if (planned != null) {
+        _prefetched = null;
+        return planned;
+      }
+    }
+    _plan = null;
+    _vq = null;
+    _forceByAmount = false;
     return _process((await _understand(text)).u);
+  }
+
+  // ───────────────────────── 새 구조: 도구 고르기 ─────────────────────────
+
+  /// Gemini에 주는 맥락: 내 정보 + 최근 질문들의 도구·조건 + 바로 앞 답변 목록
+  String _planContext() {
+    final lines = <String>[
+      if (_known.summary.isNotEmpty) '내 정보: ${_known.summary}',
+      if (_planLog.isNotEmpty) '이전 도구 조건 (오래된 것부터):',
+      for (final e in _planLog.skip(_planLog.length > 3 ? _planLog.length - 3 : 0))
+        '- 질문 "${e.q}" → ${e.tool} ${jsonEncode(e.args)}',
+    ];
+    final last = _turnCards.lastWhere((c) => c.isNotEmpty, orElse: () => const []);
+    if (last.isNotEmpty) {
+      lines.add('바로 앞 답변 목록: ${[for (final (i, c) in last.indexed) '${i + 1}. ${c.title}'].join(' / ')}');
+    }
+    return lines.join('\n');
+  }
+
+  /// 질문 → 도구 하나 → 답. Gemini가 실패하면 null (예전 경로로)
+  Future<ChatMessage?> _planned(String text) async {
+    final sw = Stopwatch()..start();
+    var p = await _llm!.plan(text, context: _planContext(), timeout: const Duration(seconds: 20));
+    sw.stop();
+    if (p == null && _prefetched == null) _noLlmUnderstand = true; // 미리 받은 이해가 없으면 규칙으로
+    if (p == null) return null;
+    // 후속 질문이면 앞 예식장 조건과 앱이 합친다
+    final prevVenue = _planLog.lastOrNull;
+    if (p.tool == 'search_venues' && p.args['refine_previous'] == true && prevVenue?.tool == 'search_venues') {
+      p = ToolPlanner.refine(p, prevVenue!.args);
+    }
+    // 자기 이야기는 질문에 그 말이 있을 때만. '몇 개월 남음'도 질문에 'N개월·N달'이 있을 때만
+    final monthsLeft = RegExp(r'\d+\s*(개월|달)').hasMatch(text) ? p.monthsLeft : null;
+    p = AgentPlan(
+      tool: p.tool, self: ToolPlanner.grounded(p.self, text), venue: p.venue, names: p.names, topic: p.topic,
+      targetSido: p.targetSido, nationwide: p.nationwide, byAmount: p.byAmount, items: p.items,
+      itemBudget: p.itemBudget, cheapest: p.cheapest, expr: p.expr, untilDate: p.untilDate,
+      weddingDate: p.weddingDate, monthsLeft: monthsLeft, refIndex: p.refIndex, unsupported: p.unsupported,
+      args: p.args,
+    );
+    _plan = p;
+    _vq = p.venue;
+    _forceByAmount = p.byAmount;
+    _askDate = p.venue?.date;
+    _period = p.venue != null && p.venue!.hasPeriod ? _periodOf(p.venue!) : null;
+    _unsupported = p.unsupported;
+    _nluNote = 'Gemini가 도구를 고름: ${p.tool} ${jsonEncode(p.args)} (조건은 앱이 검사, ${sw.elapsedMilliseconds}ms)';
+    _planLog.add((q: text, tool: p.tool, args: p.args));
+    // 자기 이야기 → 대화 기억 + 내 정보 (지역은 사는 곳을 말했을 때만)
+    _known = _known.merge(p.self.profile);
+    _noteSelf(p.self.profile, region: p.self.livesGiven);
+    // 찾는 시도는 대화 기억에 시도가 없을 때만 채운다 (되묻지 않게)
+    final firstSido = p.venue?.sidos.firstOrNull ?? p.targetSido;
+    if (_known.sido == null && firstSido != null) _known = _known.merge(UserProfile(sido: firstSido));
+    if (p.weddingDate != null) {
+      _known = _known.merge(UserProfile(weddingDate: p.weddingDate));
+      _noteSelf(UserProfile(weddingDate: p.weddingDate));
+    }
+    final lastIntent = _turns.lastOrNull?.intent ?? ConsultIntent.venue;
+    final u = switch (p.tool) {
+      'search_venues' || 'venue_info' => Understanding(
+          intent: ConsultIntent.venue,
+          kind: p.tool == 'venue_info' ? AskKind.detail : AskKind.list,
+          names: p.names,
+          filter: p.venue?.freeOnly == true ? 'free' : null,
+          exclude: p.venue?.excludeTowns ?? const [],
+          needs: p.venue?.needs ?? const [],
+          date: p.venue?.date,
+          unsupported: p.unsupported),
+      'search_policies' => Understanding(
+          intent: ConsultIntent.policy, topic: p.topic, names: p.names),
+      'search_vendors' => Understanding(
+          intent: ConsultIntent.vendor,
+          item: p.items.length == 1 ? p.items.first : null,
+          items: p.items,
+          itemBudget: p.itemBudget,
+          filter: p.cheapest ? 'cheaper' : null),
+      'estimate_cost' => Understanding(intent: ConsultIntent.budget, kind: AskKind.cost, items: p.items,
+          item: p.items.length == 1 ? p.items.first : null),
+      'calculate' => Understanding(intent: ConsultIntent.budget, kind: AskKind.calc, calc: p.expr),
+      'wedding_schedule' => Understanding(intent: ConsultIntent.schedule, monthsLeft: p.weddingDate == null ? p.monthsLeft : null),
+      'recommend_overview' => const Understanding(intent: ConsultIntent.recommend),
+      'general_answer' => const Understanding(intent: ConsultIntent.help, kind: AskKind.general),
+      'refer_previous' => Understanding(intent: lastIntent, refIndex: p.refIndex),
+      _ => const Understanding(intent: ConsultIntent.help),
+    };
+    if (p.tool == 'show_more') return _moreAnswer();
+    return _process(u, plan: p);
+  }
+
+  /// 예식장 답변에 쓰는 지역 이름: 도구 조건의 시도(여러 개면 ·로), 없으면 대화의 시도
+  String get _searchSidoLabel => _vq != null && _vq!.sidos.isNotEmpty ? _vq!.sidos.join('·') : _known.sido!;
+
+  /// 도구 조건의 기간 → 날짜들 (요일 말이 없으면 주말)
+  ({List<DateTime> dates, String label}) _periodOf(VenueQuery q) {
+    final days = q.weekdays.isEmpty ? const [DateTime.saturday, DateTime.sunday] : q.weekdays;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dates = [
+      for (var d = q.from!; !d.isAfter(q.to!); d = DateTime(d.year, d.month, d.day + 1))
+        if (days.contains(d.weekday) && d.isAfter(today)) d,
+    ];
+    const names = {1: '월', 2: '화', 3: '수', 4: '목', 5: '금', 6: '토', 7: '일'};
+    final dayLabel = days.length == 2 && days.contains(6) && days.contains(7)
+        ? '주말'
+        : days.length == 5 && !days.contains(6) && !days.contains(7)
+            ? '평일'
+            : '${days.map((d) => names[d]).join('·')}요일';
+    final f = q.from!, t = q.to!;
+    final sameMonth = f.year == t.year && f.month == t.month && f.day == 1 && DateTime(t.year, t.month + 1, 0).day == t.day;
+    final range = sameMonth ? '${f.year}년 ${f.month}월' : '${formatDate(f)}~${formatDate(t)}';
+    return (dates: dates, label: '$range $dayLabel');
+  }
+
+  /// 도구 경로의 바로 답하기: 도구 이름으로 고른다 (예전 경로의 정규식 대신)
+  Future<Future<ChatMessage> Function()?> _planDirect(AgentPlan p, Understanding u) async {
+    switch (p.tool) {
+      case 'search_venues':
+        if (_known.sido == null) return null; // 지역 되묻기
+        if (_askDate != null) return () => _venueDateAnswer(_askDate!, u);
+        if (_period != null && _period!.dates.isNotEmpty) {
+          return () => _venueSeasonAnswer(u, _period!.dates, _period!.label);
+        }
+        return null;
+      case 'venue_info':
+        final named = findVenuesByName(await Repos.venue.loadAll(), _question, names: p.names);
+        if (named.length == 1) return () async => _venueDetailAnswer(named.first, u);
+        if (named.length >= 2) return () => _compareAnswer(named.take(3).toList(), u);
+        return null;
+      case 'search_policies':
+        final home = _known.sido;
+        if (p.targetSido != null && p.targetSido != home) return () => _residencyAnswer(p.targetSido!);
+        if (p.nationwide && (p.topic == PolicyCategory.cash || p.byAmount)) return () => _cashRegionAnswer();
+        if (p.names.isNotEmpty) {
+          final hit = await _policyHits(u);
+          if (hit.length == 1) return () async => _policyDetailAnswer(hit.first);
+        }
+        return null;
+      case 'search_vendors':
+        if (u.items.length > 1 && _known.sido != null) return () => _bundleAnswer(u);
+        return null;
+      case 'estimate_cost':
+        return () => _costAnswer(u);
+      case 'calculate':
+        if (p.untilDate != null) return () async => _daysUntilAnswer(p.untilDate!);
+        if (p.expr != null && evalExpr(p.expr!) != null) return () async => _calcAnswer(p.expr!);
+        return _llm == null ? null : () => _generalAnswer(u);
+      case 'general_answer':
+        return _llm == null ? null : () => _generalAnswer(u);
+      default:
+        return null;
+    }
   }
 
   /// ① 질문 이해: Gemini가 있으면 Gemini, 실패하거나 없으면 규칙.
@@ -362,7 +537,12 @@ class ConsultAgent implements ChatAgent {
     // 되묻기 답("서울")이 아니면 대화 흐름 규칙도 적용 ("두 번째", "그중에 무료", "그럼 부산은?")
     final rule = expecting == null ? ContextRules.apply(plain, text, _turns) : plain;
     final context = _turns.isEmpty ? null : ConversationContext.state(_turns, _memoryTurns, known: _known);
-    final ai = await _llm?.understand(text, expecting: expecting, context: context);
+    final pre = expecting == null ? _prefetched : null;
+    _prefetched = null;
+    final ai = pre != null
+        ? await pre
+        : (_noLlmUnderstand ? null : await _llm?.understand(text, expecting: expecting, context: context));
+    _noLlmUnderstand = false;
     final flow = context == null ? '' : ' · 최근 ${_turns.length.clamp(1, _memoryTurns)}턴 대화 요약을 함께 봄';
     if (ai == null) {
       _nluNote = (_llm == null ? '규칙(키워드·대화 흐름)으로 이해' : 'Gemini 응답 없음 → 규칙(키워드·대화 흐름)으로 이해');
@@ -417,9 +597,13 @@ class ConsultAgent implements ChatAgent {
 
   /// ⑤ 답변 문장: 앱이 만든 답변(데이터 결과)을 Gemini가 질문에 맞게 다시 쓴다.
   /// 원문에 없는 숫자가 나오면 Gemini 문장을 버리고 원래 문장을 쓴다.
+  /// Gemini가 답 문장을 다시 쓰는 단계. 2026-11-20 끔: 무료 요금제에서 Gemini가 느려(한 턴 20~50초, 시간 초과 잦음)
+  /// 턴당 Gemini 호출을 도구 고르기 1번으로 줄였다. 답 문장은 앱이 조회 결과로 만든 문장 (숫자는 모두 데이터 그대로)
+  static const rewriteAnswers = false;
+
   Future<ChatMessage> _polish(ChatMessage m) async {
     final llm = _llm;
-    if (llm == null || m.isQuestion || m.aiWritten) return m;
+    if (!rewriteAnswers || llm == null || m.isQuestion || m.aiWritten) return m;
     final text = await llm.rewrite(question: _question, draft: draftOf(m));
     return text == null ? m : m.copyWith(text: text, aiWritten: true);
   }
@@ -461,7 +645,7 @@ class ConsultAgent implements ChatAgent {
     }
     if (r.slot == Slot.item.name && _pending != null) {
       _pending = _pending!.withItem(VendorCategory.values.byName(r.value as String));
-      return _process(_pending!);
+      return _process(_pending!, plan: _plan);
     }
     if (r.slot != null && _pending != null) {
       if (r.slot == Slot.sido.name) _sidoJustAsked = true;
@@ -471,7 +655,7 @@ class ConsultAgent implements ChatAgent {
       if (!(slot == Slot.weddingDate && const [90, 180, 365].contains(r.value))) {
         _noteSelf(_valueToFacts(slot, r.value), region: true);
       }
-      return _process(_pending!);
+      return _process(_pending!, plan: _plan);
     }
     if (r.text != null) return reply(r.text!);
     return _help();
@@ -479,14 +663,15 @@ class ConsultAgent implements ChatAgent {
 
   // ───────────────────────── 대화 흐름 ─────────────────────────
 
-  Future<ChatMessage> _process(Understanding u) async {
+  Future<ChatMessage> _process(Understanding u, {AgentPlan? plan}) async {
+    _flowNote = '';
+    if (plan != null) return _processPlanned(u, plan);
     _known = _known.merge(u.facts);
     // 문장 속 나이·하객·예산·무주택 등은 자기 정보. 지역은 "강남 살아요"처럼 사는 곳을 말했을 때만
     // ("부산 예식장 알려줘"의 부산은 찾는 곳일 수 있어 내 정보로 저장하지 않음)
     _noteSelf(u.facts);
     final home = _livingRegion;
     if (home != null) _noteSelf(home, region: true);
-    _flowNote = '';
     if (u.intent == ConsultIntent.schedule && _askDate != null && _askDate!.isAfter(DateTime.now())) {
       // "2027년 4월 10일 결혼이면 며칠 남았어?" → 질문 속 날짜가 예식일 ('몇 개월 남음' 어림값보다 우선)
       _known = _known.merge(UserProfile(weddingDate: _askDate));
@@ -518,6 +703,43 @@ class ConsultAgent implements ChatAgent {
     final skipped = [for (final s in _skipped) _slotLabel[s]!];
     _clearPending();
     if (u.intent == ConsultIntent.help) return _helpAnswer();
+    return _finish(u, skipped: skipped);
+  }
+
+  /// 도구 경로: 도구 이름으로 바로 답하기 → 앞 목록 가리키기 → 빠진 정보 되묻기 → 목적별 답변
+  Future<ChatMessage> _processPlanned(Understanding u, AgentPlan p) async {
+    if (u.monthsLeft != null && p.weddingDate == null) {
+      _known = _known.merge(UserProfile(weddingDate: DateTime.now().add(Duration(days: u.monthsLeft! * 30))));
+    }
+    if (u.refIndex != null) {
+      final picked = _pickFromHistory(u);
+      if (picked != null) {
+        _clearPending();
+        return _finish(u, build: () => _refAnswer(u, picked.$1, picked.$2, picked.$3));
+      }
+    }
+    final direct = await _planDirect(p, u);
+    if (direct != null) {
+      _clearPending();
+      return _finish(u, build: direct);
+    }
+    final missing = _missing(u);
+    if (missing.isNotEmpty) {
+      _pending = u;
+      _asking = missing.first;
+      return _ask(missing.first, u, remaining: missing.length);
+    }
+    // 되묻고 나서 지역이 생겼으면 날짜·기간 답으로
+    if (p.tool == 'search_venues' && (_askDate != null || _period != null)) {
+      final again = await _planDirect(p, u);
+      if (again != null) {
+        _clearPending();
+        return _finish(u, build: again);
+      }
+    }
+    final skipped = [for (final s in _skipped) _slotLabel[s]!];
+    _clearPending();
+    if (u.intent == ConsultIntent.help && u.kind != AskKind.general) return _helpAnswer();
     return _finish(u, skipped: skipped);
   }
 
@@ -569,7 +791,7 @@ class ConsultAgent implements ChatAgent {
       if (_unsupported.isNotEmpty) '앱 데이터에 없는 조건 · ${_unsupported.join(', ')} (Gemini가 판단, 답변에 안내)',
       '사용한 정보 · $used${skipped.isEmpty ? '' : ' (모른다고 하신 정보: ${skipped.join(', ')} → 없이 진행)'}',
       if (_lookupNote.isNotEmpty) '데이터 조회 · $_lookupNote',
-      '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : _llm.lastRewriteNote}',
+      '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : !rewriteAnswers ? (m.aiWritten ? 'Gemini 일반 안내 (앱 데이터 아님 표시)' : '앱이 조회 결과로 문장 작성 (Gemini 다시 쓰기는 속도 때문에 끔)') : _llm.lastRewriteNote}',
     ]);
   }
 
@@ -594,7 +816,7 @@ class ConsultAgent implements ChatAgent {
   Future<ChatMessage> _skipCurrent() async {
     if (_asking == null || _pending == null) return _help();
     _skipped.add(_asking!);
-    return _process(_pending!);
+    return _process(_pending!, plan: _plan);
   }
 
   bool _isDontKnow(String t) => ['모르', '몰라', '패스', '건너', '상관없', '아무'].any(t.contains);
@@ -786,7 +1008,7 @@ class ConsultAgent implements ChatAgent {
     }
     // 질문에 소득이 있으면 원문의 소득 상한과 비교, "제일 많이 주는"이면 원문의 최대 금액 순
     final income = incomeFromQuestion(_question);
-    final byAmount = RegExp(r'제일\s*많이|가장\s*많이|많이\s*주|금액.{0,4}(큰|많)|최대\s*얼마').hasMatch(_question);
+    final byAmount = _forceByAmount || RegExp(r'제일\s*많이|가장\s*많이|많이\s*주|금액.{0,4}(큰|많)|최대\s*얼마').hasMatch(_question);
     final notes = <String>[];
     if (income != null) {
       final over = matches.where((m) => (incomeCap(m.policy.eligibility) ?? 1 << 30) < income).toList();
@@ -864,7 +1086,7 @@ class ConsultAgent implements ChatAgent {
   /// 없는 곳은 예식 가능일 원문을 Gemini가 읽고 판단 (실패하면 규칙).
   /// 둘 다 없는 곳은 "정보 없음"으로 나누고, 현황은 수집 시점 기준이라 사이트에서 다시 확인하라고 안내한다.
   Future<ChatMessage> _venueDateAnswer(DateTime date, Understanding u) async {
-    final sido = _known.sido!;
+    final sido = _searchSidoLabel;
     final guests = _known.guests;
     final label = dateLabel(date);
     final pool = await _venuePool(u);
@@ -1286,7 +1508,7 @@ class ConsultAgent implements ChatAgent {
 
   /// 계절·요일 질문: 날짜마다 예식 가능일 원문을 규칙으로 확인 → 가능한 날이 있는 곳
   Future<ChatMessage> _venueSeasonAnswer(Understanding u, List<DateTime> dates, String label) async {
-    final sido = _known.sido!;
+    final sido = _searchSidoLabel;
     final pool = await _venuePool(u);
     final bookings = Repos.booking.cached ?? const <String, BookingStatus>{};
     final counts = <Venue, int>{};
@@ -1372,24 +1594,58 @@ class ConsultAgent implements ChatAgent {
 
   /// 예식장 후보 + 조건 적용 (무료·하객 수용·사진·더 싼 곳 / 시군구 제외 / 주차·피로연·야외 원문)
   Future<({List<Venue> list, List<String> notes, List<String> conds})> _venuePool(Understanding u) async {
-    final sido = _known.sido!;
-    final guests = _known.guests;
-    // 질문에서 찾는 시·군·구 ("송파구 결혼식장만", "강남구 말고 송파구") → 그 구만. 내 정보의 시군구는 먼저 보여 주기만 한다
-    final town = _askedTown(u, sido);
-    var list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: town ?? _known.sigungu);
+    final vq = _vq;
+    final sidos = vq != null && vq.sidos.isNotEmpty ? vq.sidos : [_known.sido!];
+    final sido = sidos.join('·');
+    final guests = vq?.guests ?? _known.guests;
     final notes = <String>[];
     final conds = <String>[];
-    if (town != null) {
-      final inTown = list.where((v) => v.sigungu == town).toList();
-      if (inTown.isEmpty) {
-        notes.add('• $town에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
-      } else {
-        notes.add('• $town만: $sido ${list.length}곳 → ${inTown.length}곳');
-        conds.add('$town만');
-        list = inTown;
+    List<Venue> list;
+    String? town;
+    if (vq != null) {
+      // 도구 조건: 시도 여러 개 + 구 여러 개
+      final one = vq.towns.length == 1 ? vq.towns.first : null;
+      list = [
+        for (final s in sidos) ...await ConsultTools.searchVenues(sido: s, guests: guests, sigungu: one ?? _known.sigungu),
+      ];
+      if (vq.towns.isNotEmpty) {
+        final inTowns = list.where((v) => vq.towns.contains(v.sigungu)).toList();
+        final label = vq.towns.join('·');
+        final missingTowns = [for (final t in vq.towns) if (!inTowns.any((v) => v.sigungu == t)) t];
+        if (inTowns.isEmpty) {
+          notes.add('• $label에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
+        } else {
+          // 구 순서대로 (강남구 먼저, 그다음 송파구)
+          inTowns.sort((a, b) => vq.towns.indexOf(a.sigungu).compareTo(vq.towns.indexOf(b.sigungu)));
+          notes.add('• $label만: $sido ${list.length}곳 → ${inTowns.length}곳'
+              '${missingTowns.isEmpty ? '' : ' (${missingTowns.join('·')}에는 등록된 곳이 없어요)'}');
+          conds.add('$label만');
+          list = inTowns;
+          town = label;
+        }
+      }
+      if (vq.maxFee != null) {
+        final before = list.length;
+        list = list.where((v) => v.rentalFee != null && v.rentalFee! <= vq.maxFee!).toList();
+        conds.add('대관료 ${formatManwon(vq.maxFee! ~/ 10000)} 이하');
+        notes.add('• 대관료 ${formatManwon(vq.maxFee! ~/ 10000)} 이하: $before곳 → ${list.length}곳 (요금 모르는 곳 제외)');
+      }
+    } else {
+      // 예전 경로: 질문에서 찾는 시·군·구 ("송파구만", "강남구 말고 송파구") → 그 구만. 내 정보의 시군구는 먼저 보여 주기만 한다
+      town = _askedTown(u, sido);
+      list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: town ?? _known.sigungu);
+      if (town != null) {
+        final inTown = list.where((v) => v.sigungu == town).toList();
+        if (inTown.isEmpty) {
+          notes.add('• $town에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
+        } else {
+          notes.add('• $town만: $sido ${list.length}곳 → ${inTown.length}곳');
+          conds.add('$town만');
+          list = inTown;
+        }
       }
     }
-    _lastTown = town != null && conds.contains('$town만') ? (sido: sido, town: town) : null;
+    _lastTown = vq == null && town != null && conds.contains('$town만') ? (sido: sido, town: town) : null;
     final total = list.length;
     final filter = u.filter;
     if (filter != null && _filterLabel.containsKey(filter)) {
@@ -1431,8 +1687,20 @@ class ConsultAgent implements ChatAgent {
       notes.add('• ${_needLabel[need]} 가능(원문 기준) ${yes.length}곳 · 불가 $no곳 · 정보 없음 ${before.length - yes.length - no}곳'
           '${need == 'outdoor' ? ' (실내외 칸이 비면 이름의 잔디·공원·마당 등으로 판단)' : ''}${need == 'parking' ? ' → 주차 대수가 많은 순' : ''}');
     }
+    if (vq != null && vq.sort == 'fee_low') {
+      list = [...list]..sort((a, b) => (a.rentalFee ?? 1 << 30).compareTo(b.rentalFee ?? 1 << 30));
+      conds.add('대관료 낮은 순');
+    }
+    if (vq != null && vq.sort == 'open_days') {
+      final b = Repos.booking.cached ?? const <String, BookingStatus>{};
+      final now = DateTime.now();
+      int open(Venue v) => b[v.id]?.openBetween(now, DateTime(now.year, now.month + 3, now.day)).length ?? -1;
+      list = [...list]..sort((x, y) => open(y).compareTo(open(x)));
+      conds.add('빈 날 많은 순');
+      notes.add('• 앞으로 3개월 예약 현황의 빈 날이 많은 순 (현황 없는 곳은 뒤로)');
+    }
     // "제일 큰 곳", "넓은 곳", "많이 들어가는 곳" → 정원 큰 순 (정원 모르는 곳은 뒤로)
-    if (RegExp(r'(제일|가장)\s*(큰|넓은|많이\s*들어)|큰\s*(곳|데|홀)|넓은\s*(곳|데|홀)|많이\s*들어가').hasMatch(_question)) {
+    if ((vq != null && vq.sort == 'capacity_high') || vq == null && RegExp(r'(제일|가장)\s*(큰|넓은|많이\s*들어)|큰\s*(곳|데|홀)|넓은\s*(곳|데|홀)|많이\s*들어가').hasMatch(_question)) {
       list = [...list]..sort((a, b) => (b.capacity ?? -1).compareTo(a.capacity ?? -1));
       conds.add('정원 큰 순');
       notes.add('• 정원(최대 인원)이 큰 순으로 정렬 (정원 모르는 ${list.where((v) => v.capacity == null).length}곳은 뒤로)');
@@ -1822,7 +2090,7 @@ class ConsultAgent implements ChatAgent {
   };
 
   Future<ChatMessage> _venueAnswer(Understanding u) async {
-    final sido = _known.sido!;
+    final sido = _searchSidoLabel;
     final guests = _known.guests;
     final pool = await _venuePool(u);
     final list = pool.list;
