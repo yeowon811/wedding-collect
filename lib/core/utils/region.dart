@@ -46,6 +46,29 @@ const kSigunguBySido = <String, List<String>>{
 
 /// 문장에서 시·군·구 찾기. [sido]를 알면 그 안에서만, 모르면 전국에서 하나로 정해질 때만.
 /// "강남구"뿐 아니라 "강남"처럼 끝 글자(구·시·군)를 뺀 말도 찾는다.
+/// 문장에 나온 시·군·구를 모두, 나온 순서대로 ("강남구 말고 송파구" → [강남구, 송파구]).
+/// "동구"처럼 더 긴 이름("동대문구")의 일부로만 나온 것은 뺀다. 시도를 모르면 여러 시도에 있는 이름도 그대로 둔다
+List<(String sido, String sigungu)> findSigungus(String text, {String? sido}) {
+  final hits = <(int, String, String)>[];
+  for (final e in kSigunguBySido.entries) {
+    if (sido != null && e.key != sido) continue;
+    for (final g in e.value) {
+      final stem = g.length > 2 ? g.substring(0, g.length - 1) : g;
+      var i = text.indexOf(g);
+      if (i < 0 && stem.length >= 2) i = text.indexOf(stem);
+      if (i >= 0) hits.add((i, e.key, g));
+    }
+  }
+  hits.sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : b.$3.length.compareTo(a.$3.length));
+  final out = <(String, String)>[];
+  for (final h in hits) {
+    // 같은 자리에서 시작하는 더 긴 이름이 이미 있으면 짧은 이름은 버림 ("동대문구"의 "동구")
+    final covered = hits.any((o) => o.$3.length > h.$3.length && o.$3.contains(h.$3) && text.contains(o.$3));
+    if (!covered && !out.any((o) => o.$2 == h.$3 && o.$1 == h.$2)) out.add((h.$2, h.$3));
+  }
+  return out;
+}
+
 (String sido, String sigungu)? findSigungu(String text, {String? sido}) {
   final hits = <(String, String)>[];
   for (final e in kSigunguBySido.entries) {

@@ -105,7 +105,13 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // 무료만 보는 중에 뒤로 가기 → 앱을 나가지 않고 필터만 끈다
+    return PopScope(
+      canPop: !_freeOnly,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _freeOnly = false);
+      },
+      child: Scaffold(
       body: SafeArea(
         child: FutureBuilder<List<Venue>>(
           future: _future,
@@ -175,6 +181,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             );
           },
         ),
+      ),
       ),
     );
   }
@@ -458,6 +465,28 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // 무료만 보는 중이면 한눈에 알 수 있게 + 바로 돌아가는 버튼
+        if (_freeOnly)
+          Padding(
+            padding: const EdgeInsets.only(right: 12, bottom: 10),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+              decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text('무료 웨딩홀만 보고 있어요',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                ),
+                TextButton.icon(
+                  onPressed: () => setState(() => _freeOnly = false),
+                  icon: const Icon(Icons.close, size: 18),
+                  label: const Text('전체 보기로'),
+                ),
+              ]),
+            ),
+          ),
         Row(
           children: [
             Expanded(
@@ -482,7 +511,14 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         Row(children: [
           // 지역 칩과 같은 모양 (선택되면 검정 + 흰 글자)
           ChoiceChip(
-            label: const Text('무료만'),
+            // 켜져 있으면 ✕를 붙여 '누르면 꺼진다'는 걸 보이게
+            label: _freeOnly
+                ? const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('무료만'),
+                    SizedBox(width: 4),
+                    Icon(Icons.close, size: 16, color: Colors.white),
+                  ])
+                : const Text('무료만'),
             selected: _freeOnly,
             showCheckmark: false,
             onSelected: (v) => setState(() => _freeOnly = v),

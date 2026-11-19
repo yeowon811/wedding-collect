@@ -1347,15 +1347,50 @@ class ConsultAgent implements ChatAgent {
   }
 
   ({String? filter, List<String> exclude, List<String> needs})? _lastVenueConds;
+  ({String sido, String town})? _lastTown; // 바로 앞 예식장 답변이 거른 시·군·구
+
+  /// 이번 질문이 찾는 시·군·구: 질문에 나온 구 중 '말고·빼고'로 뺀 구가 아닌 첫 번째.
+  /// 질문에 구가 없고 짧은 후속 질문("그중에 무료만")이면 앞 답변의 구를 이어받는다
+  String? _askedTown(Understanding u, String sido) {
+    String stem(String x) => x.replaceAll(RegExp(r'(구|시|군)$'), '');
+    final excluded = u.exclude.map(stem).toSet();
+    final asked = [
+      for (final (sd, g) in findSigungus(_question, sido: sido))
+        if (sd == sido && !excluded.contains(stem(g))) g,
+    ];
+    if (asked.isNotEmpty) return asked.first;
+    final prev = _lastTown;
+    final followUp = _question.trim().startsWith('그중') || _question.trim().length <= 20;
+    final prevVenue = _turns.lastOrNull?.intent == ConsultIntent.venue;
+    if (prev != null && prev.sido == sido && followUp && prevVenue && u.intent == ConsultIntent.venue &&
+        !RegExp(r'전체|다른\s*(구|곳|지역)').hasMatch(_question)) {
+      _flowNote = '앞 질문의 지역(${prev.town})을 이어서 씀';
+      return prev.town;
+    }
+    return null;
+  }
 
   /// 예식장 후보 + 조건 적용 (무료·하객 수용·사진·더 싼 곳 / 시군구 제외 / 주차·피로연·야외 원문)
   Future<({List<Venue> list, List<String> notes, List<String> conds})> _venuePool(Understanding u) async {
     final sido = _known.sido!;
     final guests = _known.guests;
-    var list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: _known.sigungu);
-    final total = list.length;
+    // 질문에서 찾는 시·군·구 ("송파구 결혼식장만", "강남구 말고 송파구") → 그 구만. 내 정보의 시군구는 먼저 보여 주기만 한다
+    final town = _askedTown(u, sido);
+    var list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: town ?? _known.sigungu);
     final notes = <String>[];
     final conds = <String>[];
+    if (town != null) {
+      final inTown = list.where((v) => v.sigungu == town).toList();
+      if (inTown.isEmpty) {
+        notes.add('• $town에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
+      } else {
+        notes.add('• $town만: $sido ${list.length}곳 → ${inTown.length}곳');
+        conds.add('$town만');
+        list = inTown;
+      }
+    }
+    _lastTown = town != null && conds.contains('$town만') ? (sido: sido, town: town) : null;
+    final total = list.length;
     final filter = u.filter;
     if (filter != null && _filterLabel.containsKey(filter)) {
       list = switch (filter) {
@@ -1404,7 +1439,7 @@ class ConsultAgent implements ChatAgent {
     }
     _lastVenueConds = (filter: filter, exclude: u.exclude, needs: u.needs);
     _lookupNote = '$sido 공공예식장 $total곳${conds.isEmpty ? '' : ' → 조건(${conds.join(', ')}) 적용 ${list.length}곳'} → '
-        '${_known.sigungu != null ? '${_known.sigungu} 먼저 · ' : ''}하객 수용 · 무료 · 예약 가능 순';
+        '${town == null && _known.sigungu != null ? '${_known.sigungu} 먼저 · ' : ''}하객 수용 · 무료 · 예약 가능 순';
     return (list: list, notes: notes, conds: conds);
   }
 
