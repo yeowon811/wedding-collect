@@ -55,12 +55,12 @@ class ChatMessage {
   final bool aiWritten; // 생성형 AI(Gemini)가 앱 데이터로 문장을 쓴 답변인지
   final List<String> trace; // "왜 이렇게 답했나요?": 질문 이해 → 사용한 정보 → 데이터 조회 → 답변 작성
 
-  ChatMessage copyWith({String? text, bool? aiWritten, List<String>? trace}) => ChatMessage(
+  ChatMessage copyWith({String? text, bool? aiWritten, List<String>? trace, List<QuickReply>? quickReplies}) => ChatMessage(
         fromUser: fromUser,
         text: text ?? this.text,
         cards: cards,
         sources: sources,
-        quickReplies: quickReplies,
+        quickReplies: quickReplies ?? this.quickReplies,
         basis: basis,
         isQuestion: isQuestion,
         aiWritten: aiWritten ?? this.aiWritten,

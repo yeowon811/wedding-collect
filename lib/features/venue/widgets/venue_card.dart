@@ -61,6 +61,18 @@ class VenueCard extends StatelessWidget {
                         ),
                     ]),
               ),
+              // 무료 대관은 사진 위에도 표시해 눈에 띄게
+              if (v.isFree)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(6)),
+                    child: const Text('무료',
+                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
               Positioned(right: 4, top: 4, child: FavoriteButton(ref: 'venue:${v.id}', onImage: true)),
             ]),
           ),

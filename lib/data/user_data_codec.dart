@@ -28,13 +28,16 @@ class UserDataCodec {
       'sigungu': s.profile.sigungu,
       'age': s.profile.age,
       'ageMax': s.profile.ageMax,
-      'stage': s.profile.stage?.name,
-      'marriedYears': s.profile.marriedYears,
+      // 결혼 단계·연차는 대화에서 직접 말한 값만 저장 (나머지는 예식일로 계산)
+      'stage': s.profile.stageInput?.name,
+      'marriedYears': s.profile.marriedYearsInput,
       'weddingDate': _date(s.profile.weddingDate),
       'weddingUndecided': s.profile.weddingUndecided,
       'guests': s.profile.guests,
       'budget': s.profile.budget,
       'homeless': s.profile.homeless,
+      'firstMarriage': s.profile.firstMarriage?.name,
+      'income': s.profile.income,
     },
     'plan': {
       'weddingDate': _date(s.plan.weddingDate),
@@ -183,6 +186,8 @@ class UserDataCodec {
       guests: _int(p['guests']),
       budget: _int(p['budget']),
       homeless: p['homeless'] as bool?,
+      firstMarriage: FirstMarriage.values.where((f) => f.name == p['firstMarriage']).firstOrNull,
+      income: _int(p['income']),
     );
 
     final pl = (d['plan'] as Map?)?.cast<String, dynamic>() ?? const {};

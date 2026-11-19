@@ -16,6 +16,8 @@ import '../../data/repositories/policy_repository.dart';
 import 'policy_detail_screen.dart';
 import 'widgets/policy_banner.dart';
 import 'policy_matcher.dart';
+import '../../core/utils/format.dart';
+import '../chat/agent/policy_text.dart' show manwonLabel;
 
 /// 맞춤 정책 찾기: 내 상황 입력 → 규칙으로 대상 판정 → 목록
 class PolicyScreen extends StatefulWidget {
@@ -101,7 +103,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   title: '조건에 맞는 정책이 없어요',
                   message: _profile.sido == null
                       ? '거주 지역을 고르면 지자체 정책까지 찾아드려요.'
-                      : '결혼 단계나 나이를 바꿔 보거나, AI 상담에서 상황을 설명해 보세요.',
+                      : '예식일이나 나이를 바꿔 보거나, AI 상담에서 상황을 설명해 보세요.',
                   actions: [
                     if (_category != null)
                       EmptyAction('전체 분야 보기', () => setState(() => _category = _savedCategory = null)),
@@ -127,6 +129,9 @@ class _PolicyScreenState extends State<PolicyScreen> {
             if (u.age != null) '만 ${u.age}세',
             if (u.stage != null)
               u.stage == MarriageStage.married ? '신혼부부 ${u.marriedYears ?? 1}년차' : '예비부부',
+            if (u.firstMarriage != null) u.firstMarriage!.label,
+            if (u.homeless != null) u.homeless! ? '무주택' : '집 있음',
+            if (u.income != null) '연소득 ${manwonLabel(u.income!)}',
           ].join(' · ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
@@ -204,27 +209,59 @@ class _PolicyScreenState extends State<PolicyScreen> {
                       onChanged: (v) => setSheet(() => draft = draft.copyWith(age: v, clearAgeMax: true)),
                     ),
                   ),
+                  // 결혼 단계는 고르지 않고 예식일로 정한다 (예식 전 예비부부 · 지나면 신혼부부 N년차)
                   FormSection(
-                    title: '결혼 단계',
-                    child: ChoiceRow<MarriageStage>(
-                      options: [for (final s in MarriageStage.values) (s, s.label)],
-                      value: draft.stage,
-                      onChanged: (v) => setSheet(() => draft = draft.copyWith(stage: v)),
+                    title: '예식일',
+                    hint: _stageHint(draft),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: draft.weddingDate ?? now.add(const Duration(days: 240)),
+                          firstDate: DateTime(now.year - 10),
+                          lastDate: DateTime(now.year + 3, 12, 31),
+                          helpText: '예식일 (지난 날짜도 고를 수 있어요)',
+                        );
+                        if (picked != null) {
+                          setSheet(() => draft = draft.copyWith(weddingDate: picked, weddingUndecided: false));
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                      label: Text(draft.weddingDate != null ? formatDate(draft.weddingDate!) : '날짜 고르기'),
                     ),
                   ),
-                  if (draft.stage == MarriageStage.married)
-                    FormSection(
-                      title: '혼인 연차',
-                      child: StepperField(
-                        value: draft.marriedYears,
-                        min: 1,
-                        max: 10,
-                        initial: 1,
-                        unit: '년차',
-                        label: '혼인 연차',
-                        onChanged: (v) => setSheet(() => draft = draft.copyWith(marriedYears: v)),
-                      ),
+                  FormSection(
+                    title: '초혼 여부',
+                    hint: '결혼 장려금 일부는 초혼 부부나 부부 중 1명 이상 초혼만 받을 수 있어요.',
+                    child: ChoiceRow<FirstMarriage>(
+                      options: [for (final f in FirstMarriage.values) (f, f.label)],
+                      value: draft.firstMarriage,
+                      onChanged: (v) => setSheet(() => draft = draft.copyWith(firstMarriage: v)),
                     ),
+                  ),
+                  FormSection(
+                    title: '집이 있나요?',
+                    hint: '주거·대출 지원은 대부분 무주택 조건이 있어요.',
+                    child: ChoiceRow<bool>(
+                      options: const [(true, '무주택'), (false, '집 있음')],
+                      value: draft.homeless,
+                      onChanged: (v) => setSheet(() => draft = draft.copyWith(homeless: v)),
+                    ),
+                  ),
+                  FormSection(
+                    title: '부부 합산 연소득 (선택)',
+                    hint: '원문에 소득 상한이 숫자로 적힌 정책과 비교해요. 기기에만 저장돼요.',
+                    child: NumberConfirmField(
+                      value: draft.income,
+                      unit: '만원',
+                      min: 100,
+                      max: 100000,
+                      hint: '예: 7000',
+                      preview: (v) => '연 ${manwonLabel(v)}',
+                      onConfirmed: (v) => setSheet(() => draft = draft.copyWith(income: v)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -240,6 +277,18 @@ class _PolicyScreenState extends State<PolicyScreen> {
       ),
     );
     if (applied != null) _app.updateProfileDraft(applied);
+  }
+
+  /// 예식일로 정한 결혼 단계를 설명 ("예식 전이라 예비부부로 봐요")
+  static String _stageHint(UserProfile u) {
+    if (u.weddingDate == null) return '예식 전이면 예비부부, 지났으면 신혼부부(혼인 N년차)로 정책을 골라요.';
+    if (u.stageInput == MarriageStage.married && !u.weddingPassed) {
+      return '혼인신고를 했다고 알려 주셔서 신혼부부로 봐요.';
+    }
+    if (!u.weddingPassed) return '예식 전이라 예비부부로 봐요. 예식일이 지나면 신혼부부로 바뀌어요.';
+    final m = u.monthsSinceWedding ?? 0;
+    return '예식 후 ${m >= 12 ? '${m ~/ 12}년 ${m % 12}개월' : '$m개월'} → 신혼부부(혼인 ${u.marriedYears}년차)로 봐요. '
+        '혼인신고일 기준인 정책은 기관에서 확인해 주세요.';
   }
 
   /// 결과 묶음 제목: 색 점 + 이름 + 건수 + 한 줄 설명

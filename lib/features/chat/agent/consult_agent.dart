@@ -125,6 +125,8 @@ class ConsultAgent implements ChatAgent {
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
   late UserProfile _known = _app.profileDone ? _app.profile : const UserProfile();
   late UserProfile _seenApp = _app.profile; // 마지막으로 본 앱의 내 정보
+  UserProfile _selfFacts = const UserProfile(); // 이번 턴에 사용자가 '자기 이야기'로 말한 값 → 내 정보에 자동 반영
+  ({UserProfile profile, WeddingPlan plan})? _undo; // [되돌리기]용 반영 전 값
 
   /// 이번 질문에서 방금 지역(시도)을 되물어 답을 받았는지 → 그때만 이어서 시·군·구를 묻는다
   bool _sidoJustAsked = false;
@@ -189,6 +191,84 @@ class ConsultAgent implements ChatAgent {
     return m;
   }
 
+  /// 사용자가 자기 이야기로 말한 값을 모은다 (지역은 [region]일 때만)
+  void _noteSelf(UserProfile f, {bool region = false}) {
+    _selfFacts = _selfFacts.merge(UserProfile(
+      sido: region ? f.sido : null,
+      sigungu: region ? f.sigungu : null,
+      age: f.age,
+      ageMax: f.age != null ? f.ageMax : null,
+      stage: f.stageInput,
+      marriedYears: f.marriedYearsInput,
+      weddingDate: f.weddingDate,
+      weddingUndecided: f.weddingUndecided,
+      guests: f.guests,
+      budget: f.budget,
+      homeless: f.homeless,
+      firstMarriage: f.firstMarriage,
+      income: f.income,
+    ));
+  }
+
+  /// "강남구 살아요", "경기도 사는데 …" → 사는 곳 (사는다는 말 앞의 지역)
+  UserProfile? get _livingRegion {
+    final q = _question;
+    final live = RegExp(r'살아요|살아|사는데|살고|사는\s*곳|거주|이사\s*왔').firstMatch(q);
+    if (live == null) return null;
+    final before = q.substring(0, live.start);
+    final hits = [
+      for (final sd in kSidoList)
+        if (before.lastIndexOf(sd) >= 0) (sd, before.lastIndexOf(sd)),
+    ]..sort((a, b) => a.$2.compareTo(b.$2));
+    final sido = hits.lastOrNull?.$1;
+    final town = findSigungu(before, sido: sido) ?? (sido == null ? findSigungu(before) : null);
+    if (town != null) return UserProfile(sido: town.$1, sigungu: town.$2);
+    return sido == null ? null : UserProfile(sido: sido);
+  }
+
+  /// 이번 턴의 자기 정보를 내 정보(= 체크리스트 결혼 정보)에 반영하고, 답변 끝에 무엇을 바꿨는지 알린다
+  ChatMessage _applySelfFacts(ChatMessage m) {
+    final f = _selfFacts;
+    _selfFacts = const UserProfile();
+    final before = _app.profile;
+    final after = before.merge(f);
+    final changed = [
+      if (after.regionLabel != before.regionLabel && after.regionLabel != null) after.regionLabel!,
+      if (after.age != before.age || after.ageMax != before.ageMax) after.ageLabel,
+      if (after.stageInput != before.stageInput && after.stageInput != null) after.stageInput!.label,
+      if (after.weddingDate != before.weddingDate && after.weddingDate != null) '예식일 ${formatDate(after.weddingDate!)}',
+      if (after.guests != before.guests) '하객 ${after.guests}명',
+      if (after.budget != before.budget) '예산 ${formatManwon(after.budget!)}',
+      if (after.homeless != before.homeless && after.homeless != null) after.homeless! ? '무주택' : '집 있음',
+      if (after.firstMarriage != before.firstMarriage && after.firstMarriage != null) after.firstMarriage!.label,
+    ];
+    if (changed.isEmpty) return m;
+    _undo = (profile: before, plan: _app.plan);
+    _app.updateProfileDraft(after);
+    _seenApp = _app.profile;
+    return m.copyWith(
+      text: '${m.text}\n\n내 정보에 반영했어요: ${changed.join(' · ')}',
+      quickReplies: [
+        ...m.quickReplies.where((r) => r.action != 'save_profile'),
+        const QuickReply('되돌리기', action: 'undo_profile'),
+      ],
+    );
+  }
+
+  ChatMessage _undoSelfFacts() {
+    final u = _undo;
+    if (u == null) return const ChatMessage(fromUser: false, text: '되돌릴 변경이 없어요.');
+    _undo = null;
+    _app.updatePlan(u.plan);
+    _app.updateProfileDraft(u.profile);
+    _app.plan = u.plan; // 처음 입력한 값(빈칸)도 그대로 되돌린다
+    _seenApp = _app.profile;
+    return const ChatMessage(
+      fromUser: false,
+      text: '내 정보를 바꾸기 전으로 되돌렸어요. 이번 대화에서는 말씀하신 조건으로 계속 찾아 드릴게요.',
+    );
+  }
+
   /// 체크리스트·내 정보 화면에서 바뀐 결혼 정보만 대화 기억에 반영 (대화에서 말한 값은 덮지 않음)
   void _syncFromApp() {
     final cur = _app.profile;
@@ -232,6 +312,11 @@ class ConsultAgent implements ChatAgent {
 
   @override
   Future<ChatMessage> reply(String question) async {
+    _selfFacts = const UserProfile();
+    return _applySelfFacts(await _reply(question));
+  }
+
+  Future<ChatMessage> _reply(String question) async {
     _syncFromApp();
     // 예약 현황 (예식장 정보 답변에서 바로 쓰도록 미리 읽어 둠). 못 읽어도 원문 판단으로 답한다
     try {
@@ -249,6 +334,8 @@ class ConsultAgent implements ChatAgent {
         return _process(u);
       }
       _known = _known.merge(u.facts);
+      // 되묻기에 대한 답은 자기 정보 (지역은 '어디 사세요?'에 답했을 때만)
+      _noteSelf(u.facts, region: _asking == Slot.sido || _asking == Slot.sigungu);
       if (_asking == Slot.sido) _sidoJustAsked = true;
       if (_asking == Slot.item && u.item != null) _pending = _pending!.withItem(u.item!);
       if (!_isFilled(_asking!, _pending!)) {
@@ -346,6 +433,12 @@ class ConsultAgent implements ChatAgent {
 
   @override
   Future<ChatMessage> choose(QuickReply r) async {
+    if (r.action == 'undo_profile') return _undoSelfFacts();
+    _selfFacts = const UserProfile();
+    return _applySelfFacts(await _choose(r));
+  }
+
+  Future<ChatMessage> _choose(QuickReply r) async {
     switch (r.action) {
       case 'open_checklist':
         MainShell.goTo(3);
@@ -372,7 +465,12 @@ class ConsultAgent implements ChatAgent {
     }
     if (r.slot != null && _pending != null) {
       if (r.slot == Slot.sido.name) _sidoJustAsked = true;
-      _known = _known.merge(_valueToFacts(Slot.values.byName(r.slot!), r.value));
+      final slot = Slot.values.byName(r.slot!);
+      _known = _known.merge(_valueToFacts(slot, r.value));
+      // 버튼으로 고른 답도 자기 정보. '3개월 뒤'처럼 어림한 예식일은 정확한 날짜로 저장하지 않는다
+      if (!(slot == Slot.weddingDate && const [90, 180, 365].contains(r.value))) {
+        _noteSelf(_valueToFacts(slot, r.value), region: true);
+      }
       return _process(_pending!);
     }
     if (r.text != null) return reply(r.text!);
@@ -383,10 +481,16 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _process(Understanding u) async {
     _known = _known.merge(u.facts);
+    // 문장 속 나이·하객·예산·무주택 등은 자기 정보. 지역은 "강남 살아요"처럼 사는 곳을 말했을 때만
+    // ("부산 예식장 알려줘"의 부산은 찾는 곳일 수 있어 내 정보로 저장하지 않음)
+    _noteSelf(u.facts);
+    final home = _livingRegion;
+    if (home != null) _noteSelf(home, region: true);
     _flowNote = '';
     if (u.intent == ConsultIntent.schedule && _askDate != null && _askDate!.isAfter(DateTime.now())) {
       // "2027년 4월 10일 결혼이면 며칠 남았어?" → 질문 속 날짜가 예식일 ('몇 개월 남음' 어림값보다 우선)
       _known = _known.merge(UserProfile(weddingDate: _askDate));
+      _noteSelf(UserProfile(weddingDate: _askDate));
     } else if (u.monthsLeft != null) {
       _known = _known.merge(UserProfile(weddingDate: DateTime.now().add(Duration(days: u.monthsLeft! * 30))));
     }
@@ -896,6 +1000,7 @@ class ConsultAgent implements ChatAgent {
     if (_askDate != null && RegExp(r'며칠|몇\s*일|디데이|d-?day', caseSensitive: false).hasMatch(_question)) {
       if (RegExp(r'결혼|예식|식\s*올').hasMatch(_question) && _askDate!.isAfter(DateTime.now())) {
         _known = _known.merge(UserProfile(weddingDate: _askDate));
+        _noteSelf(UserProfile(weddingDate: _askDate));
         return () async => _scheduleAnswer();
       }
       return () async => _daysUntilAnswer(_askDate!);

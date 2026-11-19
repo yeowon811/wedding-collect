@@ -53,7 +53,7 @@
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
 
 ## 개발 환경 (현재 PC, 2026-11-19 옮김)
-- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 78개 통과 확인 (11-19)
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 93개 통과 확인 (11-19)
 - 이전 PC: `C:\Users\LG\flutter`, 에뮬레이터 `Medium_Phone_API_37.0`
 - NDK 28.2.13676358 설치함 (APK 빌드에 필요)
 - **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
@@ -155,6 +155,12 @@
   - AI: `bookingJudge`(date_check.dart)가 현황으로 먼저 확정 → 없는 곳만 원문 규칙·Gemini 판단(Gemini 호출도 줄어듦). 날짜 질문은 '예약 달력에서 비어 있던 곳'을 먼저, 카드 배지 '○월 ○일 비어 있음', 출처에 확인 날짜. 계절 질문·예식장 한 곳 정보(앞으로 6개월 빈 주말)에도 반영. 항상 '수집한 날 기준이라 바뀔 수 있음' 안내
 - **AI 상담 탐색 평가·수정 (2026-11-19):** 예상 질문에 없는 30개(`test/eval/probe_cases.dart`, 실행 `probe_eval_main.dart`)로 틀린 답 11개를 찾아 고침 (`docs/ai-eval/probe_report.md`, 규칙 경로 테스트 `test/probe_fixes_test.dart`). 기간 질문 `ConsultAgent.periodDates`("내년 3월", "다음 달", "4월 토요일", "예약 현황"=앞으로 3개월 주말, 달만 있으면 Gemini의 1일 날짜를 쓰지 않음) → 예식장 이름 있으면 그곳의 빈 날, 없으면 지역 예식장 날짜별 확인. "그중에 …" 후속은 길어도 앞 조건 이어받기. 날짜+'며칠'은 달력으로 계산(`_daysUntilAnswer`, 결혼이면 예식일로 일정), 날짜 있으면 계산식 금지. 나이 넣은 정책 질문은 정책 판정. "A 사는데 B 지원"은 B 거주 조건(`_otherRegionAsk`). 장려금 많은 지역은 전국 현금 지원 금액 순(`_cashRegionAnswer`, 대출 제외). "제일 큰 곳"은 정원 순. 국립공원은 `_parkAnswer`. 수량 질문("몇 장")은 일반 안내, 일반 안내 숫자는 질문 속 숫자만 허용하고 실패 시 이유 안내
   - 남은 문제: Gemini 무료 요금제에서 34턴 중 7턴 '응답 없음·연결 오류'(규칙으로 대신 답함), 답변 15~25초. 같은 질문도 Gemini 이해가 달라질 수 있음
+- **피드백 반영 (2026-11-19):**
+  - 예식장 홈: '무료 웨딩홀 Best'(무료 중 사진·하객 수용·정원 확인 순, [전체 보기] = 무료만), '빈 주말 많은 곳'(앞으로 3개월, 예약 현황 기준), 목록 위 [무료만] 칩 + 정렬(기본순·대관료 낮은 순·정원 큰 순), 카드 사진에 '무료' 배지. 예식장 리뷰 데이터는 없어서 '리뷰 Best'는 만들지 않음
+  - 결혼 단계는 입력받지 않음: `UserProfile.stage`가 예식일로 계산(예식 전 예비부부 · 지나면 신혼부부, `marriedYears` = 예식 후 N년차). 대화에서 "혼인신고 했어요"(`stageInput`)는 예식 전이어도 신혼부부. 저장은 직접 말한 값(stageInput·marriedYearsInput)만. 예식일 선택은 지난 날짜도 가능
+  - 정책 '내 상황': 예식일(판정 설명), 초혼 여부(`FirstMarriage` 둘 다/한 명만/둘 다 재혼), 무주택, 부부 합산 연소득(원문 소득 상한과 비교). 정책 데이터 `firstMarriage`('one' 1명 이상 초혼 / 'both' 초혼 부부, 11건). 예비부부에겐 '혼인신고 후 N년 이내 신청 (예식일 기준 YYYY.M까지)' 안내
+  - **AI 상담에서 말한 내 정보 자동 반영:** 사용자가 자기 이야기로 말한 값(`_noteSelf`: 나이·하객·예산·예식일·무주택·초혼·"혼인신고 했어요", 되묻기·버튼 답)은 턴이 끝날 때 내 정보 = 체크리스트 결혼 정보에 저장(`_applySelfFacts` → `updateProfileDraft`)하고 답변 끝에 '내 정보에 반영했어요: …' + [되돌리기](`undo_profile`, 반영 전 profile·plan 복원). 지역은 사는 곳을 말했을 때만(`_livingRegion`: "수원 살아요", "경기도 사는데 …"의 앞 지역) 또는 '어디 사세요?'에 답했을 때만 — "부산 예식장 알려줘"의 부산은 찾는 곳이라 저장 안 함. '3개월 뒤' 같은 어림 예식일은 저장 안 함. 테스트 `test/chat_profile_sync_test.dart`
+  - 정책 분류 규칙 보완(`convert_policies.py`): 결혼자금·결혼비용·바우처 → 결혼 장려금, 신혼집·리모델링 → 주거, 엽산 → 건강 (함양 결혼자금 등 5건, 기타는 1건만 남음)
 - 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변, 예약 현황 판단, 탐색 질문 수정)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`

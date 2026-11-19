@@ -1,7 +1,8 @@
 import '../../data/models/policy.dart';
 import '../../data/models/user_profile.dart';
+import '../chat/agent/policy_text.dart';
 
-export '../../data/models/user_profile.dart' show MarriageStage;
+export '../../data/models/user_profile.dart' show MarriageStage, FirstMarriage;
 
 /// 정책 판정용 조건 (기기 안에서만 쓰고 외부로 보내지 않는다)
 class PolicyProfile {
@@ -13,6 +14,9 @@ class PolicyProfile {
     this.stage = MarriageStage.engaged,
     this.marriedYears = 1,
     this.homeless,
+    this.firstMarriage,
+    this.income,
+    this.weddingDate,
   });
 
   /// 내 정보(또는 대화에서 알게 된 정보)로 만든다. 모르는 값은 기본값을 쓴다.
@@ -24,6 +28,9 @@ class PolicyProfile {
         stage: u.stage ?? MarriageStage.engaged,
         marriedYears: u.marriedYears ?? 1,
         homeless: u.homeless,
+        firstMarriage: u.firstMarriage,
+        income: u.income,
+        weddingDate: u.weddingDate,
       );
 
   final String? sido; // null = 지역 미선택 (전국 정책만)
@@ -33,6 +40,9 @@ class PolicyProfile {
   final MarriageStage stage;
   final int marriedYears; // 신혼부부일 때 혼인 N년차
   final bool? homeless; // 무주택 여부 (null = 모름)
+  final FirstMarriage? firstMarriage; // 초혼 여부 (null = 모름)
+  final int? income; // 부부 합산 연소득 만원 (null = 모름)
+  final DateTime? weddingDate; // 예비부부의 신청 기한 안내용
 
   bool get isAgeRange => ageMax != null && ageMax != age;
   int get ageHigh => ageMax ?? age;
@@ -52,6 +62,9 @@ class PolicyProfile {
         stage: stage ?? this.stage,
         marriedYears: marriedYears ?? this.marriedYears,
         homeless: homeless,
+        firstMarriage: firstMarriage,
+        income: income,
+        weddingDate: weddingDate,
       );
 }
 
@@ -140,7 +153,25 @@ class PolicyMatcher {
         if (policy.allowsEngaged) {
           reasons.add('예비부부 신청 가능');
         } else if (policy.marriedWithinYears != null) {
-          checks.add('혼인신고 후 신청');
+          // "혼인신고 후 1년 이내만 신청" 같은 기한: 예식일을 알면 언제까지인지 대략 알려 준다
+          final w = p.weddingDate;
+          final until = w == null ? '' : ' (예식일 기준 ${w.year + policy.marriedWithinYears!}.${w.month}까지)';
+          checks.add('혼인신고 후 ${policy.marriedWithinYears}년 이내 신청$until');
+        }
+      }
+
+      // 초혼: 'both' 초혼 부부만 · 'one' 부부 중 1명 이상 초혼
+      final fm = policy.firstMarriage;
+      if (fm != null) {
+        final need = fm == 'both' ? '초혼 부부 대상' : '부부 중 1명 이상 초혼 대상';
+        final mine = p.firstMarriage;
+        if (mine == null) {
+          checks.add(fm == 'both' ? '초혼 여부 (둘 다 초혼)' : '초혼 여부 (1명 이상 초혼)');
+        } else if (mine == FirstMarriage.none || (fm == 'both' && mine == FirstMarriage.one)) {
+          misses.add(PolicyMiss(policy, '$need (내 정보: ${mine.label})'));
+          continue;
+        } else {
+          reasons.add(need.replaceAll(' 대상', ' 충족'));
         }
       }
 
@@ -156,7 +187,19 @@ class PolicyMatcher {
           checks.add('무주택 여부');
         }
       }
-      if (policy.hasIncomeLimit) checks.add('소득 기준');
+      // 소득: 원문에 상한 숫자가 있고 내 소득을 알면 비교, 아니면 확인 필요
+      if (policy.hasIncomeLimit) {
+        final cap = incomeCap(policy.eligibility);
+        if (cap != null && p.income != null) {
+          if (p.income! > cap) {
+            misses.add(PolicyMiss(policy, '연소득 ${manwonLabel(cap)} 이하 대상 (내 소득 ${manwonLabel(p.income!)})'));
+            continue;
+          }
+          reasons.add('소득 ${manwonLabel(cap)} 이하 충족');
+        } else {
+          checks.add('소득 기준');
+        }
+      }
 
       result.add(PolicyMatch(
         policy,

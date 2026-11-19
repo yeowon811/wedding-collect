@@ -10,6 +10,7 @@ import '../favorites/favorites_screen.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/app_state.dart';
 import '../../data/models/venue.dart';
+import '../../data/repositories/repositories.dart';
 import '../../data/repositories/venue_repository.dart';
 import 'venue_detail_screen.dart';
 import 'widgets/venue_card.dart';
@@ -38,8 +39,51 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   String? _sido; // null = 전체
   String? _sigungu; // null = 시도 전체
+  _Sort _sort = _Sort.basic;
+  bool _freeOnly = false;
 
   List<Venue> _apply(List<Venue> all) {
+    final list = _inRegion(all).where((v) => !_freeOnly || v.isFree).toList();
+    switch (_sort) {
+      case _Sort.basic:
+        break;
+      case _Sort.feeLow:
+        // 대관료 낮은 순 (무료가 맨 앞, 요금 모르는 곳은 뒤로)
+        list.sort((a, b) => (a.rentalFee ?? 1 << 30).compareTo(b.rentalFee ?? 1 << 30));
+      case _Sort.capacity:
+        // 정원 큰 순 (정원 모르는 곳은 뒤로)
+        list.sort((a, b) => (b.capacity ?? -1).compareTo(a.capacity ?? -1));
+    }
+    return list;
+  }
+
+  /// 무료 웨딩홀 Best: 대관료 무료 중 사진 있는 곳 → 내 하객 수 수용 → 정원 확인된 곳 순
+  List<Venue> _freeBest(List<Venue> region) {
+    final guests = AppState.instance.plan.guests;
+    int score(Venue v) =>
+        (v.images.isNotEmpty ? 4 : 0) + (v.fits(guests) == true ? 2 : 0) + (v.capacity != null ? 1 : 0);
+    return [...region.where((v) => v.isFree)]..sort((a, b) => score(b).compareTo(score(a)));
+  }
+
+  /// 앞으로 3개월 빈 주말이 많은 곳 (수집한 예약 현황 기준)
+  List<(Venue, int)> _openBest(List<Venue> region) {
+    final bookings = Repos.booking.cached;
+    if (bookings == null) return const [];
+    final now = DateTime.now();
+    final end = DateTime(now.year, now.month + 3, now.day);
+    final list = [
+      for (final v in region)
+        if (bookings[v.id] case final b?)
+          (v, b.openBetween(now, end).where((d) => d.weekday >= DateTime.saturday).length),
+    ].where((e) => e.$2 > 0).toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    return list;
+  }
+
+  bool get _showBest => _query.trim().isEmpty && !_freeOnly && _sort == _Sort.basic;
+
+  /// 지역·검색만 적용 (정렬·무료만 적용 전, 'Best' 묶음에도 씀)
+  List<Venue> _inRegion(List<Venue> all) {
     final q = _query.trim();
     return all.where((v) {
       if (_sido != null && v.sido != _sido) return false;
@@ -74,12 +118,32 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             }
             final all = snap.data!;
             final shown = _apply(all);
+            final region = _inRegion(all);
+            final freeBest = _showBest ? _freeBest(region) : const <Venue>[];
+            final openBest = _showBest ? _openBest(region) : const <(Venue, int)>[];
             return CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(child: _header(all)),
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _aiBanner()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
+                if (freeBest.length >= 2)
+                  SliverToBoxAdapter(
+                    child: _bestRow(
+                      '무료 웨딩홀 Best',
+                      '대관료 무료 ${freeBest.length}곳 · 사진·하객 수용 순',
+                      [for (final v in freeBest.take(10)) (v, null)],
+                      onMore: () => setState(() => _freeOnly = true),
+                    ),
+                  ),
+                if (openBest.length >= 2)
+                  SliverToBoxAdapter(
+                    child: _bestRow(
+                      '빈 주말 많은 곳',
+                      '앞으로 3개월 · 예약 사이트 달력 기준 (${_checkedLabel()})',
+                      [for (final (v, n) in openBest.take(10)) (v, '빈 주말 $n일')],
+                    ),
+                  ),
                 SliverToBoxAdapter(child: _resultBar(shown.length)),
                 if (shown.isEmpty)
                   SliverToBoxAdapter(child: _empty())
@@ -326,33 +390,132 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     );
   }
 
+  String _checkedLabel() {
+    final d = Repos.booking.collectedAt;
+    return d == null ? '수집 시점' : '${d.month}/${d.day} 확인';
+  }
+
+  /// 가로로 넘겨 보는 묶음: 제목 + 설명 + [전체 보기] + 카드들 (badge가 있으면 카드 위에 표시)
+  Widget _bestRow(String title, String desc, List<(Venue, String?)> items, {VoidCallback? onMore}) {
+    const width = 148.0;
+    final hasBadge = items.any((e) => e.$2 != null);
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                const SizedBox(height: 2),
+                Text(desc, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              ]),
+            ),
+            if (onMore != null) TextButton(onPressed: onMore, child: const Text('전체 보기')),
+          ]),
+        ),
+        SizedBox(
+          height: width + VenueCard.textHeight + 10 + (hasBadge ? 22 : 0),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            itemCount: items.length,
+            separatorBuilder: (context, i) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              final (v, badge) = items[i];
+              return SizedBox(
+                width: width,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (badge != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(badge,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.success)),
+                    ),
+                  Expanded(
+                    child: VenueCard(
+                      venue: v,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => VenueDetailScreen(venue: v)),
+                      ),
+                    ),
+                  ),
+                ]),
+              );
+            },
+          ),
+        ),
+      ]),
+    );
+  }
+
   Widget _resultBar(int count) {
     final where = [
       if (_sido != null) _sido!,
       if (_sigungu != null) _sigungu!,
     ].join(' ');
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
-      child: Row(
-        children: [
-          Text(
-            where.isEmpty ? '전체 $count곳' : '$where $count곳',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: AppColors.textPrimary,
+      padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${where.isEmpty ? '전체' : where}${_freeOnly ? ' 무료' : ''} $count곳',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ),
+            if (_sido != null)
+              TextButton(
+                onPressed: () => _selectSido(null),
+                child: const Text('지역 초기화'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // 무료만 + 정렬
+        Row(children: [
+          // 지역 칩과 같은 모양 (선택되면 검정 + 흰 글자)
+          ChoiceChip(
+            label: const Text('무료만'),
+            selected: _freeOnly,
+            showCheckmark: false,
+            onSelected: (v) => setState(() => _freeOnly = v),
           ),
           const Spacer(),
-          if (_sido != null)
-            TextButton(
-              onPressed: () => _selectSido(null),
-              child: const Text('지역 초기화'),
+          PopupMenuButton<_Sort>(
+            initialValue: _sort,
+            onSelected: (s) => setState(() => _sort = s),
+            itemBuilder: (_) => [for (final s in _Sort.values) PopupMenuItem(value: s, child: Text(s.label))],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(_sort.label,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                const SizedBox(width: 2),
+                Icon(Icons.expand_more, size: 18, color: AppColors.textSecondary),
+              ]),
             ),
-        ],
-      ),
+          ),
+        ]),
+      ]),
     );
   }
+}
+
+/// 목록 정렬
+enum _Sort {
+  basic('기본순'),
+  feeLow('대관료 낮은 순'),
+  capacity('정원 큰 순');
+
+  const _Sort(this.label);
+  final String label;
 }
 
 /// 시군구 선택창: 하나 고르고 [확인]. 결과는 (시군구 또는 null=시도 전체,)

@@ -43,9 +43,10 @@ AMBIGUOUS = {"고성군"}  # 강원·경남 둘 다 있음 → 앞뒤 정책의 
 
 CATEGORY_RULES = [
     ("WEDDING", r"예식장|결혼식|대관|웨딩"),
-    ("CASH", r"장려금|축하금|지원금|목돈|공제|현금"),
-    ("HOUSING", r"대출|이자|전세|임대|주택|주거|보증금"),
-    ("HEALTH", r"검진|건강|가임|임신"),
+    # 결혼자금·결혼비용·축하 바우처도 받는 돈 (2026-11-19: 함양 결혼자금 등이 기타로 분류되던 것 수정)
+    ("CASH", r"장려금|축하금|지원금|목돈|공제|현금|결혼\s*자금|결혼\s*비용|바우처"),
+    ("HOUSING", r"대출|이자|전세|임대|주택|주거|보증금|신혼집|리모델링"),
+    ("HEALTH", r"검진|건강|가임|임신|엽산"),
     ("EDUCATION", r"교육|상담|교실|프로그램"),
 ]
 
@@ -79,6 +80,15 @@ def parse_married_years(text: str):
     return int(m.group(1)) if m else None
 
 
+def parse_first_marriage(text: str):
+    """초혼 조건: 'one' = 부부 중 1명 이상 초혼, 'both' = 초혼 부부(둘 다), None = 조건 없음·상관없음"""
+    if "초혼" not in text or re.search(r"초혼\s*재혼\s*여부\s*상관\s*없", text):
+        return None
+    if re.search(r"(1\s*명|한\s*명|1\s*인)\s*이상\s*(이\s*)?초혼", text):
+        return "one"
+    return "both"
+
+
 def category_of(name: str, text: str):
     for code, pattern in CATEGORY_RULES:
         if re.search(pattern, name):
@@ -109,6 +119,7 @@ def main(path: str) -> None:
             "ageMax": age_max,
             "allowsEngaged": bool(re.search(r"예비|결혼\s*예정|혼인\s*예정|누구나", elig)),
             "marriedWithinYears": parse_married_years(elig),
+            "firstMarriage": parse_first_marriage(elig),
             "hasIncomeLimit": "소득" in elig,
             "requiresHomeless": "무주택" in elig,
             "extractedBy": "rule",
@@ -132,7 +143,7 @@ def main(path: str) -> None:
         cats[p["category"]] = cats.get(p["category"], 0) + 1
     print(f"policies: {len(policies)}  categories: {cats}")
     print(f"  나이 추출 {stat('ageMax')}건 · 혼인 N년 {stat('marriedWithinYears')}건 · "
-          f"예비부부 가능 {stat('allowsEngaged')}건 · 소득조건 {stat('hasIncomeLimit')}건")
+          f"예비부부 가능 {stat('allowsEngaged')}건 · 소득조건 {stat('hasIncomeLimit')}건 · 초혼 조건 {stat('firstMarriage')}건")
 
 
 if __name__ == "__main__":

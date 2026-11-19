@@ -39,6 +39,7 @@ class Policy {
     this.ageMin,
     this.ageMax,
     this.marriedWithinYears,
+    this.firstMarriage,
   });
 
   final String id;
@@ -53,6 +54,7 @@ class Policy {
   final int? ageMax;
   final bool allowsEngaged; // 원문에 예비부부·결혼예정 언급
   final int? marriedWithinYears; // 혼인 N년 이내
+  final String? firstMarriage; // 'one' 부부 중 1명 이상 초혼 · 'both' 초혼 부부 · null 조건 없음
   final bool hasIncomeLimit;
   final bool requiresHomeless;
   final bool reviewed;
@@ -75,6 +77,7 @@ class Policy {
     ageMax: (j['ageMax'] as num?)?.toInt(),
     allowsEngaged: j['allowsEngaged'] as bool,
     marriedWithinYears: (j['marriedWithinYears'] as num?)?.toInt(),
+    firstMarriage: j['firstMarriage'] as String?,
     hasIncomeLimit: j['hasIncomeLimit'] as bool,
     requiresHomeless: j['requiresHomeless'] as bool,
     reviewed: j['reviewed'] as bool,

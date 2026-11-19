@@ -61,8 +61,8 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
     var p = _p;
     if (!_ageKnown) {
       p = UserProfile(
-          sido: p.sido, sigungu: p.sigungu, stage: p.stage, marriedYears: p.marriedYears, weddingDate: p.weddingDate,
-          weddingUndecided: p.weddingUndecided, guests: p.guests, budget: p.budget, homeless: p.homeless);
+          sido: p.sido, sigungu: p.sigungu, stage: p.stageInput, marriedYears: p.marriedYearsInput, weddingDate: p.weddingDate,
+          weddingUndecided: p.weddingUndecided, guests: p.guests, budget: p.budget, homeless: p.homeless, firstMarriage: p.firstMarriage, income: p.income);
     }
     _app.saveProfile(p);
     widget.onDone();
@@ -111,36 +111,8 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                 ),
               ),
               FormSection(
-                title: '결혼 단계',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ChoiceRow<MarriageStage>(
-                      options: const [
-                        (MarriageStage.engaged, '예비부부'),
-                        (MarriageStage.married, '신혼부부'),
-                      ],
-                      value: p.stage,
-                      onChanged: (v) => _set(p.copyWith(stage: v)),
-                    ),
-                    if (p.stage == MarriageStage.married) ...[
-                      const SizedBox(height: 14),
-                      Text('혼인신고한 지', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
-                      Wrap(spacing: 8, runSpacing: 8, children: [
-                        for (final (label, y) in [('1년 이내', 1), ('2~3년', 3), ('4~7년', 7), ('7년 넘음', 8)])
-                          ChoiceChip(
-                            label: Text(label),
-                            selected: p.marriedYears == y,
-                            onSelected: (_) => _set(p.copyWith(marriedYears: y)),
-                          ),
-                      ]),
-                    ],
-                  ],
-                ),
-              ),
-              FormSection(
                 title: '예식일',
+                hint: '예식 전이면 예비부부, 지났으면 신혼부부로 정책을 골라요.',
                 child: Row(children: [
                   Expanded(
                     child: OutlinedButton.icon(
@@ -148,7 +120,8 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: p.weddingDate ?? DateTime.now().add(const Duration(days: 240)),
-                          firstDate: DateTime.now(),
+                          // 지난 날짜도 고를 수 있게 (예식이 지났으면 신혼부부로 정책을 골라요)
+                          firstDate: DateTime(DateTime.now().year - 10),
                           lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
                         );
                         if (picked != null) _set(p.copyWith(weddingDate: picked, weddingUndecided: false));
@@ -162,8 +135,8 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                     label: const Text('아직 미정'),
                     selected: p.weddingDate == null && p.weddingUndecided,
                     onSelected: (_) => _set(UserProfile(
-                        sido: p.sido, sigungu: p.sigungu, age: p.age, ageMax: p.ageMax, stage: p.stage, marriedYears: p.marriedYears,
-                        weddingUndecided: true, guests: p.guests, budget: p.budget, homeless: p.homeless)),
+                        sido: p.sido, sigungu: p.sigungu, age: p.age, ageMax: p.ageMax, stage: p.stageInput, marriedYears: p.marriedYearsInput,
+                        weddingUndecided: true, guests: p.guests, budget: p.budget, homeless: p.homeless, firstMarriage: p.firstMarriage, income: p.income)),
                   ),
                 ]),
               ),
