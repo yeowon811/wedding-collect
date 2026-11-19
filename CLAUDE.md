@@ -53,7 +53,7 @@
 - 저장 방식: 정적 데이터를 JSON으로 앱에 넣고 로컬 DB에 불러옴. AI에는 조건과 후보 ID·요약만 전송. API 키 보호용 중계 서버 여부는 미정
 
 ## 개발 환경 (현재 PC, 2026-11-19 옮김)
-- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio, Chrome. `flutter test` 65개 통과 확인
+- Flutter 3.50.0 (Dart 3.14.0) at `C:\Users\User\flutter` (git 태그로 받아 `flutter doctor`에 channel 경고가 나오지만 무시해도 됨, `flutter channel`로 바꾸면 버전이 달라지니 하지 말 것), Android SDK 36 + Android Studio + NDK 28.2.13676358(APK 빌드에 필요, `sdkmanager "ndk;28.2.13676358"`), Node, Firebase CLI, Chrome. `flutter test` 78개 통과 확인 (11-19)
 - 이전 PC: `C:\Users\LG\flutter`, 에뮬레이터 `Medium_Phone_API_37.0`
 - NDK 28.2.13676358 설치함 (APK 빌드에 필요)
 - **에뮬레이터는 아직 실행 불가:** "Android Emulator hypervisor driver"가 없음 → Android Studio SDK Manager > SDK Tools에서 설치(관리자 권한) 또는 실제 폰 USB 디버깅으로 테스트. 그 전까지는 Chrome(`flutter run -d chrome`)으로 확인
@@ -148,7 +148,14 @@
   - Gemini 사용량: 무료 분당 한도 초과가 평가 중 59턴에 34번 → 한도 초과면 3초 뒤 1회 재시도(`_call`), 날짜 판단은 한 번에 묶어 1회. 호출은 질문당 이해 1 + 작성 1(날짜 질문은 +1)
   - v3 (2026-11-18): 거주 조건(`_residencyAnswer`: 이용 대상 원문 + 예식 지원 정책 거주 조건), 계절·요일(`_seasonDates`/`_venueSeasonAnswer`: 그 기간 날짜 전부 규칙 판정), 중복·동시 신청(일반 안내 + 원문 안내), 정책 이름 단어 찾기(`_policyHits`), 소득 상한·최대 금액(`policy_text.dart` 원문 정규식). 평가 52/52 (`docs/ai-eval/predicted_report.md`)
   - 주차·피로연 원문 분류 검수 표: `python -I tools/venue_features_report.py` → `docs/data-validation/venue_features.md`
-- 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변)
+- **예식장 예약 현황 달력 (2026-11-19):** 실제 예약 사이트 달력을 수집한 스냅샷 `assets/data/booking_status.json` (174곳: 공유누리 113 + 서울마이웨딩 61, 2026-11 ~ 2027-12). 형식은 예식장마다 `months: {"2026-11": "NNY…"}` 하루 한 글자(Y 가능 / A 오전 공석 / P 오후 공석 / B 오전·오후 / N 불가 / . 정보 없음) + source·sourceUrl·checkedAt·closedMeaning
+  - 수집: `python -I tools/collect_booking_status.py` (공유누리: 공개 달력 주소 `POST /UserPortal/Upv/{rsrc_no}/selectCpsResvExclShareCalendar.do`, 온라인 예약 시설만, 1초 간격, robots.txt 허용). 서울마이웨딩은 달력 API(`/wp-json/sknk/v1/calendar?facility_id=&year=&month=`)가 스크립트 요청을 403으로 막아, 앱 내 브라우저로 시설 페이지를 연 채 그 API를 읽어 `tools/raw/booking_seoul_compact.json`에 저장 → `--skip-eshare`로 다시 합침. 초록 '오전/오후' = 공석, 검은 '예약확정 ○'·회색 '예약불가' = 예약됨, 빈칸 = 그날 접수 없음. 달력 없는 4곳(H091·H128·H149·H152)
+  - 공유누리 '불가'는 예약됨·휴관·접수 기간 아님을 사이트가 구분하지 않음 → 앱에 그대로 안내. 나머지 66곳(폼·전화·기타 사이트)은 현황 비공개 → '예약 페이지에서 확인'
+  - 화면: 예식장 상세 '예약 현황' 달력 (`features/venue/widgets/booking_calendar.dart`, 내 예식일 표시·날짜 누르면 상태·공석, '○/○ 확인 · 출처 · 이후 바뀔 수 있어요', 사이트 링크). 모델 `data/models/booking_status.dart`, 저장소 `Repos.booking` (main에서 미리 읽음, `rootBundle.load`로 직접 디코딩: 테스트에서 loadString의 isolate가 멈추는 문제 피함)
+  - AI: `bookingJudge`(date_check.dart)가 현황으로 먼저 확정 → 없는 곳만 원문 규칙·Gemini 판단(Gemini 호출도 줄어듦). 날짜 질문은 '예약 달력에서 비어 있던 곳'을 먼저, 카드 배지 '○월 ○일 비어 있음', 출처에 확인 날짜. 계절 질문·예식장 한 곳 정보(앞으로 6개월 빈 주말)에도 반영. 항상 '수집한 날 기준이라 바뀔 수 있음' 안내
+- **AI 상담 탐색 평가·수정 (2026-11-19):** 예상 질문에 없는 30개(`test/eval/probe_cases.dart`, 실행 `probe_eval_main.dart`)로 틀린 답 11개를 찾아 고침 (`docs/ai-eval/probe_report.md`, 규칙 경로 테스트 `test/probe_fixes_test.dart`). 기간 질문 `ConsultAgent.periodDates`("내년 3월", "다음 달", "4월 토요일", "예약 현황"=앞으로 3개월 주말, 달만 있으면 Gemini의 1일 날짜를 쓰지 않음) → 예식장 이름 있으면 그곳의 빈 날, 없으면 지역 예식장 날짜별 확인. "그중에 …" 후속은 길어도 앞 조건 이어받기. 날짜+'며칠'은 달력으로 계산(`_daysUntilAnswer`, 결혼이면 예식일로 일정), 날짜 있으면 계산식 금지. 나이 넣은 정책 질문은 정책 판정. "A 사는데 B 지원"은 B 거주 조건(`_otherRegionAsk`). 장려금 많은 지역은 전국 현금 지원 금액 순(`_cashRegionAnswer`, 대출 제외). "제일 큰 곳"은 정원 순. 국립공원은 `_parkAnswer`. 수량 질문("몇 장")은 일반 안내, 일반 안내 숫자는 질문 속 숫자만 허용하고 실패 시 이유 안내
+  - 남은 문제: Gemini 무료 요금제에서 34턴 중 7턴 '응답 없음·연결 오류'(규칙으로 대신 답함), 답변 15~25초. 같은 질문도 Gemini 이해가 달라질 수 있음
+- 테스트: `flutter test` (탭 전체, 비교·상담·계약 흐름, 데이터 건수, 상담 의도별 답변, 예약 현황 판단, 탐색 질문 수정)
 - **디자인 확정 (2026-11-16): 시안 A "클린 미니멀"** (시안 비교: https://claude.ai/artifact/FqvJzq1vPsHqxJiCKRUZzH). 흰 바탕 + 진한 회색 글자 + 파랑 포인트(#3B5BDB) 하나, 그림자 대신 회색 면·1px 테두리, 글꼴 Pretendard(`assets/fonts`, OFL). 색은 `app_palette.dart`/`app_colors.dart`, 컴포넌트 규칙은 `app_theme.dart` 상단 주석. 시안 전환 버튼은 삭제
   - 버튼: 화면당 주 버튼(파랑) 1개, 보조는 테두리. 상세 화면의 주요 행동은 **아래 고정 `BottomActionBar`**(+ `ActionPair` 보조·주) — `lib/core/widgets/inputs.dart`
   - 입력: 나이처럼 정확한 숫자는 **슬라이더 대신 `StepperField`**(−/+·직접 입력), 하객·예산은 `PresetPicker`(자주 쓰는 값 칩 + 직접 입력), 2~3개 중 고르기는 `ChoiceRow`, 묶음 제목은 `FormSection`(아이콘 없음)

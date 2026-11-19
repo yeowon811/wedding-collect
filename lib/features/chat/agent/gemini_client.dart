@@ -432,7 +432,9 @@ class GeminiClient {
       final res = await _call(_writeModel, '$_generalPrompt\n질문: ${maskPersonalInfo(question)}', _timeout);
       final text = res.text?.trim();
       if (text == null || text.isEmpty) return null;
-      if (RegExp(r'\d{2,}').hasMatch(text)) return null;
+      // 근거 없는 숫자를 만들지 않도록: 두 자리 이상 숫자는 질문에 나온 숫자만 허용 ("하객 150명이면…")
+      final asked = RegExp(r'\d+').allMatches(question).map((m) => m[0]).toSet();
+      if (RegExp(r'\d{2,}').allMatches(text).any((m) => !asked.contains(m[0]))) return null;
       return text.replaceAll('**', '');
     } catch (e) {
       debugPrint('Gemini 일반 지식 답변 실패: $e');

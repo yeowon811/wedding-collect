@@ -1,3 +1,4 @@
+import '../../../data/models/booking_status.dart';
 import '../../../data/models/venue.dart';
 
 /// 예식장 날짜 판단 결과
@@ -47,6 +48,24 @@ String? dateTextOf(Venue v, DateTime date) {
     if (date.weekday == DateTime.sunday && v.hoursHoliday != null) '일요일·공휴일: ${v.hoursHoliday}',
   ];
   return parts.isEmpty ? null : parts.join(' / ');
+}
+
+/// 수집한 예약 현황(공유누리·서울마이웨딩 달력)으로 그날을 판단. 현황이 없거나 수집 범위 밖이면 null → 원문 판단으로
+/// - 가능: 수집 시점에 그 날짜가 비어 있었음 (서울마이웨딩은 공석 이름 함께)
+/// - 불가: 이미 예약됨(공유누리는 휴관·접수 기간 아님 포함)
+/// - 서울마이웨딩 달력에서 빈칸인 날: 그날 예식 접수 없음 → 불가
+DateJudgement? bookingJudge(BookingStatus? b, DateTime date) {
+  if (b == null || !b.covers(date)) return null;
+  final when = '${b.checkedAt.month}/${b.checkedAt.day} ${b.source} 달력';
+  switch (b.on(date)) {
+    case DayBooking.open:
+      final slots = b.slotsOn(date);
+      return DateJudgement(DateFit.possible, '$when: 비어 있음${slots.isEmpty ? '' : ' (${slots.join('·')})'}');
+    case DayBooking.closed:
+      return DateJudgement(DateFit.impossible, '$when: 예약 불가');
+    case DayBooking.unknown:
+      return b.source == '서울마이웨딩' ? DateJudgement(DateFit.impossible, '$when: 그날 예식 접수 없음') : null;
+  }
 }
 
 /// Gemini가 없을 때의 단순 규칙 판단 (예식 가능일 원문의 월 범위·요일·불가 날짜만 본다)

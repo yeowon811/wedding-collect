@@ -19,6 +19,7 @@ import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
 Future<void> _preload(WidgetTester tester) => tester.runAsync(() async {
       await Repos.venue.loadAll();
       await Repos.policy.loadAll();
+      await Repos.booking.loadAll();
       await Repos.vendor.realVendors();
       await Repos.vendor.demoVendors();
       await Repos.vendor.nearbyFor('H001');

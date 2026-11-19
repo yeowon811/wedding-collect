@@ -28,11 +28,12 @@ void main() {
       final second = await agent.reply('12/20일날 예약 가능한 예식장은 뭐야?');
       expect(second.text, isNot(first.text));
       expect(second.text, contains('12월 20일'));
-      expect(second.text, contains('예약이 잡혔는지는 앱에서 알 수 없어요'));
+      // 예약 달력을 수집한 곳이 있으면 '수집한 날 기준', 없으면 '앱에서 알 수 없어요'
+      expect(second.text, anyOf(contains('수집한 날 기준'), contains('예약이 잡혔는지는 앱에서 알 수 없어요')));
       expect(second.text, contains('예식 가능일 정보가 앱에 없는 곳'));
       expect(second.trace.any((t) => t.startsWith('날짜 조건')), isTrue);
       for (final c in second.cards) {
-        expect(c.badge, anyOf('12월 20일(일) 가능일', '기관 확인 필요', '날짜 정보 없음'));
+        expect(c.badge, anyOf('12월 20일(일) 비어 있음', '12월 20일(일) 가능일', '기관 확인 필요', '날짜 정보 없음'));
       }
     });
   });

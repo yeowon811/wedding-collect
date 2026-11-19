@@ -15,6 +15,7 @@ import '../policy/policy_matcher.dart';
 import '../vendor/real_vendor_detail_screen.dart';
 import '../vendor/widgets/vendor_cards.dart';
 import '../../data/app_state.dart';
+import 'widgets/booking_calendar.dart';
 import 'widgets/venue_image.dart';
 
 /// 이 예식장 지역에서 받을 수 있는 예식 관련 정책 (공공예식장 ↔ 정책 연결)
@@ -212,6 +213,7 @@ class VenueDetailScreen extends StatelessWidget {
               _detailBox(v.feeText!),
             _row(Icons.info_outline, '운영 상태', v.statusText),
           ]),
+          BookingCalendarSection(venueId: v.id, onOpenSource: (url) => _open(context, Uri.parse(url))),
           _usageSection(v),
           _weddingSection(v),
           _PartnerVendors(venue: v),

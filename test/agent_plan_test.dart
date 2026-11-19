@@ -36,10 +36,11 @@ void main() {
     expect(m.text, contains('주차'));
   });
 
-  test('D04 특정 예식장: 그곳 정보 + 남은 자리는 모른다고', () async {
+  test('D04 특정 예식장: 그곳 정보 + 예약 현황(있으면 수집 날짜와 함께, 없으면 모른다고)', () async {
     final m = await ConsultAgent().reply('북서울꿈의숲 내년 예약 아직 남아 있어?');
     expect(m.cards.single.title, startsWith('북서울 꿈의숲'));
-    expect(m.text, contains('남은 자리는 앱 데이터에 없어요'));
+    expect(m.text, anyOf(contains('예약 현황('), contains('예약 현황이 공개되지 않아')));
+    expect(m.text, contains('확인해 주세요'));
   });
 
   test('C01 총비용: 업체_요소 단가로 공공·일반 비교', () async {

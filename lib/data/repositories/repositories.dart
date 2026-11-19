@@ -1,3 +1,4 @@
+import 'booking_repository.dart';
 import 'policy_repository.dart';
 import 'vendor_repository.dart';
 import 'venue_repository.dart';
@@ -9,4 +10,5 @@ class Repos {
   static final venue = VenueRepository();
   static final policy = PolicyRepository();
   static final vendor = VendorRepository();
+  static final booking = BookingRepository();
 }
