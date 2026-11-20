@@ -382,7 +382,8 @@ void main() {
       expect(m.isQuestion, isFalse);
       expect(m.basis, contains('하객 150명'));
 
-      // 되묻는 중에 다른 질문을 하면 새 질문으로 처리
+      // 되묻는 중에 다른 질문을 하면 새 질문으로 처리 (앞 대화가 저장한 내 정보는 비우고 시작)
+      AppState.instance.resetProfile();
       final other = ConsultAgent();
       await other.reply('공공예식장 추천해줘');
       expect(other.asking, Slot.sido);

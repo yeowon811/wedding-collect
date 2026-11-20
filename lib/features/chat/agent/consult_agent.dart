@@ -136,7 +136,8 @@ class ConsultAgent implements ChatAgent {
   AppState get _app => AppState.instance;
 
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
-  late UserProfile _known = _app.profileDone ? _app.profile : const UserProfile();
+  // 저장된 내 정보가 항상 출발점 (처음 입력 폼을 건너뛰었어도 체크리스트·공유 링크·지난 대화로 들어온 값은 쓴다, 2026-11-21)
+  late UserProfile _known = _app.profile;
   late UserProfile _seenApp = _app.profile; // 마지막으로 본 앱의 내 정보
 
   // ───── 새 답 화면 (블록, 2026-11-20) ─────
@@ -358,8 +359,10 @@ class ConsultAgent implements ChatAgent {
 
   @override
   Future<ChatMessage> start() async {
-    _known = _app.profileDone ? _app.profile : _known;
-    if (!_app.profileDone) {
+    _known = _app.profile;
+    _seenApp = _app.profile;
+    // 아는 정보가 하나도 없을 때만 일반 인사, 하나라도 있으면 그 정보에 맞춘 질문 추천
+    if (_known.summary.isEmpty) {
       return ChatMessage(
         fromUser: false,
         text: '안녕하세요! 결혼 준비를 도와드릴게요.\n'
