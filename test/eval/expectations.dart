@@ -25,6 +25,8 @@ class Exp {
     this.noChip,
     this.filter,
     this.noFilter,
+    this.form,
+    this.profileHas,
   });
 
   final List<String>? towns; // 예식장 카드가 모두 이 구 안
@@ -47,6 +49,8 @@ class Exp {
   final String? noChip; // 없어야 할 칩 (정규식)
   final String? filter; // 있어야 할 조건 칩 (정규식)
   final String? noFilter; // 없어야 할 조건 칩 (정규식, 예: 총예산이 '3000만원 이하' 칩이 되면 안 됨)
+  final bool? form; // 채팅 안 미니 폼이어야 함 (true) / 아니어야 함 (false)
+  final String? profileHas; // 이 턴 뒤 내 정보 요약(위쪽 조건 칩)에 있어야 할 것 (정규식)
 }
 
 /// 대화 하나: 턴마다 질문(또는 '#칩 이름') + 기대값
@@ -170,6 +174,11 @@ const extraCases = <EvalCase>[
       [Exp(sidos: ['서울'], minCards: 1, noFilter: '이하', text: '식대·꽃장식')]),
   EvalCase('R2', '대관료 상한', ['대관료 50만원 이하 서울 예식장'],
       [Exp(sidos: ['서울'], maxFee: 500000, filter: '50만원 이하', minCards: 1)]),
+  // Red Team Phase 3 (2026-11-20): 내 정보 없이 정책 질문 → 미니 폼 한 장 → 제출하면 내 정보에 저장하고 바로 답 (Q로 시작하면 내 정보 없이 시작)
+  EvalCase('Q1', '미니 폼', ['받을 수 있는 정책 알려줘', '!form sido=서울;age=29;stage=engaged;homeless=true'], [
+    Exp(ask: true, form: true),
+    Exp(ask: false, form: false, kind: 'policyList', minCards: 1, profileHas: r'서울.*29'),
+  ]),
 ];
 
 List<EvalCase> fromPredicted(List<PredictedCase> cases, Map<String, List<Exp?>> exps) => [

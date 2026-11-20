@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/main_shell.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/info_badge.dart';
 import '../../../core/widgets/trait_chips.dart';
+import '../../../data/app_state.dart';
 import '../chat_card_link.dart';
 import 'answer_blocks.dart';
 
@@ -285,6 +287,8 @@ class AnswerCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = card;
     final canOpen = c.ref.contains(':') && !c.ref.startsWith('card:');
+    // 예식장·업체 카드는 화면을 떠나지 않고 체크리스트에 담기 (Red Team P2-3)
+    final addable = const ['venue:', 'vendor:', 'real:'].any(c.ref.startsWith);
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
@@ -308,12 +312,17 @@ class AnswerCardView extends StatelessWidget {
               if (c.badge != null) ...[const SizedBox(width: 8), ToneBadge(c.badge!)],
               if (canOpen) Icon(Icons.chevron_right, size: 18, color: AppColors.textHint),
             ]),
-            if (c.values.isNotEmpty) ...[
+            if (c.values.isNotEmpty || addable) ...[
               const SizedBox(height: 3),
-              Text(c.values.join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              Row(children: [
+                Expanded(
+                  child: Text(c.values.join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                ),
+                if (addable) AddToChecklistButton(ref: c.ref),
+              ]),
             ],
             if (c.reason != null) ...[
               const SizedBox(height: 4),
@@ -331,6 +340,49 @@ class AnswerCardView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 카드의 [+ 담기] / [담김] (Red Team P2-3): 상세 화면의 [체크리스트에 추가]와 같은 동작(`AppState.toggleChecklist`),
+/// 채팅에 그대로 머물고 '체크리스트에 추가했어요 [보러가기]'. 다시 누르면 뺀다
+class AddToChecklistButton extends StatelessWidget {
+  const AddToChecklistButton({super.key, required this.ref});
+
+  final String ref;
+
+  /// [보러가기]: 체크리스트 탭 (테스트에서 바꿀 수 있게)
+  static void Function() openChecklist = () => MainShell.goTo(3);
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: AppState.instance,
+        builder: (context, _) {
+          final app = AppState.instance;
+          final added = app.inChecklist(ref);
+          return TextButton.icon(
+            onPressed: () {
+              app.toggleChecklist(ref);
+              final now = app.inChecklist(ref);
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(
+                  content: Text(now ? '체크리스트에 추가했어요' : '체크리스트에서 뺐어요'),
+                  action: now ? SnackBarAction(label: '보러가기', onPressed: openChecklist) : null,
+                  duration: const Duration(seconds: 3),
+                ));
+            },
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 30),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              foregroundColor: added ? AppColors.success : AppColors.primary,
+              textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+            ),
+            icon: Icon(added ? Icons.check_rounded : Icons.add_rounded, size: 16),
+            label: Text(added ? '담김' : '담기'),
+          );
+        },
+      );
 }
 
 class _TableView extends StatelessWidget {

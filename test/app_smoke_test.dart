@@ -13,6 +13,7 @@ import 'package:wedding_collect/data/models/policy.dart';
 import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
 import 'package:wedding_collect/features/chat/agent/understanding.dart';
+import 'package:wedding_collect/features/chat/chat_agent.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_card.dart';
 import 'package:wedding_collect/features/intro/lookbook_ad.dart';
 
@@ -337,36 +338,36 @@ void main() {
     expect(nlu.parse('결혼 2년차예요').facts.stage, MarriageStage.married);
   });
 
-  testWidgets('내 정보가 없으면 필요한 정보를 하나씩 되묻고 이어서 답한다', (tester) async {
+  testWidgets('내 정보가 없으면 필요한 정보를 묻고(정책 조건 여러 개는 미니 폼) 이어서 답한다', (tester) async {
     await _preload(tester);
     AppState.instance.resetProfile();
     final agent = ConsultAgent();
 
     await tester.runAsync(() async {
-      // 지역·결혼 단계를 모르므로 먼저 지역을 묻는다 (나이는 "20대"로 앎)
+      // 지역·결혼 단계·주택을 모르므로 하나씩 묻지 않고 미니 폼 한 장 (나이는 "20대"로 앎, Red Team P2-2)
       var m = await agent.reply('20대 청년이 신혼생활에 받을 수 있는 정책이 뭐가있어?');
       expect(m.isQuestion, isTrue);
       expect(agent.asking, Slot.sido);
-      expect(m.text, contains('어느 지역'));
-      expect(m.quickReplies.map((r) => r.label), contains('서울'));
+      expect(m.form, containsAll(['region', 'stage', 'homeless']));
+      expect(m.form, isNot(contains('age')));
       expect(m.basis, contains('만 20~29세'));
 
-      // 버튼으로 답 → 이어서 시·군·구를 묻는다 (서울 → 강남구 …)
-      m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '서울'));
-      expect(agent.asking, Slot.sigungu);
-      expect(m.text, contains('서울의 어느 시·군·구'));
-      expect(m.quickReplies.map((r) => r.label), containsAll(['강남구', '송파구', '잘 모르겠어요']));
-      m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '강남구'));
-      expect(agent.asking, Slot.stage);
+      // 폼이 떠 있어도 글로 답해도 된다 → 지역을 알면 시·군·구는 다음 폼에서 함께
+      m = await agent.reply('서울');
+      expect(m.form, containsAll(['region', 'stage', 'homeless']));
 
-      // 글로 답해도 된다
-      m = await agent.reply('네 혼인신고 했어요');
+      // 폼 제출: 강남구 · 신혼부부 (주택은 비움 = 잘 모름) → 혼인 연차 하나만 남아 예전처럼 하나 묻기
+      m = await agent.choose(QuickReply('서울 강남구 · 신혼부부', action: 'form', value: {
+        'sido': '서울',
+        'sigungu': '강남구',
+        'stage': 'married',
+        'slots': m.form,
+      }));
       expect(agent.asking, Slot.marriedYears);
+      expect(m.form, isEmpty);
       m = await agent.choose(m.quickReplies.firstWhere((r) => r.label == '1년 이내'));
-      expect(agent.asking, Slot.homeless);
 
-      // 모르면 건너뛰기 → 답변
-      m = await agent.reply('잘 모르겠어요');
+      // 주택은 폼에서 비워 건너뜀 → 답변
       expect(m.isQuestion, isFalse);
       expect(agent.asking, isNull);
       expect(m.basis, contains('서울'));

@@ -13,7 +13,8 @@
 
 ## 진행 상황
 - Phase 1 (P0): 2026-11-20 구현 (조건 칩 줄 `ProfileChipsBar`·`AppState.clearProfileField`, 헤더 정리, 입력 폼 `onDraft` 자동 저장, 가운데 760px, 펼침 자동 스크롤, 키보드 시 하단 탭 숨김, 한글 조합 중 엔터 보류. 테스트 `test/redteam_phase1_test.dart`). 채팅 스크롤·상태 유지는 MainShell이 IndexedStack이라 이미 유지됨
-- Phase 2 (P1): 2026-11-20 구현, 커밋 전 (총예산≠대관료 `ToolPlanner.feeGuard` · 예상 총 예식비 `VenueCostEstimate`(참고 단가표 추정, 제목 아래 한 번 + 카드 '무료 · 식대 별도') · '어떻게 찾았나요' 사용자 말 3단 `FoldSummary`(내부 기록은 화면에서 숨김) · 속성 배지 `VenueFeatures.traits`/`TraitChips` · 사진 자리표시 `PhotoPlaceholder` 통일. 테스트 `test/redteam_phase2_test.dart`, Gemini 확인 `docs/ai-eval/phase2_2026-11-20.md`)
+- Phase 2 (P1): 2026-11-20 구현·배포 (커밋 5133f21) (총예산≠대관료 `ToolPlanner.feeGuard` · 예상 총 예식비 `VenueCostEstimate`(참고 단가표 추정, 제목 아래 한 번 + 카드 '무료 · 식대 별도') · '어떻게 찾았나요' 사용자 말 3단 `FoldSummary`(내부 기록은 화면에서 숨김) · 속성 배지 `VenueFeatures.traits`/`TraitChips` · 사진 자리표시 `PhotoPlaceholder` 통일. 테스트 `test/redteam_phase2_test.dart`, Gemini 확인 `docs/ai-eval/phase2_2026-11-20.md`)
+- Phase 3 (P2): 2026-11-20 구현, 커밋 전 (파트너에게 공유 `ShareSummary`·헤더 [공유]·마지막 답 [공유], 공유 링크 `?tab=4&sido=&sigungu=&guests=&budget=&date=` → `DemoLinks.applyShared`(내 정보가 있으면 '공유받은 조건으로 바꿀까요?' 띠) · 정책 조건 2개 이상이면 채팅 안 미니 폼 `MiniFormCard`(action `form`) · 예식장·업체 카드 [+ 담기]/[담김] `AddToChecklistButton`. 카드별 복사 버튼은 답 전체 복사가 있어 넣지 않음. 테스트 `test/redteam_phase3_test.dart`, Gemini 확인 `docs/ai-eval/phase3_2026-11-20.md`)
 
 ## 작업 순서
 Phase 1(P0) → Phase 2(P1) → Phase 3(P2). 단계마다 `flutter analyze`·`flutter test`·웹 화면 확인.

@@ -31,7 +31,8 @@ UserProfile profileFor(String set) => set == 'design' || set == 'extra'
 
 /// 한 대화를 실행하고 턴마다 결과(JSON)를 돌려준다
 Future<List<Map<String, Object?>>> runCase(String set, EvalCase c, {GeminiClient? llm, int run = 1}) async {
-  AppState.instance.saveProfile(profileFor(set));
+  // 'Q'로 시작하는 대화는 내 정보 없이 시작 (미니 폼 확인)
+  AppState.instance.saveProfile(c.id.startsWith('Q') ? const UserProfile() : profileFor(set));
   final agent = ConsultAgent(llm: llm);
   final out = <Map<String, Object?>>[];
   ChatMessage? m;
@@ -45,6 +46,20 @@ Future<List<Map<String, Object?>>> runCase(String set, EvalCase c, {GeminiClient
     final sw = Stopwatch()..start();
     if (q == '!start') {
       m = await agent.start();
+    } else if (q.startsWith('!form ')) {
+      // 미니 폼 제출: '!form sido=서울;age=29;stage=engaged;homeless=true' (화면의 [조건 적용하고 결과 보기]와 같은 값)
+      final kv = {
+        for (final p in q.substring(6).split(';'))
+          if (p.contains('=')) p.split('=')[0].trim(): p.split('=')[1].trim(),
+      };
+      m = await agent.choose(QuickReply(kv.values.join(' · '), action: 'form', value: <String, Object?>{
+        if (kv['sido'] != null) 'sido': kv['sido'],
+        if (kv['sigungu'] != null) 'sigungu': kv['sigungu'],
+        if (kv['age'] != null) 'age': int.parse(kv['age']!),
+        if (kv['stage'] != null) 'stage': kv['stage'],
+        if (kv['homeless'] != null) 'homeless': kv['homeless'] == 'true',
+        'slots': m?.form ?? const <String>[],
+      }));
     } else if (q.startsWith('~=')) {
       // 조건 칩으로 값 바꾸기: '~=sigungu:강남구' (여러 개는 |로)
       final kv = q.substring(2).split(':');
@@ -150,6 +165,10 @@ Future<Map<String, Object?>> gradeTurn(String set, EvalCase c, int i, String q, 
     if (e.noChip != null && chips.any((x) => RegExp(e.noChip!).hasMatch(x))) fails.add('칩 /${e.noChip}/ 있음');
     final filterLabels = [for (final b in blocks.where((b) => b.type == BlockType.filters)) for (final x in b.filters) x.label];
     if (e.filter != null && !filterLabels.any((x) => RegExp(e.filter!).hasMatch(x))) fails.add('조건 칩 /${e.filter}/ 없음');
+    if (e.form != null && m.form.isNotEmpty != e.form) fails.add(e.form! ? '미니 폼이어야 함' : '미니 폼이 아니어야 함');
+    if (e.profileHas != null && !RegExp(e.profileHas!).hasMatch(AppState.instance.profile.summary)) {
+      fails.add('내 정보에 /${e.profileHas}/ 없음: ${AppState.instance.profile.summary}');
+    }
     if (e.noFilter != null && filterLabels.any((x) => RegExp(e.noFilter!).hasMatch(x))) {
       fails.add('조건 칩 /${e.noFilter}/ 있음: ${filterLabels.join(', ')}');
     }
@@ -191,6 +210,8 @@ Future<Map<String, Object?>> gradeTurn(String set, EvalCase c, int i, String q, 
         {'verify': [for (final x in b.badges) x.text], 'steps': b.items, 'met': b.met, 'pending': b.pending},
     ],
     'filters': [for (final b in blocks.where((b) => b.type == BlockType.filters)) for (final x in b.filters) x.label],
+    'form': m.form,
+    'profile': AppState.instance.profile.summary,
     'plan': GeminiClient.instance?.lastPlanRaw,
     'trace': m.trace,
     'checks': [for (final x in issues) '$x'],

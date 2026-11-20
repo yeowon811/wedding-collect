@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app/demo_links.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
@@ -14,7 +16,9 @@ import 'answer/answer_view.dart';
 import '../../core/widgets/inputs.dart';
 import 'chat_agent.dart';
 import 'chat_card_link.dart';
+import 'mini_form_card.dart';
 import 'profile_setup_view.dart';
+import 'share_summary.dart';
 
 /// AI 상담: 내 정보 입력 → 첫 추천 → 질문 → (필요하면 되묻기) → 답변
 class ChatScreen extends StatefulWidget {
@@ -101,6 +105,25 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     _app.clearChat();
     if (!_needsProfile) _begin();
+  }
+
+  /// 파트너에게 공유 (Red Team P2-1): 내 조건 + 추천 TOP 3 + 예상 비용 줄 + 같은 조건 링크를 카톡용 글로 복사
+  Future<void> _share() async {
+    final origin = kIsWeb ? Uri.base.origin : 'https://wedding-collect.web.app';
+    final text = ShareSummary.build(_app.profile, _messages, origin: origin);
+    var ok = true;
+    try {
+      await Clipboard.setData(ClipboardData(text: text)).timeout(const Duration(seconds: 3));
+    } catch (_) {
+      ok = false;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(ok ? '카카오톡 공유용 상담 요약이 복사되었어요' : '이 브라우저에서는 복사가 막혀 있어요. 답변을 길게 눌러 선택해 복사해 주세요'),
+        duration: Duration(seconds: ok ? 2 : 4),
+      ));
   }
 
   /// 키보드 엔터: 한글 조합 중(마지막 글자가 아직 확정 전)이면 보내지 않는다 (중복 전송·글자 잘림 방지)
@@ -208,6 +231,13 @@ class _ChatScreenState extends State<ChatScreen> {
             title: const Text('AI 상담'),
             // 헤더 오른쪽: 새 상담 · 내 계정 (내 정보는 아래 조건 줄의 [수정]으로, 2026-11-20 Red Team P0)
             actions: [
+              // 파트너에게 공유 (Red Team P2-1): 새 상담 왼쪽
+              if (!setup && !resume)
+                IconButton(
+                  tooltip: '파트너에게 공유',
+                  icon: const Icon(Icons.ios_share_rounded),
+                  onPressed: _share,
+                ),
               if (!setup && !resume)
                 IconButton(
                   tooltip: '새 상담 시작',
@@ -323,6 +353,20 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _chatColumn() {
     return Column(
       children: [
+        // 공유받은 조건이 내 정보와 다를 때: 덮어쓰지 않고 먼저 묻는다 (Red Team P2-1)
+        ValueListenableBuilder<UserProfile?>(
+          valueListenable: DemoLinks.pendingShare,
+          builder: (context, shared, _) => shared == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SharedConditionsBanner(
+                    summary: ShareSummary.conditions(shared),
+                    onApply: DemoLinks.acceptShared,
+                    onKeep: DemoLinks.keepMine,
+                  ),
+                ),
+        ),
         // 지금 상담 기준이 되는 내 정보: 대화에서 반영한 값도 바로 보이는 조건 칩 (✕로 하나씩 지움)
         Container(
           color: AppColors.background,
@@ -348,9 +392,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   _Bubble(
                     message: m,
                     interactive: isLast && !_busy,
+                    onShare: isLast && !m.fromUser && !m.isQuestion && !_busy ? _share : null,
                     onRefine: (set, remove, label) => _choose(QuickReply(label,
                         action: 'refine', value: <String, Object?>{'set': set, 'remove': remove})),
                   ),
+                  // 정책 조건 여러 개는 카드 한 장으로 (Red Team P2-2)
+                  if (isLast && !m.fromUser && m.form.isNotEmpty && !_busy)
+                    MiniFormCard(slots: m.form, initial: _app.profile, onSubmit: _choose),
                   if (isLast && !m.fromUser && m.quickReplies.isNotEmpty && !_busy)
                     Padding(
                       padding: const EdgeInsets.only(top: 6, bottom: 8),
@@ -438,10 +486,11 @@ String _plainOld(ChatMessage m) => [
     ].where((l) => l.trim().isNotEmpty).join('\n');
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, this.interactive = false, this.onRefine});
+  const _Bubble({required this.message, this.interactive = false, this.onRefine, this.onShare});
 
   final ChatMessage message;
   final bool interactive;
+  final VoidCallback? onShare; // 마지막 답에만: 파트너에게 공유
   final void Function(Map<String, Object?> set, List<String> remove, String label)? onRefine;
 
   @override
@@ -491,7 +540,21 @@ class _Bubble extends StatelessWidget {
                 blocks: m.blocks,
                 interactive: interactive,
                 onRefine: onRefine,
-                footer: CopyAnswerButton(text: m.blocks.copyText),
+                footer: onShare == null
+                    ? CopyAnswerButton(text: m.blocks.copyText)
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        TextButton.icon(
+                          onPressed: onShare,
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: AppColors.textSecondary,
+                            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                          icon: const Icon(Icons.ios_share_rounded, size: 16),
+                          label: const Text('공유'),
+                        ),
+                        CopyAnswerButton(text: m.blocks.copyText),
+                      ]),
               )
             : Column(
           crossAxisAlignment: CrossAxisAlignment.start,

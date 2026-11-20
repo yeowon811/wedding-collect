@@ -46,6 +46,7 @@ class ChatMessage {
     this.aiWritten = false,
     this.trace = const [],
     this.blocks = const [],
+    this.form = const [],
   });
 
   final bool fromUser;
@@ -58,6 +59,7 @@ class ChatMessage {
   final bool aiWritten; // 생성형 AI(Gemini)가 앱 데이터로 문장을 쓴 답변인지
   final List<String> trace; // "왜 이렇게 답했나요?": 질문 이해 → 사용한 정보 → 데이터 조회 → 답변 작성
   final List<AnswerBlock> blocks; // 새 답 화면 (블록). 비어 있으면 예전처럼 글 + 카드로 보여 준다
+  final List<String> form; // 채팅 안 미니 폼의 칸 (region·age·stage·homeless). 비어 있지 않으면 되묻기 대신 폼 카드 (저장 안 함)
 
   ChatMessage copyWith(
           {String? text, bool? aiWritten, List<String>? trace, List<QuickReply>? quickReplies, List<AnswerBlock>? blocks}) =>
@@ -72,6 +74,7 @@ class ChatMessage {
         aiWritten: aiWritten ?? this.aiWritten,
         trace: trace ?? this.trace,
         blocks: blocks ?? this.blocks,
+        form: form,
       );
 }
 

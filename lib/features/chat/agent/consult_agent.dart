@@ -749,6 +749,8 @@ class ConsultAgent implements ChatAgent {
         return ChatMessage(fromUser: false, text: '체크리스트 탭을 열었어요. 준비 항목을 눌러 금액을 적어 주세요.');
       case 'skip_ask':
         return _skipCurrent();
+      case 'form':
+        return _applyForm(r);
       case 'more':
         return _moreAnswer();
       case 'refine':
@@ -836,6 +838,8 @@ class ConsultAgent implements ChatAgent {
     if (missing.isNotEmpty) {
       _pending = u;
       _asking = missing.first;
+      final form = _formSlots(u, missing);
+      if (form.isNotEmpty) return _askForm(form, u);
       return _ask(missing.first, u, remaining: missing.length);
     }
     final skipped = [for (final s in _skipped) _slotLabel[s]!];
@@ -865,6 +869,8 @@ class ConsultAgent implements ChatAgent {
     if (missing.isNotEmpty) {
       _pending = u;
       _asking = missing.first;
+      final form = _formSlots(u, missing);
+      if (form.isNotEmpty) return _askForm(form, u);
       return _ask(missing.first, u, remaining: missing.length);
     }
     // 되묻고 나서 지역이 생겼으면 날짜·기간 답으로
@@ -1107,6 +1113,70 @@ class ConsultAgent implements ChatAgent {
       basis: known.isEmpty ? null : '지금까지 알려주신 정보: $known',
       quickReplies: [...options, ?input, const QuickReply('잘 모르겠어요', action: 'skip_ask')],
     );
+  }
+
+  // ───────────────────────── 채팅 안 미니 폼 (Red Team P2-2) ─────────────────────────
+
+  static const _formSlotOf = {'region': Slot.sido, 'age': Slot.age, 'stage': Slot.stage, 'homeless': Slot.homeless};
+
+  /// 정책 질문에 빠진 조건(사는 곳·나이·결혼 단계·주택)이 2개 이상이면 한 장의 폼으로 묻는다. 하나뿐이면 예전처럼 하나씩 (빈 목록)
+  List<String> _formSlots(Understanding u, List<Slot> missing) {
+    if (u.intent != ConsultIntent.policy) return const [];
+    final core = missing.where((s) => _formSlotOf.containsValue(s)).length;
+    if (core < 2) return const [];
+    return [
+      if (missing.contains(Slot.sido) || missing.contains(Slot.sigungu)) 'region', // 시도를 알아도 시·군·구는 폼에서 함께
+      if (missing.contains(Slot.age)) 'age',
+      if (missing.contains(Slot.stage)) 'stage',
+      // 주택은 주거 정책이 아니어도 판정에 쓰이므로 모르면 함께 묻는다 (선택)
+      if (missing.contains(Slot.homeless) || _known.homeless == null) 'homeless',
+    ];
+  }
+
+  ChatMessage _askForm(List<String> slots, Understanding u) {
+    final what = [
+      if (slots.contains('region')) '사는 곳',
+      if (slots.contains('age')) '나이',
+      if (slots.contains('stage')) '결혼 단계',
+      if (slots.contains('homeless')) '주택',
+    ].join('·');
+    _hint = const AnswerHint(kind: AnswerKind.ask, headline: '조건을 한 번에 골라 주세요');
+    final known = _known.summary;
+    return ChatMessage(
+      fromUser: false,
+      isQuestion: true,
+      text: '${_purpose(u)} $what에 따라 달라져요. 아래 카드에서 한 번에 골라 주시면 바로 찾아 드릴게요.',
+      basis: known.isEmpty ? null : '지금까지 알려주신 정보: $known',
+      form: slots,
+    );
+  }
+
+  /// 미니 폼 제출: 고른 값은 자기 정보로 저장(위쪽 조건 칩), 비운 칸은 '잘 모름'으로 건너뛰고 기다리던 질문에 답한다
+  Future<ChatMessage> _applyForm(QuickReply r) async {
+    final pending = _pending;
+    if (pending == null) return _help();
+    final v = (r.value as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+    final date = v['weddingDate'] is String ? DateTime.tryParse(v['weddingDate'] as String) : null;
+    final f = UserProfile(
+      sido: kSidoList.contains(v['sido']) ? v['sido'] as String : null,
+      sigungu: v['sigungu'] is String ? v['sigungu'] as String : null,
+      age: v['age'] is int ? v['age'] as int : null,
+      stage: v['stage'] is String ? MarriageStage.values.byName(v['stage'] as String) : null,
+      weddingDate: date,
+      homeless: v['homeless'] is bool ? v['homeless'] as bool : null,
+    );
+    _known = _known.merge(f);
+    _noteSelf(f, region: true);
+    // 폼에서 비운 칸은 다시 묻지 않는다 (시·군·구도 폼에서 함께 골랐으므로 따로 묻지 않음)
+    final slots = [for (final s in (v['slots'] as List?) ?? const []) if (s is String) s];
+    for (final s in slots) {
+      final slot = _formSlotOf[s];
+      if (slot != null && !_isFilled(slot, pending)) _skipped.add(slot);
+    }
+    _skipped.add(Slot.sigungu);
+    _sidoJustAsked = false;
+    _asking = null;
+    return _process(pending, plan: _plan);
   }
 
   String _purpose(Understanding u) => switch (u.intent) {
