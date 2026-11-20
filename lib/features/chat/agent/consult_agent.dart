@@ -1211,11 +1211,9 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _policyAnswer(Understanding u) async {
     var matches = await ConsultTools.matchPolicies(_known, topic: u.topic);
-    var topicNote = u.topic != null ? '${u.topic!.label} ' : '';
-    if (matches.isEmpty && u.topic != null) {
-      matches = await ConsultTools.matchPolicies(_known);
-      topicNote = '';
-    }
+    final topicNote = u.topic != null ? '${u.topic!.label} ' : '';
+    // 그 분야가 0건이면 조용히 전체 정책으로 바꾸지 않고 '없다'고 말한다 (같은 답 반복처럼 보이던 문제, 2026-11-20)
+    if (matches.isEmpty && u.topic != null) return _emptyTopicAnswer(u.topic!);
     // 질문에 소득이 있으면 원문의 소득 상한과 비교, "제일 많이 주는"이면 원문의 최대 금액 순
     final income = incomeFromQuestion(_question);
     final byAmount = _forceByAmount || RegExp(r'제일\s*많이|가장\s*많이|많이\s*주|금액.{0,4}(큰|많)|최대\s*얼마').hasMatch(_question);
@@ -1337,9 +1335,75 @@ class ConsultAgent implements ChatAgent {
       sources: const ['청년 결혼 지원 정책 177건 (복지로·온통청년·지자체 공고)'],
       quickReplies: _withSave([
         ...more,
-        if (u.topic != PolicyCategory.cash) const QuickReply('결혼 장려금도 보기', text: '결혼 장려금 정책 알려줘'),
-        if (u.topic != PolicyCategory.housing) const QuickReply('주거 지원도 보기', text: '신혼집 주거 지원 정책 알려줘'),
+        // 다른 분야 칩은 내 조건으로 실제 결과가 있을 때만, 건수와 함께 (결과가 0건인 칩을 누르면 같은 답만 나오므로)
+        ...await _topicChips(exclude: u.topic),
         const QuickReply('공공예식장 추천', text: '공공예식장 추천해줘'),
+      ]),
+    );
+  }
+
+  /// 정책 분야 칩에서 보내는 질문 (질문 이해가 그 분야로 읽는 말)
+  static const _topicQuestion = {
+    PolicyCategory.cash: '결혼 장려금 정책 알려줘',
+    PolicyCategory.housing: '신혼집 주거 지원 정책 알려줘',
+    PolicyCategory.wedding: '결혼식 지원 정책 알려줘',
+    PolicyCategory.health: '건강검진 지원 정책 알려줘',
+  };
+
+  static const _topicChipLabel = {
+    PolicyCategory.cash: '장려금',
+    PolicyCategory.housing: '주거 지원',
+    PolicyCategory.wedding: '예식 지원',
+    PolicyCategory.health: '건강검진',
+  };
+
+  /// 내 조건으로 결과가 있는 다른 분야만 칩으로 (최대 2개, '주거 지원 3건')
+  Future<List<QuickReply>> _topicChips({PolicyCategory? exclude}) async {
+    final out = <QuickReply>[];
+    for (final t in _topicQuestion.keys) {
+      if (t == exclude || out.length >= 2) continue;
+      final n = (await ConsultTools.matchPolicies(_known, topic: t)).length;
+      if (n > 0) out.add(QuickReply('${_topicChipLabel[t]} $n건', text: _topicQuestion[t]));
+    }
+    return out;
+  }
+
+  /// 물어본 분야의 정책이 내 조건으로 0건일 때: 없다고 말하고, 이유(지역에 없음 / 조건이 안 맞음)와 다른 길을 안내
+  Future<ChatMessage> _emptyTopicAnswer(PolicyCategory topic) async {
+    final all = await Repos.policy.loadAll();
+    final region = _known.regionLabel ?? '전국';
+    final sido = _known.sido;
+    // 내 지역(시·도) + 전국 사업 중 그 분야가 있는지 → 있으면 '조건이 안 맞음', 없으면 '지역에 없음'
+    final inRegion = all
+        .where((p) => p.category == topic && (p.sido == '전국' || (sido != null && sidoMatches(p.sido, sido))))
+        .length;
+    final bySido = <String, int>{};
+    for (final p in all.where((p) => p.category == topic && p.sido != '전국')) {
+      bySido[p.sido] = (bySido[p.sido] ?? 0) + 1;
+    }
+    final top = (bySido.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).take(3);
+    final where = top.map((e) => '${e.key} ${e.value}건').join('·');
+    final others = await ConsultTools.matchPolicies(_known);
+    final headline = inRegion == 0 ? '$region에는 ${topic.label} 정책이 없어요' : '조건에 맞는 ${topic.label} 정책이 없어요';
+    final sentence = inRegion == 0
+        ? '${topic.label}은 지자체마다 달라요${where.isEmpty ? '' : ' (많은 곳: $where)'}.'
+        : '$region ${topic.label} $inRegion건은 나이·결혼 단계 등 조건이 맞지 않아요.';
+    _funnel = [
+      '지원 정책 ${all.length}건',
+      '${topic.label} 분야 · ${sido ?? '전국'}·전국 사업 $inRegion건',
+      '내 상황(지역·나이 등)으로 판정 · 해당 0건',
+    ];
+    _lookupNote = '정책 데이터를 정해진 규칙으로 판정 → ${topic.label} 분야 해당 0건 (지역·전국 사업 $inRegion건)';
+    _hint = AnswerHint(kind: AnswerKind.policyList, headline: headline, sentence: sentence);
+    return ChatMessage(
+      fromUser: false,
+      basis: [region, _known.ageLabel, _known.stageLabel].join(' · '),
+      text: '$headline. $sentence\n\n'
+          '${others.isEmpty ? '' : '대신 내 조건으로 받을 수 있는 다른 정책이 ${others.length}건 있어요.'}',
+      sources: const ['청년 결혼 지원 정책 177건 (복지로·온통청년·지자체 공고)'],
+      quickReplies: _withSave([
+        if (others.isNotEmpty) QuickReply('전체 정책 ${others.length}건', text: '받을 수 있는 정책 알려줘'),
+        ...await _topicChips(exclude: topic),
       ]),
     );
   }
