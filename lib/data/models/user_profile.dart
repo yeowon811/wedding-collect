@@ -137,9 +137,11 @@ class UserProfile {
 
   UserProfile copyWith({
     String? sido,
+    bool clearSido = false, // 시도·시군구 모두 지움
     String? sigungu,
     bool clearSigungu = false,
     int? age,
+    bool clearAge = false, // 나이·나이 범위 모두 지움
     int? ageMax,
     bool clearAgeMax = false,
     MarriageStage? stage,
@@ -148,7 +150,9 @@ class UserProfile {
     bool clearWeddingDate = false,
     bool? weddingUndecided,
     int? guests,
+    bool clearGuests = false,
     int? budget,
+    bool clearBudget = false,
     bool? homeless,
     bool clearHomeless = false,
     FirstMarriage? firstMarriage,
@@ -156,16 +160,18 @@ class UserProfile {
     int? income,
     bool clearIncome = false,
   }) => UserProfile(
-    sido: sido ?? this.sido,
-    sigungu: clearSigungu || (sido != null && sido != this.sido && sigungu == null) ? null : (sigungu ?? this.sigungu),
-    age: age ?? this.age,
-    ageMax: clearAgeMax ? null : (ageMax ?? this.ageMax),
+    sido: clearSido ? null : (sido ?? this.sido),
+    sigungu: clearSido || clearSigungu || (sido != null && sido != this.sido && sigungu == null)
+        ? null
+        : (sigungu ?? this.sigungu),
+    age: clearAge ? null : (age ?? this.age),
+    ageMax: clearAge || clearAgeMax ? null : (ageMax ?? this.ageMax),
     stage: stage ?? stageInput,
     marriedYears: marriedYears ?? marriedYearsInput,
     weddingDate: clearWeddingDate ? null : (weddingDate ?? this.weddingDate),
     weddingUndecided: weddingUndecided ?? this.weddingUndecided,
-    guests: guests ?? this.guests,
-    budget: budget ?? this.budget,
+    guests: clearGuests ? null : (guests ?? this.guests),
+    budget: clearBudget ? null : (budget ?? this.budget),
     homeless: clearHomeless ? null : (homeless ?? this.homeless),
     firstMarriage: clearFirstMarriage ? null : (firstMarriage ?? this.firstMarriage),
     income: clearIncome ? null : (income ?? this.income),

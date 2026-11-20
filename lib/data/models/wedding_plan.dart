@@ -33,6 +33,15 @@ class WeddingPlan {
     ).difference(DateTime(today.year, today.month, today.day)).inDays;
   }
 
+  /// 입력한 항목에서 뺀다 (값은 계산용 기본값으로 남지만 체크리스트에는 '입력하기'로 보임)
+  WeddingPlan forget(String key) => WeddingPlan(
+        weddingDate: weddingDate,
+        sido: sido,
+        budget: budget,
+        guests: guests,
+        entered: {...entered}..remove(key),
+      );
+
   WeddingPlan copyWith({
     DateTime? weddingDate,
     String? sido,

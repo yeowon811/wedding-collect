@@ -284,6 +284,7 @@ class ChoiceRow<T> extends StatelessWidget {
 }
 
 /// 숫자 입력칸 + [확인]. 확인(또는 키보드 완료)을 눌러야 값이 바뀐다. 범위를 벗어나면 안내.
+/// [onDraft]를 주면 입력 중인 값(범위 안이면 숫자, 아니면 null)을 바로 알려 준다 → 화면 아래 저장 버튼이 함께 저장
 class NumberConfirmField extends StatefulWidget {
   const NumberConfirmField({
     super.key,
@@ -294,6 +295,7 @@ class NumberConfirmField extends StatefulWidget {
     this.max = 100000,
     this.hint,
     this.preview,
+    this.onDraft,
   });
 
   final int? value;
@@ -303,6 +305,7 @@ class NumberConfirmField extends StatefulWidget {
   final int max;
   final String? hint; // 예: 예: 150
   final String Function(int)? preview; // 입력 중 아래에 보여줄 읽기 쉬운 값 (예: 3,000만원)
+  final ValueChanged<int?>? onDraft;
 
   @override
   State<NumberConfirmField> createState() => _NumberConfirmFieldState();
@@ -352,7 +355,11 @@ class _NumberConfirmFieldState extends State<NumberConfirmField> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textInputAction: TextInputAction.done,
-            onChanged: (_) => setState(() => _error = null),
+            onChanged: (_) {
+              setState(() => _error = null);
+              final v = _typed;
+              widget.onDraft?.call(v != null && v >= widget.min && v <= widget.max ? v : null);
+            },
             onSubmitted: (_) => _confirm(),
             decoration: InputDecoration(hintText: widget.hint, suffixText: widget.unit, errorText: _error),
           ),
@@ -370,7 +377,11 @@ class _NumberConfirmFieldState extends State<NumberConfirmField> {
         Padding(
           padding: const EdgeInsets.only(top: 6, left: 4),
           child: Text(
-            saved ? '${widget.preview!(typed)}으로 저장했어요' : '${widget.preview!(typed)} · 확인을 눌러 저장',
+            saved
+                ? '${widget.preview!(typed)}으로 저장했어요'
+                : widget.onDraft != null
+                    ? '${widget.preview!(typed)} · 아래 버튼을 누르면 함께 저장돼요'
+                    : '${widget.preview!(typed)} · 확인을 눌러 저장',
             style: TextStyle(fontSize: 13, color: saved ? AppColors.success : AppColors.textSecondary),
           ),
         ),

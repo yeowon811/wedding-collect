@@ -401,6 +401,23 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// AI 상담 위쪽 조건 칩의 ✕: 그 항목만 내 정보에서 지운다 (체크리스트 결혼 정보도 '입력 안 함'으로)
+  /// key: region · age · date · guests · budget · homeless
+  void clearProfileField(String key) {
+    profile = switch (key) {
+      'region' => profile.copyWith(clearSido: true),
+      'age' => profile.copyWith(clearAge: true),
+      'date' => profile.copyWith(clearWeddingDate: true),
+      'guests' => profile.copyWith(clearGuests: true),
+      'budget' => profile.copyWith(clearBudget: true),
+      'homeless' => profile.copyWith(clearHomeless: true),
+      _ => profile,
+    };
+    final planKey = key == 'region' ? 'sido' : key;
+    if (const {'sido', 'date', 'guests', 'budget'}.contains(planKey)) plan = plan.forget(planKey);
+    notifyListeners();
+  }
+
   /// AI 상담 내 정보 입력 중에 바꾼 값을 바로 체크리스트에도 반영 (입력을 마치기 전이라도)
   void updateProfileDraft(UserProfile p) {
     profile = p;

@@ -487,7 +487,20 @@ class _FoldState extends State<_Fold> {
       Row(children: [
         InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => setState(() => _open = !_open),
+          onTap: () {
+            setState(() => _open = !_open);
+            if (!_open) return;
+            // 펼친 뒤: 펼친 영역 전체가 보이게 (아래 입력창에 가리지 않게, Red Team P0)
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              Scrollable.ensureVisible(
+                context,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+              );
+            });
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(mainAxisSize: MainAxisSize.min, children: [

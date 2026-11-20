@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
+import '../../data/models/user_profile.dart';
 import 'agent/consult_agent.dart';
 import 'agent/gemini_client.dart';
 import 'answer/answer_blocks.dart';
@@ -100,6 +101,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     _app.clearChat();
     if (!_needsProfile) _begin();
+  }
+
+  /// 키보드 엔터: 한글 조합 중(마지막 글자가 아직 확정 전)이면 보내지 않는다 (중복 전송·글자 잘림 방지)
+  void _submitFromKeyboard(String text) {
+    if (!_input.value.composing.isCollapsed) return;
+    _send(text);
   }
 
   void _send(String text) {
@@ -199,20 +206,15 @@ class _ChatScreenState extends State<ChatScreen> {
           backgroundColor: setup ? null : const Color(0xFFF9FAFB),
           appBar: AppBar(
             title: const Text('AI 상담'),
+            // 헤더 오른쪽: 새 상담 · 내 계정 (내 정보는 아래 조건 줄의 [수정]으로, 2026-11-20 Red Team P0)
             actions: [
-              const AccountButton(),
               if (!setup && !resume)
                 IconButton(
                   tooltip: '새 상담 시작',
-                  icon: const Icon(Icons.add_comment_outlined),
+                  icon: const Icon(Icons.refresh_rounded),
                   onPressed: _newChat,
                 ),
-              if (!setup)
-                IconButton(
-                  tooltip: '내 정보',
-                  icon: Icon(Icons.person_outline, color: AppColors.primaryDark),
-                  onPressed: () => setState(() => _editingProfile = true),
-                ),
+              const AccountButton(),
               if (_editingProfile)
                 IconButton(
                   tooltip: '닫기',
@@ -308,55 +310,33 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _chatView() {
-    final summary = _app.profile.summary;
+    // 데스크톱에서도 읽기 편한 폭 (넓은 화면은 가운데 760px, 2026-11-20 Red Team P0)
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: _chatColumn(),
+      ),
+    );
+  }
+
+  Widget _chatColumn() {
     return Column(
       children: [
-        // 지금 상담 기준이 되는 내 정보
+        // 지금 상담 기준이 되는 내 정보: 대화에서 반영한 값도 바로 보이는 조건 칩 (✕로 하나씩 지움)
         Container(
           color: AppColors.background,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Material(
-                color: AppColors.fill,
-                borderRadius: BorderRadius.circular(10),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () => setState(() => _editingProfile = true),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                    child: Row(children: [
-                      Expanded(
-                        child: Text(
-                          _app.profileDone && summary.isNotEmpty ? summary : '내 정보 없음 · 필요한 정보는 대화 중에 여쭤봐요',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 13, color: AppColors.textBody),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('수정',
-                          style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${_agent.name} · 이름·연락처는 적지 마세요',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+          child: ProfileChipsBar(
+            onEdit: () => setState(() => _editingProfile = true),
           ),
         ),
         const Divider(),
         Expanded(
           child: ListView.builder(
             controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            // 아래 여유: 마지막 답의 후속 칩·펼친 기록이 입력창에 붙지 않게
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             itemCount: _messages.length + (_busy ? 1 : 0),
             itemBuilder: (context, i) {
               if (i == _messages.length) return _ProgressSteps(step: _agent.step);
@@ -419,9 +399,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: _input,
                       textInputAction: TextInputAction.send,
-                      onSubmitted: _send,
+                      onSubmitted: _submitFromKeyboard,
                       decoration: const InputDecoration(
-                        hintText: '궁금한 걸 물어보세요',
+                        hintText: '궁금한 걸 물어보세요 (이름·연락처는 적지 마세요)',
                         isDense: true,
                       ),
                     ),
@@ -729,6 +709,74 @@ class _WhyThisAnswerState extends State<_WhyThisAnswer> {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// AI 상담 위쪽 조건 줄: 지금 상담에 쓰는 내 정보를 칩으로 (대화·버튼으로 반영한 값도 바로 보임).
+/// 칩의 ✕는 그 항목만 지우고, [수정]은 내 정보 화면을 연다. (2026-11-20 Red Team P0)
+class ProfileChipsBar extends StatelessWidget {
+  const ProfileChipsBar({super.key, required this.onEdit});
+
+  final VoidCallback onEdit;
+
+  /// (지울 때 쓰는 이름, 아이콘, 글자)
+  static List<(String, IconData, String)> itemsOf(UserProfile p) => [
+        if (p.sido != null) ('region', Icons.place_outlined, p.regionLabel!),
+        if (p.age != null) ('age', Icons.person_outline, p.ageLabel),
+        if (p.weddingDate != null)
+          ('date', Icons.event_outlined, '예식 ${p.weddingDate!.month}/${p.weddingDate!.day}'),
+        if (p.guests != null) ('guests', Icons.groups_outlined, '하객 ${p.guests}명'),
+        if (p.budget != null) ('budget', Icons.payments_outlined, '총예산 ${formatManwon(p.budget!)}'),
+        if (p.homeless != null) ('homeless', Icons.home_outlined, p.homeless! ? '무주택' : '집 있음'),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppState.instance;
+    final items = itemsOf(app.profile);
+    final edit = ActionChip(
+      avatar: Icon(Icons.tune_rounded, size: 16, color: AppColors.primary),
+      label: Text(items.isEmpty ? '정보 입력' : '수정'),
+      labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+      backgroundColor: Colors.white,
+      side: BorderSide(color: AppColors.border),
+      visualDensity: VisualDensity.compact,
+      onPressed: onEdit,
+    );
+    if (items.isEmpty) {
+      return Row(children: [
+        Expanded(
+          child: Text('내 정보 없음 · 필요한 정보는 대화 중에 여쭤봐요',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: AppColors.textBody)),
+        ),
+        const SizedBox(width: 8),
+        edit,
+      ]);
+    }
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final (key, icon, label) in items)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: InputChip(
+                avatar: Icon(icon, size: 16, color: AppColors.textSecondary),
+                label: Text(label),
+                labelStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                backgroundColor: AppColors.fill,
+                side: BorderSide.none,
+                visualDensity: VisualDensity.compact,
+                deleteIcon: const Icon(Icons.close, size: 15),
+                deleteButtonTooltipMessage: '$label 지우기',
+                onDeleted: () => app.clearProfileField(key),
+              ),
+            ),
+          edit,
+        ],
+      ),
     );
   }
 }

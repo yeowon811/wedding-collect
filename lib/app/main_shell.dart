@@ -59,7 +59,10 @@ class _MainShellState extends State<MainShell> {
           const ChatScreen(),
         ],
       ),
-      bottomNavigationBar: DecoratedBox(
+      // 모바일에서 키보드가 올라와 있으면 하단 탭을 숨겨 대화가 보이는 영역을 넓힌다
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null
+          : DecoratedBox(
         decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.divider))),
         child: NavigationBar(
         selectedIndex: _index,

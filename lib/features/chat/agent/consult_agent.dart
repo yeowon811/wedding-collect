@@ -326,6 +326,15 @@ class ConsultAgent implements ChatAgent {
   /// 체크리스트·내 정보 화면에서 바뀐 결혼 정보만 대화 기억에 반영 (대화에서 말한 값은 덮지 않음)
   void _syncFromApp() {
     final cur = _app.profile;
+    // 위쪽 조건 칩 ✕로 지운 값 (앱에 있던 값이 없어짐) → 대화 기억에서도 지운다
+    _known = _known.copyWith(
+      clearSido: _seenApp.sido != null && cur.sido == null,
+      clearAge: _seenApp.age != null && cur.age == null,
+      clearWeddingDate: _seenApp.weddingDate != null && cur.weddingDate == null,
+      clearGuests: _seenApp.guests != null && cur.guests == null,
+      clearBudget: _seenApp.budget != null && cur.budget == null,
+      clearHomeless: _seenApp.homeless != null && cur.homeless == null,
+    );
     _known = _known.merge(UserProfile(
       sido: cur.sido != _seenApp.sido ? cur.sido : null,
       sigungu: cur.sigungu != _seenApp.sigungu ? cur.sigungu : null,

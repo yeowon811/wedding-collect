@@ -26,6 +26,9 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
   // 체크리스트에서 입력한 값도 profile에 들어 있다 (AppState.updatePlan)
   late UserProfile _p = _app.profile;
   late bool _ageKnown = _p.age != null;
+  // [확인]을 누르지 않고 입력만 해 둔 하객·예산 (아래 저장 버튼이 함께 저장)
+  int? _draftGuests;
+  int? _draftBudget;
 
   void _set(UserProfile p) {
     setState(() => _p = p);
@@ -59,6 +62,8 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
 
   void _save() {
     var p = _p;
+    if (_draftGuests != null) p = p.copyWith(guests: _draftGuests);
+    if (_draftBudget != null) p = p.copyWith(budget: _draftBudget);
     if (!_ageKnown) {
       p = UserProfile(
           sido: p.sido, sigungu: p.sigungu, stage: p.stageInput, marriedYears: p.marriedYearsInput, weddingDate: p.weddingDate,
@@ -149,6 +154,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                   max: 2000,
                   hint: '예: 150',
                   preview: (v) => '하객 $v명',
+                  onDraft: (v) => _draftGuests = v,
                   onConfirmed: (v) => _set(p.copyWith(guests: v)),
                 ),
               ),
@@ -159,8 +165,9 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                   unit: '만원',
                   min: 100,
                   max: 100000,
-                  hint: '예: 3000',
+                  hint: '예: 3000 (3천만원)',
                   preview: (v) => '총예산 ${formatManwon(v)}',
+                  onDraft: (v) => _draftBudget = v,
                   onConfirmed: (v) => _set(p.copyWith(budget: v)),
                 ),
               ),
