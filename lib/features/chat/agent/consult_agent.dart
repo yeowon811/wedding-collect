@@ -2232,7 +2232,7 @@ class ConsultAgent implements ChatAgent {
         if (g != null) switch (v.fits(g)) {
           true => BlockBadge('$g명 OK', Tone.good),
           false => BlockBadge('${v.capacity}명까지', Tone.no),
-          null => const BlockBadge('정원 정보 없음', Tone.check),
+          null => const BlockBadge('정원 문의 필요', Tone.check),
         },
         if (judge != null)
           BlockBadge('${_askDate!.month}/${_askDate!.day} ${switch (judge.fit) { DateFit.possible => '가능', DateFit.impossible => '안 됨', _ => '확인 필요' }}',

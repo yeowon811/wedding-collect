@@ -294,7 +294,7 @@ class AnswerFacts {
 // ───────────────────────── 값 만들기 (앱 판정) ─────────────────────────
 
 String feeShort(Venue v) {
-  if (v.rentalFee == null) return '요금 정보 없음';
+  if (v.rentalFee == null) return '요금 문의 필요';
   if (v.rentalFee == 0) return '무료';
   final w = v.rentalFee!;
   if (w >= 10000 && w % 10000 == 0) return '${w ~/ 10000}만원';
@@ -303,7 +303,7 @@ String feeShort(Venue v) {
 }
 
 String capShort(Venue v) {
-  if (v.capacity == null) return '정원 정보 없음';
+  if (v.capacity == null) return '정원 문의 필요';
   if (v.capacityMin != null) return '${v.capacityMin}~${v.capacity}명';
   return '최대 ${v.capacity}명';
 }
@@ -341,11 +341,11 @@ FactItem venueFact(Venue v, {QueryScope? scope, BookingStatus? booking, bool mul
     badge = switch (v.fits(guests)) {
       true => BlockBadge('$guests명 OK', Tone.good),
       false => BlockBadge('${v.capacity}명까지', Tone.no),
-      null => const BlockBadge('정원 정보 없음', Tone.check),
+      null => const BlockBadge('정원 문의 필요', Tone.check),
     };
   } else {
     badge = switch (v.rentalFee) {
-      null => const BlockBadge('요금 정보 없음', Tone.check),
+      null => const BlockBadge('요금 문의 필요', Tone.check),
       0 => const BlockBadge('무료', Tone.good),
       _ => BlockBadge(feeShort(v), Tone.info),
     };
@@ -368,7 +368,7 @@ FactItem venueFact(Venue v, {QueryScope? scope, BookingStatus? booking, bool mul
     name: v.name,
     values: values,
     badge: override ?? badge,
-    contact: empty.isEmpty ? null : '☎ ${v.bookingContact}',
+    contact: empty.isEmpty ? null : (v.phone != null ? '☎ ${v.bookingContact}' : '예약 페이지에서 문의'),
     empty: empty,
     venue: v,
     rankValue: override?.text,

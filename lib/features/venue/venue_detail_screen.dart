@@ -206,9 +206,15 @@ class VenueDetailScreen extends StatelessWidget {
           const SizedBox(height: 20),
           _section('기본 정보', [
             _row(Icons.location_on_outlined, '주소', v.address),
-            _row(Icons.groups_outlined, '정원', _capacityText(v)),
-            _row(Icons.payments_outlined, '대관료',
-                v.rentalFee == null ? '기관 확인 필요${v.feeText != null ? ' (${v.feeText})' : ''}' : v.feeLabel),
+            if (v.capacity == null)
+              _gapRow(context, v, '정원', v.capacityGap)
+            else
+              _row(Icons.groups_outlined, '정원', _capacityText(v)),
+            if (v.rentalFee == null)
+              // 시간당·오전/오후처럼 숫자 하나가 아닌 요금은 원문을 함께 보여 준다
+              _gapRow(context, v, '대관료', v.feeGap, original: v.feeDetail == null ? v.feeText : null)
+            else
+              _row(Icons.payments_outlined, '대관료', v.feeLabel),
             if (v.feeDetail != null) _detailBox(v.feeDetail!),
             // "무료(냉난방 시 추가)"처럼 조건이 붙은 원문은 그대로 보여준다
             if (v.feeDetail == null && v.feeText != null && v.feeText != '무료' && v.rentalFee != null)
@@ -252,10 +258,52 @@ class VenueDetailScreen extends StatelessWidget {
     );
   }
 
+  /// 비어 있는 값: 안내 문구 + 연결처(전화·예약 페이지). 잘못 등록된 값("1명")은 보여 주지 않는다
+  Widget _gapRow(BuildContext context, Venue v, String label, String message, {String? original}) {
+    final phone = v.phone;
+    final hasUrl = v.bookingUrl.startsWith('http');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 84, child: Text(label, style: TextStyle(fontSize: 15, color: AppColors.textSecondary))),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (original != null && original.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(original, style: TextStyle(fontSize: 15, height: 1.4, color: AppColors.textPrimary)),
+              ),
+            Text(message, style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.warning, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('연결처: ${v.bookingContact.isEmpty ? '예약 페이지' : v.bookingContact}',
+                style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.textSecondary)),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, runSpacing: 6, children: [
+              if (phone != null)
+                _smallAction(Icons.call_outlined, '전화 문의', () => _open(context, Uri.parse('tel:${phone.replaceAll('-', '')}'))),
+              if (hasUrl)
+                _smallAction(Icons.open_in_new, '예약 페이지', () => _open(context, Uri.parse(v.bookingUrl))),
+            ]),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _smallAction(IconData icon, String label, VoidCallback onTap) => OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 16),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      );
+
   String _capacityText(Venue v) {
-    if (v.capacity == null) {
-      return '기관 확인 필요${v.capacityText != null ? ' (등록값: ${v.capacityText})' : ''}';
-    }
     final guests = AppState.instance.plan.guests;
     final range = v.capacityMin != null ? '${v.capacityMin}~${v.capacity}명' : '${v.capacity}명';
     return '$range · 내 하객 $guests명 ${v.capacity! >= guests ? '수용 가능' : '초과'}';

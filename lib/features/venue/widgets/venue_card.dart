@@ -23,11 +23,10 @@ class VenueCard extends StatelessWidget {
     final v = venue;
     final fits = v.fits(AppState.instance.plan.guests);
     final traits = VenueFeatures.traits(v);
-    final fee = v.rentalFee == null
-        ? (v.feeText != null ? '요금 상세 참고' : '요금 문의')
-        : (v.isFree ? '대관료 무료' : v.feeLabel);
+    // 빈 값은 모든 화면에서 같은 말 ('… 문의 필요', 상세 화면에 연결처)
+    final fee = v.rentalFee == null ? '대관료 문의 필요' : (v.isFree ? '대관료 무료' : v.feeLabel);
     final capacity = v.capacity == null
-        ? '정원 문의'
+        ? '정원 문의 필요'
         : (v.capacityMin != null ? '${v.capacityMin}~${v.capacity}명' : '정원 ${v.capacity}명');
 
     return InkWell(

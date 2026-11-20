@@ -330,7 +330,7 @@ class AnswerCardView extends StatelessWidget {
             ],
             if (c.contact != null) ...[
               const SizedBox(height: 4),
-              Text('정보 없음 · 문의 ${c.contact}',
+              Text('문의로 확인해 주세요 · ${c.contact}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.warning)),

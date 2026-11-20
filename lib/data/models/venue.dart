@@ -139,15 +139,38 @@ class Venue {
   /// 하객 [guests]명을 수용할 수 있는지. 정원을 모르면 null
   bool? fits(int guests) => capacity == null ? null : capacity! >= guests;
 
+  // ── 빈 값 안내 (2026-11-20): 모든 화면에서 같은 말 + 연결처 ──
+
+  /// 정원이 비어 있을 때 안내. "1명" 같은 등록 오류 값은 보여 주지 않는다
+  String get capacityGap => (capacityText ?? '').contains('시간')
+      ? '시간대마다 달라요 · 문의로 확인해 주세요'
+      : '정보 없음 · 문의로 확인해 주세요';
+
+  /// 대관료가 비어 있을 때 안내. 원문(시간당·오전/오후 등)이 있으면 원문은 따로 보여 준다
+  String get feeGap {
+    final t = feeText ?? '';
+    if (t.isEmpty) return '정보 없음 · 문의로 확인해 주세요';
+    if (t.contains('협의')) return '협의 후 결정 · 문의로 확인해 주세요';
+    return '정확한 금액은 문의로 확인해 주세요';
+  }
+
+  /// 연결처: 전화번호 (문의처 글에서 첫 번호). 없으면 null → 예약 페이지로 안내
+  String? get phone {
+    final m = RegExp(r'0\d{1,2}-\d{3,4}(?:-\d{4})?|1\d{3}-\d{4}').firstMatch('$bookingContact ${inquiry ?? ''}');
+    return m?.group(0);
+  }
+
+  /// 연결처 한 줄 (예: "☎ 02-2133-6546" / "예약 페이지에서 문의")
+  String get contactLine => phone != null ? '☎ ${phone!}' : '예약 페이지에서 문의';
+
   String get capacityLabel {
-    if (capacity == null) return '정원 확인 필요';
+    if (capacity == null) return '정원 문의 필요';
     if (capacityMin != null) return '$capacityMin~$capacity명';
     return '정원 $capacity명';
   }
 
   String get feeLabel {
-    if (rentalFee == null)
-      return feeText != null ? '대관료 유료 · 상세 참고' : '대관료 확인 필요';
+    if (rentalFee == null) return '대관료 문의 필요';
     if (rentalFee == 0) return '대관료 무료';
     return '기본요금 ${_won(rentalFee!)}';
   }
