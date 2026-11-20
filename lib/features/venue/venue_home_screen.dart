@@ -37,8 +37,21 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     super.dispose();
   }
 
-  String? _sido; // null = 전체
-  String? _sigungu; // null = 시도 전체
+  /// 고른 지역 (여러 곳 가능): 시도 → 고른 시군구 (비어 있으면 그 시도 전체). 지도가 비면 전국
+  final Map<String, Set<String>> _regions = {};
+
+  bool _inRegions(Venue v) {
+    if (_regions.isEmpty) return true;
+    final towns = _regions[v.sido];
+    return towns != null && (towns.isEmpty || towns.contains(v.sigungu));
+  }
+
+  /// "서울 강남구·송파구, 부산" 같은 이름 (결과 줄·빈 결과 안내)
+  String get _regionLabel => [
+        for (final e in _regions.entries) e.value.isEmpty ? e.key : '${e.key} ${e.value.join('·')}',
+      ].join(', ');
+
+  bool get _anyTown => _regions.values.any((t) => t.isNotEmpty);
   _Sort _sort = _Sort.basic;
   bool _freeOnly = false;
 
@@ -86,8 +99,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   List<Venue> _inRegion(List<Venue> all) {
     final q = _query.trim();
     return all.where((v) {
-      if (_sido != null && v.sido != _sido) return false;
-      if (_sigungu != null && v.sigungu != _sigungu) return false;
+      if (!_inRegions(v)) return false;
       if (q.isNotEmpty &&
           !v.name.contains(q) &&
           !v.address.contains(q) &&
@@ -98,10 +110,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     }).toList();
   }
 
-  void _selectSido(String? sido) => setState(() {
-    _sido = sido;
-    _sigungu = null; // 시도가 바뀌면 시군구 선택은 초기화
-  });
+  void _clearRegions() => setState(_regions.clear);
 
   @override
   Widget build(BuildContext context) {
@@ -310,12 +319,11 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
         children: [
-          _choice('전체', _sido == null, () => _selectSido(null)),
+          _choice('전체', _regions.isEmpty, _clearRegions),
           for (final s in sidos)
             _choice(
-              // 고른 시군구가 있으면 칩에 함께 표시: "서울 · 강남구 ▾"
-              _sido == s && _sigungu != null ? '$s · $_sigungu' : '$s ${counts[s]}',
-              _sido == s,
+              _sidoChipLabel(s, counts[s]!),
+              _regions.containsKey(s),
               () => _pickRegion(all, s),
               hasMenu: true,
             ),
@@ -324,18 +332,27 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
     );
   }
 
-  /// 시도 칩을 누르면: 시군구가 2곳 이상이면 선택창(고르고 확인), 아니면 바로 적용
+  /// 시도 칩 이름: 고른 시군구가 있으면 "서울 · 강남구" / "서울 · 강남구 외 2"
+  String _sidoChipLabel(String sido, int count) {
+    final towns = _regions[sido];
+    if (towns == null || towns.isEmpty) return '$sido $count';
+    final first = towns.first;
+    return towns.length == 1 ? '$sido · $first' : '$sido · $first 외 ${towns.length - 1}';
+  }
+
+  /// 시도 칩을 누르면: 시군구가 2곳 이상이면 선택창(여러 곳 고르고 확인), 아니면 넣었다 뺐다.
+  /// 여러 시도를 함께 고를 수 있다 (예: 서울 강남구·송파구 + 경기)
   Future<void> _pickRegion(List<Venue> all, String sido) async {
     final counts = <String, int>{};
     for (final v in all.where((v) => v.sido == sido && v.sigungu.isNotEmpty)) {
       counts[v.sigungu] = (counts[v.sigungu] ?? 0) + 1;
     }
     if (counts.length < 2) {
-      _selectSido(sido);
+      setState(() => _regions.containsKey(sido) ? _regions.remove(sido) : _regions[sido] = {});
       return;
     }
     final total = all.where((v) => v.sido == sido).length;
-    final picked = await showModalBottomSheet<(String?,)>(
+    final picked = await showModalBottomSheet<({bool remove, Set<String> towns})>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -343,14 +360,12 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
         sido: sido,
         total: total,
         counts: counts,
-        initial: _sido == sido ? _sigungu : null,
+        selected: _regions.containsKey(sido),
+        initial: _regions[sido] ?? const {},
       ),
     );
     if (picked == null || !mounted) return; // 닫기·취소
-    setState(() {
-      _sido = sido;
-      _sigungu = picked.$1;
-    });
+    setState(() => picked.remove ? _regions.remove(sido) : _regions[sido] = picked.towns);
   }
 
   /// 시도 칩: 회색 알약, 선택되면 검정
@@ -373,10 +388,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   /// 결과가 없을 때: 원인에 맞는 다음 행동을 제안한다
   Widget _empty() {
-    final where = [
-      if (_sido != null) _sido!,
-      if (_sigungu != null) _sigungu!,
-    ].join(' ');
+    final where = _regionLabel;
     final q = _query.trim();
     return EmptyState(
       title: q.isNotEmpty ? "'$q' 검색 결과가 없어요" : '$where에는 등록된 공공예식장이 없어요',
@@ -389,9 +401,13 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             _search.clear();
             setState(() => _query = '');
           }),
-        if (_sigungu != null)
-          EmptyAction('$_sido 전체 보기', () => setState(() => _sigungu = null)),
-        if (_sido != null) EmptyAction('전국 보기', () => _selectSido(null)),
+        if (_anyTown)
+          EmptyAction('${_regions.keys.join('·')} 전체 보기', () => setState(() {
+                for (final t in _regions.values) {
+                  t.clear();
+                }
+              })),
+        if (_regions.isNotEmpty) EmptyAction('전국 보기', _clearRegions),
         EmptyAction('AI 상담에서 물어보기', () => MainShell.goTo(4)),
       ],
     );
@@ -458,10 +474,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   }
 
   Widget _resultBar(int count) {
-    final where = [
-      if (_sido != null) _sido!,
-      if (_sigungu != null) _sigungu!,
-    ].join(' ');
+    final where = _regionLabel;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 8, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -499,9 +512,9 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
                 ),
               ),
             ),
-            if (_sido != null)
+            if (_regions.isNotEmpty)
               TextButton(
-                onPressed: () => _selectSido(null),
+                onPressed: _clearRegions,
                 child: const Text('지역 초기화'),
               ),
           ],
@@ -554,30 +567,49 @@ enum _Sort {
   final String label;
 }
 
-/// 시군구 선택창: 하나 고르고 [확인]. 결과는 (시군구 또는 null=시도 전체,)
+/// 시군구 선택창: 여러 곳 고르고 [확인]. 결과 towns가 비면 시도 전체, remove면 이 시도를 뺀다
 class _RegionSheet extends StatefulWidget {
-  const _RegionSheet({required this.sido, required this.total, required this.counts, this.initial});
+  const _RegionSheet({
+    required this.sido,
+    required this.total,
+    required this.counts,
+    required this.selected,
+    required this.initial,
+  });
 
   final String sido;
   final int total;
   final Map<String, int> counts;
-  final String? initial;
+  final bool selected; // 이미 고른 시도인지 ('이 지역 빼기' 표시)
+  final Set<String> initial;
 
   @override
   State<_RegionSheet> createState() => _RegionSheetState();
 }
 
 class _RegionSheetState extends State<_RegionSheet> {
-  late String? _picked = widget.initial;
+  late final Set<String> _picked = {...widget.initial};
+
+  /// null = 시도 전체: 누르면 고른 시군구를 비움. 시군구는 눌러서 넣었다 뺐다 (모두 빼면 다시 전체)
+  void _toggle(String? value) => setState(() {
+        if (value == null) {
+          _picked.clear();
+        } else if (!_picked.remove(value)) {
+          _picked.add(value);
+        }
+      });
 
   @override
   Widget build(BuildContext context) {
     final names = widget.counts.keys.toList()..sort();
+    final n = _picked.isEmpty
+        ? widget.total
+        : _picked.fold<int>(0, (sum, g) => sum + (widget.counts[g] ?? 0));
     Widget option(String? value, String label, int n) {
-      final on = _picked == value;
+      final on = value == null ? _picked.isEmpty : _picked.contains(value);
       return InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () => setState(() => _picked = value),
+        onTap: () => _toggle(value),
         child: Container(
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -606,9 +638,23 @@ class _RegionSheetState extends State<_RegionSheet> {
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Text('${widget.sido} 시·군·구 선택',
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${widget.sido} 시·군·구 선택',
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text('여러 곳을 함께 고를 수 있어요',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                ]),
+              ),
+              if (widget.selected)
+                TextButton(
+                  onPressed: () => Navigator.pop(context, (remove: true, towns: <String>{})),
+                  child: const Text('이 지역 빼기'),
+                ),
+            ]),
           ),
           Flexible(
             child: GridView.count(
@@ -629,8 +675,8 @@ class _RegionSheetState extends State<_RegionSheet> {
             child: ActionPair(
               secondary: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
               primary: FilledButton(
-                onPressed: () => Navigator.pop(context, (_picked,)),
-                child: const Text('확인'),
+                onPressed: () => Navigator.pop(context, (remove: false, towns: {..._picked})),
+                child: Text('확인 ($n곳)'),
               ),
             ),
           ),

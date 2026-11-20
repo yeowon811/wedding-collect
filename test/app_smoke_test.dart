@@ -86,7 +86,7 @@ void main() {
     expect(find.text('서울 시·군·구 선택'), findsOneWidget);
     await tester.tap(find.textContaining('강남구'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('확인'));
+    await tester.tap(find.descendant(of: find.byType(FilledButton), matching: find.textContaining(RegExp(r'^확인 \('))));
     await tester.pumpAndSettle();
     expect(find.text('서울 시·군·구 선택'), findsNothing);
     expect(find.textContaining('서울 강남구'), findsWidgets);
@@ -94,9 +94,27 @@ void main() {
     for (final card in tester.widgetList<VenueCard>(find.byType(VenueCard))) {
       expect(card.venue.sigungu, '강남구');
     }
-    await tester.tap(find.text('지역 초기화'));
+
+    // 여러 곳: 송파구도 더하고, 다른 시도(전북)도 함께
+    await tester.tap(find.widgetWithText(ChoiceChip, '서울 · 강남구'));
     await tester.pumpAndSettle();
-    expect(find.text('서울 · 강남구'), findsNothing);
+    await tester.tap(find.textContaining('송파구'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('확인 (7곳)'));
+    await tester.pumpAndSettle();
+    expect(find.text('서울 · 강남구 외 1'), findsOneWidget);
+    expect(find.textContaining('송파구', skipOffstage: false), findsWidgets);
+    await tester.tap(find.widgetWithText(ChoiceChip, '전북 26'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(FilledButton), matching: find.textContaining(RegExp(r'^확인 \('))));
+    await tester.pumpAndSettle();
+    expect(find.text('서울 · 강남구 외 1'), findsOneWidget);
+    for (final card in tester.widgetList<VenueCard>(find.byType(VenueCard))) {
+      expect(card.venue.sido == '전북' || const {'강남구', '송파구'}.contains(card.venue.sigungu), isTrue);
+    }
+    await tester.tap(find.widgetWithText(ChoiceChip, '전체')); // 전체 = 고른 지역 모두 풀기
+    await tester.pumpAndSettle();
+    expect(find.text('서울 · 강남구 외 1'), findsNothing);
 
     // 업체: 드레스 2곳 비교
     await tab('업체');
