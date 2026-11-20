@@ -30,6 +30,13 @@ import 'tool_planner.dart';
 import 'venue_features.dart';
 import 'gemini_client.dart';
 import 'understanding.dart';
+import '../answer/answer_ai.dart';
+import '../answer/answer_blocks.dart';
+import '../answer/answer_composer.dart';
+import '../answer/answer_facts.dart';
+import '../answer/venue_scope.dart';
+
+part 'consult_present.dart';
 
 /// 상담 에이전트 (대화 관리자)
 ///
@@ -128,6 +135,36 @@ class ConsultAgent implements ChatAgent {
   /// 이번 대화에서 알고 있는 정보 = 저장된 내 정보 + 대화 중 새로 들은 정보
   late UserProfile _known = _app.profileDone ? _app.profile : const UserProfile();
   late UserProfile _seenApp = _app.profile; // 마지막으로 본 앱의 내 정보
+
+  // ───── 새 답 화면 (블록, 2026-11-20) ─────
+  /// false면 예전 글 답 (비교·되돌리기용)
+  static bool useBlocks = true;
+  late final AnswerComposer _composer = AnswerComposer(_llm);
+  AnswerHint? _hint; // 이번 답의 기본 틀 힌트 (답 함수가 채움)
+  int? _hintBudget; // 업체 답: 이번 질문의 항목 예산 (만원)
+  QueryScope? _lastScope; // 마지막 예식장 검색에 실제로 적용된 조건
+  Map<String, Object?>? _lastVenueArgs; // 같은 조건 (search_venues 형식, 조건 칩·넓히기용)
+  String? _appliedNote; // '내 정보에 반영했어요: …'
+  Understanding? _lastU; // 이번 답의 질문 이해
+  PrevAnswer? _prevAnswer; // 직전 답 (K3 반복 검사)
+  String _contextBefore = ''; // 이번 질문 전 2턴 (검토용)
+  bool _followUpTurn = false; // 앞 답을 고치는 후속 질문·조건 칩 (Gemini 검토 대상)
+  int? _cardLimit; // "3개만"처럼 사용자가 정한 카드 수
+
+  /// 질문 속 카드 수 ("3개만", "두 곳만 알려줘", "5곳 추천") → 1~5, 없으면 null. "3개월"·"2곳 비교"는 아님
+  static int? cardLimitOf(String q) {
+    final m = RegExp(r'(?<!\d)(\d|한|두|세|네|다섯)\s*(개|곳|군데|건)(?!월)\s*(만|추천|알려|보여|골라)').firstMatch(q);
+    if (m == null) return null;
+    final n = int.tryParse(m[1]!) ?? const {'한': 1, '두': 2, '세': 3, '네': 4, '다섯': 5}[m[1]];
+    return n != null && n >= 1 && n <= 5 ? n : null;
+  }
+  String? _templateOnly; // 이유가 있으면 Gemini 작성 없이 기본 틀 (더 보기·인사·앱 동작 안내)
+
+  /// 평가·화면용: 마지막 답을 어떻게 만들었는지
+  Composed? lastComposed;
+  int lastComposeMs = 0;
+  AnswerFacts? lastFacts;
+  ReviewVerdict? get lastVerdict => _composer.lastVerdict;
   UserProfile _selfFacts = const UserProfile(); // 이번 턴에 사용자가 '자기 이야기'로 말한 값 → 내 정보에 자동 반영
   ({UserProfile profile, WeddingPlan plan})? _undo; // [되돌리기]용 반영 전 값
 
@@ -139,8 +176,7 @@ class ConsultAgent implements ChatAgent {
   AgentPlan? _plan; // 새 구조: Gemini가 고른 도구와 조건 (null이면 예전 규칙 경로)
   VenueQuery? _vq; // 예식장 검색 조건 (도구 경로)
   bool _forceByAmount = false; // 정책: 금액 많은 순 (도구 경로)
-  bool _noLlmUnderstand = false; // 이번 질문은 규칙으로만 이해 (도구 고르기가 실패했을 때)
-  Future<({Understanding u, bool isAnswer})?>? _prefetched; // 도구 고르기와 함께 시작한 예전 방식의 이해
+  bool _noLlmUnderstand = false; // 이번 질문은 규칙으로만 이해
   final List<({String q, String tool, Map<String, Object?> args})> _planLog = []; // 이전 도구 조건 (후속 질문용)
   ({List<DateTime> dates, String label})? _period; // 기간 질문의 날짜들 ("내년 3월")
   List<String> _unsupported = const [];
@@ -183,6 +219,13 @@ class ConsultAgent implements ChatAgent {
     final left = _moreCards.length - _moreShown;
     final tabName = switch (_moreTab) { 1 => '정책', 2 => '업체', _ => '예식장' };
     _lookupNote = '앞서 찾은 $_moreLabel ${_moreCards.length}$_moreUnit 중 ${start + 1}~$_moreShown번째';
+    _templateOnly = '더 보기: 앞 결과의 다음 장 (Gemini 호출 없음)';
+    final kindRef = next.firstOrNull?.ref?.split(':').first;
+    _hint = AnswerHint(
+      kind: switch (kindRef) { 'policy' => AnswerKind.policyList, 'vendor' || 'real' => AnswerKind.vendorList, _ => AnswerKind.venueList },
+      headline: '$_moreLabel ${start + 1}~$_moreShown번째',
+      sentence: left > 0 ? null : '여기까지가 전부예요.',
+    );
     final m = ChatMessage(
       fromUser: false,
       basis: '$_moreLabel ${_moreCards.length}$_moreUnit 중 ${start + 1}~$_moreShown번째',
@@ -255,6 +298,7 @@ class ConsultAgent implements ChatAgent {
     _undo = (profile: before, plan: _app.plan);
     _app.updateProfileDraft(after);
     _seenApp = _app.profile;
+    _appliedNote = '내 정보에 반영했어요: ${changed.join(' · ')}';
     return m.copyWith(
       text: '${m.text}\n\n내 정보에 반영했어요: ${changed.join(' · ')}',
       quickReplies: [
@@ -311,18 +355,55 @@ class ConsultAgent implements ChatAgent {
         quickReplies: _starterReplies,
       );
     }
-    _question = '내 정보에 맞게 예식장·정책·예산·할 일을 한 번에 추천해줘';
-    _nluNote = '상담 시작 시 내 정보로 바로 추천';
-    final rec = await _finish(const Understanding(intent: ConsultIntent.recommend));
-    return rec.copyWith(
-      text: rec.aiWritten ? rec.text : '입력해 주신 정보로 먼저 정리해 봤어요.\n\n${rec.text}',
+    // 처음부터 추천을 쏟아내지 않는다: 무엇이 궁금한지 먼저 고르게 하고, 답은 내 정보로 맞춘다 (2026-11-20)
+    final summary = _known.summary;
+    _templateOnly = '시작 인사';
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: '무엇부터 알아볼까요?',
+      sentence: summary.isEmpty ? null : '입력하신 내 정보로 맞춰 답해 드릴게요.',
     );
+    return _present(ChatMessage(
+      fromUser: false,
+      text: '안녕하세요! 결혼 준비를 도와드릴게요.\n'
+          '${summary.isEmpty ? '' : '입력해 주신 정보($summary)에 맞춰 답해 드릴게요.\n'}'
+          '무엇부터 알아볼까요? 아래에서 고르거나 편하게 물어보세요.',
+      quickReplies: _profileStarters(_known),
+    ));
+  }
+
+  /// 내 정보에 맞춘 첫 질문 추천 (값이 있으면 질문에 넣는다)
+  static List<QuickReply> _profileStarters(UserProfile k) {
+    final region = k.sigungu ?? k.sido;
+    final w = k.weddingDate;
+    return [
+      const QuickReply('받을 수 있는 정책', text: '받을 수 있는 정책 알려줘'),
+      QuickReply(region == null ? '공공예식장 추천' : '$region 공공예식장',
+          text: region == null ? '공공예식장 추천해줘' : '$region 공공예식장 추천해줘'),
+      if (w != null && !k.weddingPassed)
+        QuickReply('${w.month}/${w.day} 비어 있는 곳', text: '${w.year}년 ${w.month}월 ${w.day}일에 예약 가능한 예식장 있어?'),
+      const QuickReply('예산 나누기', text: '예산 어떻게 나누면 돼?'),
+      const QuickReply('뭐부터 해야 해?', text: '뭐부터 해야 해?'),
+    ];
   }
 
   @override
   Future<ChatMessage> reply(String question) async {
     _selfFacts = const UserProfile();
-    return _applySelfFacts(await _reply(question));
+    _resetTurn();
+    _cardLimit = cardLimitOf(question);
+    return _present(_applySelfFacts(await _reply(question)));
+  }
+
+  void _resetTurn() {
+    _hint = null;
+    _hintBudget = null;
+    _followUpTurn = false;
+    _templateOnly = null;
+    _cardLimit = null;
+    _lastU = null;
+    _appliedNote = null;
+    _contextBefore = _contextNow;
   }
 
   Future<ChatMessage> _reply(String question) async {
@@ -357,15 +438,10 @@ class ConsultAgent implements ChatAgent {
     _sidoJustAsked = false;
     step.value = AgentStep.understand;
     if (_llm != null) {
-      // 도구 고르기와 예전 방식의 질문 이해를 동시에 시작한다: 도구 고르기가 늦거나 실패하면
-      // 이미 받아 둔 예전 이해로 바로 답한다 (Gemini를 차례로 두 번 기다리지 않게)
-      final context = _turns.isEmpty ? null : ConversationContext.state(_turns, _memoryTurns, known: _known);
-      _prefetched = _llm.understand(text, context: context);
+      // 도구 고르기 1번만 부른다. 실패·시간 초과일 때만 예전 질문 이해(Gemini 1번, 그래도 안 되면 규칙)로 (2026-11-20:
+      // 예전에는 질문 이해를 미리 함께 불러 질문마다 Gemini 호출이 1번 더 들었음)
       final planned = await _planned(text);
-      if (planned != null) {
-        _prefetched = null;
-        return planned;
-      }
+      if (planned != null) return planned;
     }
     _plan = null;
     _vq = null;
@@ -395,13 +471,34 @@ class ConsultAgent implements ChatAgent {
     final sw = Stopwatch()..start();
     var p = await _llm!.plan(text, context: _planContext(), timeout: const Duration(seconds: 20));
     sw.stop();
-    if (p == null && _prefetched == null) _noLlmUnderstand = true; // 미리 받은 이해가 없으면 규칙으로
     if (p == null) return null;
+    final picked = '${p.tool} ${jsonEncode(p.args)}';
+    // 앱 가드: 예식장을 물었는데 전체 추천·정책 검색을 고른 경우 등 (확실할 때만)
+    final g = ToolPlanner.guard(p, text);
+    p = g.plan;
     // 후속 질문이면 앞 예식장 조건과 앱이 합친다
     final prevVenue = _planLog.lastOrNull;
+    String? referNote;
+    if (prevVenue?.tool == 'search_venues') {
+      final r = ToolPlanner.referToRefine(p, text);
+      if (r != null) {
+        p = r;
+        referNote = '앞 목록 가리키기(번호 없음) → 앞 예식장 검색을 고치는 후속 질문으로 바꿈';
+      }
+    }
+    if (RegExp(r'^(그중|그럼|거기서|그거|아니|말고)').hasMatch(text.trim())) _followUpTurn = true;
     if (p.tool == 'search_venues' && p.args['refine_previous'] == true && prevVenue?.tool == 'search_venues') {
       p = ToolPlanner.refine(p, prevVenue!.args);
+      _followUpTurn = true;
     }
+    return _runPlan(p, text,
+        note: 'Gemini가 도구를 고름: $picked (조건은 앱이 검사, ${sw.elapsedMilliseconds}ms)'
+            '${g.note == null ? '' : ' → 앱 가드: ${g.note} → ${p.tool} ${jsonEncode(p.args)}'}'
+            '${referNote == null ? '' : ' → 앱 가드: $referNote → ${p.tool} ${jsonEncode(p.args)}'}');
+  }
+
+  /// 검사한 계획 → 답 (Gemini 도구 고르기 · 조건 칩 · 넓히기가 함께 씀)
+  Future<ChatMessage> _runPlan(AgentPlan p, String text, {required String note}) async {
     // 자기 이야기는 질문에 그 말이 있을 때만. '몇 개월 남음'도 질문에 'N개월·N달'이 있을 때만
     final monthsLeft = RegExp(r'\d+\s*(개월|달)').hasMatch(text) ? p.monthsLeft : null;
     p = AgentPlan(
@@ -417,7 +514,7 @@ class ConsultAgent implements ChatAgent {
     _askDate = p.venue?.date;
     _period = p.venue != null && p.venue!.hasPeriod ? _periodOf(p.venue!) : null;
     _unsupported = p.unsupported;
-    _nluNote = 'Gemini가 도구를 고름: ${p.tool} ${jsonEncode(p.args)} (조건은 앱이 검사, ${sw.elapsedMilliseconds}ms)';
+    _nluNote = note;
     _planLog.add((q: text, tool: p.tool, args: p.args));
     // 자기 이야기 → 대화 기억 + 내 정보 (지역은 사는 곳을 말했을 때만)
     _known = _known.merge(p.self.profile);
@@ -454,6 +551,8 @@ class ConsultAgent implements ChatAgent {
       'wedding_schedule' => Understanding(intent: ConsultIntent.schedule, monthsLeft: p.weddingDate == null ? p.monthsLeft : null),
       'recommend_overview' => const Understanding(intent: ConsultIntent.recommend),
       'general_answer' => const Understanding(intent: ConsultIntent.help, kind: AskKind.general),
+      'near_place' => const Understanding(intent: ConsultIntent.venue, kind: AskKind.list),
+      'web_lookup' => const Understanding(intent: ConsultIntent.help, kind: AskKind.general),
       'refer_previous' => Understanding(intent: lastIntent, refIndex: p.refIndex),
       _ => const Understanding(intent: ConsultIntent.help),
     };
@@ -520,6 +619,10 @@ class ConsultAgent implements ChatAgent {
         return _llm == null ? null : () => _generalAnswer(u);
       case 'general_answer':
         return _llm == null ? null : () => _generalAnswer(u);
+      case 'near_place':
+        return () => _nearPlaceAnswer(p);
+      case 'web_lookup':
+        return _llm == null || p.query == null ? null : () => _webAnswer(p.query!);
       default:
         return null;
     }
@@ -537,11 +640,7 @@ class ConsultAgent implements ChatAgent {
     // 되묻기 답("서울")이 아니면 대화 흐름 규칙도 적용 ("두 번째", "그중에 무료", "그럼 부산은?")
     final rule = expecting == null ? ContextRules.apply(plain, text, _turns) : plain;
     final context = _turns.isEmpty ? null : ConversationContext.state(_turns, _memoryTurns, known: _known);
-    final pre = expecting == null ? _prefetched : null;
-    _prefetched = null;
-    final ai = pre != null
-        ? await pre
-        : (_noLlmUnderstand ? null : await _llm?.understand(text, expecting: expecting, context: context));
+    final ai = _noLlmUnderstand ? null : await _llm?.understand(text, expecting: expecting, context: context);
     _noLlmUnderstand = false;
     final flow = context == null ? '' : ' · 최근 ${_turns.length.clamp(1, _memoryTurns)}턴 대화 요약을 함께 봄';
     if (ai == null) {
@@ -617,12 +716,17 @@ class ConsultAgent implements ChatAgent {
 
   @override
   Future<ChatMessage> choose(QuickReply r) async {
-    if (r.action == 'undo_profile') return _undoSelfFacts();
+    _resetTurn();
+    if (r.action == 'undo_profile') {
+      _templateOnly = '앱 동작 안내';
+      return _present(_undoSelfFacts());
+    }
     _selfFacts = const UserProfile();
-    return _applySelfFacts(await _choose(r));
+    return _present(_applySelfFacts(await _choose(r)));
   }
 
   Future<ChatMessage> _choose(QuickReply r) async {
+    if (const ['open_checklist', 'open_tab', 'save_profile', 'skip_ask'].contains(r.action)) _templateOnly = '앱 동작 안내';
     switch (r.action) {
       case 'open_checklist':
         MainShell.goTo(3);
@@ -631,6 +735,8 @@ class ConsultAgent implements ChatAgent {
         return _skipCurrent();
       case 'more':
         return _moreAnswer();
+      case 'refine':
+        return _refine(r);
       case 'open_tab':
         if (_moreTab == 2 && _moreCategory != null) VendorScreen.categoryRequest.value = _moreCategory;
         MainShell.goTo(_moreTab);
@@ -678,6 +784,22 @@ class ConsultAgent implements ChatAgent {
       _noteSelf(UserProfile(weddingDate: _askDate));
     } else if (u.monthsLeft != null) {
       _known = _known.merge(UserProfile(weddingDate: DateTime.now().add(Duration(days: u.monthsLeft! * 30))));
+    }
+    // 규칙 이해가 "대관료 싼 예식장"을 정책 질문으로 읽으면 예식장 찾기(대관료 낮은 순)로
+    if (u.intent == ConsultIntent.policy &&
+        RegExp(r'예식장|웨딩홀|식장').hasMatch(_question) &&
+        RegExp(r'싼|저렴|낮은').hasMatch(_question) &&
+        !RegExp(r'정책|지원|대출|장려금|혜택').hasMatch(_question)) {
+      u = u.copyWith(intent: ConsultIntent.venue, filter: 'cheaper');
+    }
+    // 짧은 후속 질문("그중에 …", "말고 …")은 검토 대상
+    if (RegExp(r'^(그중|그럼|거기서|그거|아니|말고)').hasMatch(_question.trim()) || _isFollowUp) _followUpTurn = true;
+    // 규칙 이해가 목적을 못 정했는데 문장에 시·군·구가 있으면 예식장 찾기로 ("강남구 말고 송파구", "저 수원 살고 하객 100명")
+    if (u.intent == ConsultIntent.help &&
+        u.kind != AskKind.general &&
+        findSigungus(_question).isNotEmpty &&
+        !RegExp(r'정책|지원|대출|장려금|업체|드레스|스냅|날씨').hasMatch(_question)) {
+      u = u.copyWith(intent: ConsultIntent.venue);
     }
     u = _carryVenueConds(u);
     if (u.refIndex == null || _noReferent) {
@@ -748,6 +870,7 @@ class ConsultAgent implements ChatAgent {
       {List<String> skipped = const [], Future<ChatMessage> Function()? build}) async {
     step.value = AgentStep.lookup;
     _lookupNote = '';
+    _lastU = u;
     var m = await (build?.call() ?? _answer(u));
     if (u.also != null && u.also != u.intent && build == null && !m.isQuestion) m = await _withAlso(u, m);
     if (_unsupported.isNotEmpty && !m.isQuestion && u.kind != AskKind.general) {
@@ -791,7 +914,7 @@ class ConsultAgent implements ChatAgent {
       if (_unsupported.isNotEmpty) '앱 데이터에 없는 조건 · ${_unsupported.join(', ')} (Gemini가 판단, 답변에 안내)',
       '사용한 정보 · $used${skipped.isEmpty ? '' : ' (모른다고 하신 정보: ${skipped.join(', ')} → 없이 진행)'}',
       if (_lookupNote.isNotEmpty) '데이터 조회 · $_lookupNote',
-      '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : !rewriteAnswers ? (m.aiWritten ? 'Gemini 일반 안내 (앱 데이터 아님 표시)' : '앱이 조회 결과로 문장 작성 (Gemini 다시 쓰기는 속도 때문에 끔)') : _llm.lastRewriteNote}',
+      '답변 작성 · ${_llm == null ? '앱이 정해진 문장 틀로 작성 (Gemini 미연결)' : !rewriteAnswers ? (m.aiWritten ? 'Gemini 일반 안내 (앱 데이터 아님 표시)' : (useBlocks ? '앱이 조회 결과 정리 → 블록 답 (아래 답 작성·검사 기록)' : '앱이 조회 결과로 문장 작성')) : _llm.lastRewriteNote}',
     ]);
   }
 
@@ -1010,8 +1133,24 @@ class ConsultAgent implements ChatAgent {
     final income = incomeFromQuestion(_question);
     final byAmount = _forceByAmount || RegExp(r'제일\s*많이|가장\s*많이|많이\s*주|금액.{0,4}(큰|많)|최대\s*얼마').hasMatch(_question);
     final notes = <String>[];
+    var overAsked = <PolicyMatch>[]; // 질문에 이름이 나온 정책인데 소득 상한을 넘는 것 ("신혼부부 전세대출 돼?")
     if (income != null) {
       final over = matches.where((m) => (incomeCap(m.policy.eligibility) ?? 1 << 30) < income).toList();
+      const keys = ['신혼부부', '청년', '전세', '대출', '구입', '이자', '임대', '특공', '매입'];
+      final asked = [for (final k in keys) if (_question.replaceAll(' ', '').contains(k)) k];
+      if (asked.length >= 2) {
+        overAsked = [for (final m in over) if (asked.every(m.policy.name.replaceAll(' ', '').contains)) m];
+        // 내 정보에 소득이 들어가 판정에서 이미 빠진 정책도 (Gemini가 소득을 내 정보로 넘긴 경우) 전체 정책에서 찾는다
+        if (overAsked.isEmpty) {
+          overAsked = [
+            for (final p in await Repos.policy.loadAll())
+              if ((p.sido == '전국' || sidoMatches(p.sido, _known.sido)) &&
+                  asked.every(p.name.replaceAll(' ', '').contains) &&
+                  (incomeCap(p.eligibility) ?? 1 << 30) < income)
+                PolicyMatch(p, MatchLevel.check, const [], const []),
+          ];
+        }
+      }
       matches = matches.where((m) => !over.contains(m)).toList();
       final noNumber = matches.where((m) => m.policy.hasIncomeLimit && incomeCap(m.policy.eligibility) == null).length;
       notes.add('부부합산 연소득 ${manwonLabel(income)} 기준으로 원문의 소득 상한을 비교했어요. '
@@ -1040,6 +1179,22 @@ class ConsultAgent implements ChatAgent {
         '(가능성 높음 $likely건)${topicNote.isEmpty ? '' : ' · ${topicNote.trim()} 분야만'}';
     final top = matches.take(3).toList();
     final region = _known.sido ?? '전국';
+    _hint = AnswerHint(
+      kind: AnswerKind.policyList,
+      headline: matches.isEmpty ? '맞는 ${topicNote}정책을 못 찾았어요' : '받을 수 있는 ${topicNote}정책 ${matches.length}건',
+      sentence: income != null
+          ? '연소득 ${manwonLabel(income)} 기준으로 소득 상한을 비교했어요.'
+          : (_known.sido == null ? '지역을 알려 주시면 지자체 정책도 찾아요.' : null),
+    );
+    if (overAsked.isNotEmpty) {
+      final cap = incomeCap(overAsked.first.policy.eligibility)!;
+      _hint = AnswerHint(
+        kind: AnswerKind.policyList,
+        headline: overAsked.first.policy.name.contains('대출') ? '그 대출은 대상이 아니에요' : '그 정책은 대상이 아니에요',
+        headBadges: [BlockBadge('소득 상한 연 ${manwonLabel(cap)}', Tone.no)],
+        sentence: '아래는 소득 조건이 맞는 다른 정책이에요.',
+      );
+    }
     ChatCard policyCard(PolicyMatch m) => ChatCard(
           title: m.policy.name,
           subtitle: '${m.policy.regionLabel} · ${m.policy.category.label}',
@@ -1071,7 +1226,18 @@ class ConsultAgent implements ChatAgent {
               '${lines.join('\n')}\n\n'
               '${tips.isEmpty ? '' : '${tips.join('\n')}\n'}'
               '대상 여부는 정해진 규칙으로 판정했고, 최종 확인은 담당 기관에서 해 주세요.',
-      cards: [for (final m in top) policyCard(m)],
+      cards: [
+        for (final m in overAsked.take(1))
+          ChatCard(
+            title: m.policy.name,
+            subtitle: '${m.policy.regionLabel} · 소득 상한 연 ${manwonLabel(incomeCap(m.policy.eligibility)!)}',
+            icon: Icons.volunteer_activism,
+            badge: '소득 초과',
+            open: () => PolicyDetailScreen(match: m),
+            ref: 'policy:${m.policy.id}',
+          ),
+        for (final m in top.take(overAsked.isEmpty ? 3 : 2)) policyCard(m),
+      ],
       sources: const ['청년 결혼 지원 정책 177건 (복지로·온통청년·지자체 공고)'],
       quickReplies: _withSave([
         ...more,
@@ -1145,7 +1311,7 @@ class ConsultAgent implements ChatAgent {
         for (final v in noInfo) card(v, '날짜 정보 없음'),
       ],
     ];
-    final more = _startMore(cards, '$label $sido 공공예식장', tab: 0);
+    final more = _startMore(cards, '${_placeOr(sido)} $label', tab: 0);
     String names(List<Venue> l) =>
         l.take(3).map((v) => '${v.name}(${judged[v.id]!.reason})').join(', ') + (l.length > 3 ? ' 외 ${l.length - 3}곳' : '');
     final textOpen = possible.length - bookedOpen;
@@ -1156,6 +1322,13 @@ class ConsultAgent implements ChatAgent {
       if (unclear.isNotEmpty) '• 날짜 안내는 있지만 판단이 어려운 곳: ${unclear.length}곳 — ${names(unclear)}',
       if (noInfo.isNotEmpty) '• 예약 현황·예식 가능일 정보가 앱에 없는 곳: ${noInfo.length}곳 → 예약 페이지·문의처에서 확인',
     ];
+    _hint = AnswerHint(
+      kind: AnswerKind.venueDate,
+      sentence: booked.isNotEmpty ? '${{for (final id in booked.keys) '${bookings[id]!.checkedAt.month}/${bookings[id]!.checkedAt.day}'}.join('·')} 달력 기준이라 바뀌었을 수 있어요.' : '이미 찬 날은 예약 페이지에서 확인해 주세요.',
+      headline: possible.isEmpty
+          ? (withText.isEmpty && booked.isEmpty ? '${_placeOr(sido)} $label 정보 없음' : '${_placeOr(sido)} $label 빈 곳이 없어요')
+          : null,
+    );
     final hasAny = withText.isNotEmpty || booked.isNotEmpty;
     final head = !hasAny
         ? '$sido 공공예식장 ${all.length}곳은 예약 현황과 예식 가능일 정보가 앱 데이터에 없어서 $label 예약 가능 여부를 알려드릴 수 없어요. '
@@ -1194,6 +1367,26 @@ class ConsultAgent implements ChatAgent {
 
   /// 바로 답할 수 있는 계획이면 답을 만드는 함수를 돌려준다 (없으면 기존 흐름: 필요한 정보 되묻기 → 목적별 답변)
   Future<Future<ChatMessage> Function()?> _directAnswer(Understanding u) async {
+    // 정책 이름을 그대로 물으면 그 정책 ("더 아름다운 결혼식 알려줘"). 이름 앞부분(괄호 앞) 6자 이상이 질문에 있을 때만.
+    // "결혼 장려금 제일 많이 주는 지역"처럼 비교·범위를 묻는 말은 제외
+    if ((u.intent == ConsultIntent.help || u.intent == ConsultIntent.policy) &&
+        !RegExp(r'제일|가장|어디|지역|받을\s*수|뭐가|무슨').hasMatch(_question)) {
+      final q = normName(_question);
+      final named = [
+        for (final p in await Repos.policy.loadAll())
+          if (normName(p.name.split('(').first).length >= 6 && q.contains(normName(p.name.split('(').first))) p,
+      ];
+      if (named.length == 1 && !RegExp(r'예식장|업체').hasMatch(_question.replaceAll(named.first.name, ''))) {
+        return () async => _policyDetailAnswer(named.first);
+      }
+    }
+    // "삼성역 근처 예식장", "역 가까운 곳" → 기준 장소 근처 (장소가 없으면 되묻기, 좌표는 Google 지도)
+    final near = RegExp(r'([가-힣A-Za-z0-9]{1,10}역)\s*(근처|주변|부근|에서\s*가까|가까)').firstMatch(_question);
+    if (near != null || RegExp(r'역\s*(에서\s*)?(근처|가까|주변)').hasMatch(_question)) {
+      final place = near?.group(1);
+      final generic = place == null || const ['지하철역', '역', '전철역', '기차역'].contains(place);
+      return () => _nearPlaceAnswer(AgentPlan(tool: 'near_place', place: generic ? null : place));
+    }
     // "서울에 안 살아도 서울 공공예식장 쓸 수 있어?" → 이용 대상 원문 + 지원 정책 거주 조건
     // "경기도 사는데 서울시 지원 받을 수 있어?" → 사는 곳이 아닌 다른 시도의 거주 조건
     final other = _otherRegionAsk;
@@ -1299,6 +1492,15 @@ class ConsultAgent implements ChatAgent {
         .where((p) => p.sido == sido && p.category == PolicyCategory.wedding && RegExp(r'거주|주민|주소').hasMatch(p.eligibility))
         .toList();
     _lookupNote = '$sido 공공예식장 ${all.length}곳의 이용 대상·안내 원문(관내·주민·임직원 우선 등) + $sido 예식 지원 정책 ${policies.length}건의 거주 조건 원문';
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: policies.isEmpty ? '$sido 예식장은 대부분 누구나 써요' : '예식장 이용과 지원금 조건은 달라요',
+      headBadges: [
+        BlockBadge('제한 없음 $open곳', Tone.good),
+        if (rs.isNotEmpty) BlockBadge('주민 우선 ${rs.length}곳', Tone.no),
+      ],
+      sentence: policies.isEmpty ? '이용 대상 정보가 없는 곳은 기관에 확인해 주세요.' : '지원금·비품 지원은 $sido 거주 조건이 있어요.',
+    );
     return ChatMessage(
       fromUser: false,
       basis: '$sido 공공예식장 이용 대상 · 예식 지원 정책 거주 조건',
@@ -1331,6 +1533,12 @@ class ConsultAgent implements ChatAgent {
     final now = DateTime.now();
     final days = DateTime(date.year, date.month, date.day).difference(DateTime(now.year, now.month, now.day)).inDays;
     _lookupNote = '오늘(${formatDate(now)})부터 ${formatDate(date)}까지 달력 날짜로 계산';
+    _hint = AnswerHint(
+      kind: AnswerKind.calc,
+      headline: days >= 0 ? '$days일 남았어요' : '${-days}일 지났어요',
+      headBadges: [BlockBadge(days >= 0 ? 'D-$days' : 'D+${-days}', Tone.info)],
+      sentence: '오늘부터 ${dateLabel(date)}까지 달력으로 셌어요.',
+    );
     return ChatMessage(
       fromUser: false,
       basis: '${formatDate(date)} 기준',
@@ -1362,6 +1570,18 @@ class ConsultAgent implements ChatAgent {
     final info = parks.map((v) => v.programInfo).whereType<String>().firstOrNull;
     final steps = parks.map((v) => v.bookingSteps).where((s) => s.isNotEmpty).firstOrNull;
     _lookupNote = '공공예식장 데이터에서 국립공원(국립공원공단 예약) 예식장 ${parks.length}곳 + 공통 지원 사업 안내 원문';
+    final stepItems = steps == null
+        ? const <String>[]
+        : [
+            for (final x in steps.split(RegExp(r'\s*(?:→|->|>|\d+\.\s)\s*')))
+              if (x.trim().length >= 2) x.trim().length > 18 ? '${x.trim().substring(0, 17)}…' : x.trim(),
+          ].take(4).toList();
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: parks.isEmpty ? '국립공원 예식장 정보가 없어요' : '국립공원 예식장 ${parks.length}곳',
+      sentence: '국립공원공단 예약 페이지에서 신청해요.',
+      steps: stepItems,
+    );
     String cut(String t, [int n = 220]) => t.length > n ? '${t.substring(0, n)}…' : t;
     return ChatMessage(
       fromUser: false,
@@ -1391,6 +1611,12 @@ class ConsultAgent implements ChatAgent {
     final noAmount = all.where((p) => p.category == PolicyCategory.cash).length - cash.length;
     final mine = _known.sido == null ? null : cash.where((e) => sidoMatches(e.$1.sido, _known.sido) || e.$1.isNational).toList();
     _lookupNote = '전국 결혼 장려금 정책 중 원문에 금액이 적힌 ${cash.length}건을 최대 금액 순으로 (대출·이자 지원 제외, 금액 없는 $noAmount건 제외)';
+    _hint = AnswerHint(
+      kind: AnswerKind.policyList,
+      headline: cash.isEmpty ? '금액이 적힌 장려금이 없어요' : '가장 많은 곳은 ${cash.first.$1.regionLabel}',
+      ranking: [for (final (p, amt) in cash.take(3)) '${p.regionLabel} · 최대 ${manwonLabel(amt)}'],
+      sentence: '대출·이자 지원은 빼고 받는 돈만 비교했어요.',
+    );
     return ChatMessage(
       fromUser: false,
       basis: '전국 결혼 장려금 · 원문 최대 금액 순',
@@ -1529,8 +1755,20 @@ class ConsultAgent implements ChatAgent {
     final ranked = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
     _lookupNote = '$label ${dates.length}일 × $sido 공공예식장 ${pool.list.length}곳: 예약 현황(달력) 있는 $byBooking곳은 날짜별 현황으로, '
         '나머지는 예식 가능일 원문을 규칙(월 범위·요일·불가일)으로 확인';
+    // 제목: 범위 + (들어가면) 짧은 기간 + 건수. "강남구 5월 토요일 가능한 곳 2곳"
+    final shortLabel = label.replaceAll(RegExp(r'\(.*?\)'), '').replaceFirst(RegExp(r'^\d{4}년\s*'), '').trim();
+    final withPeriod = ranked.isEmpty
+        ? '${_placeOr(sido)} $shortLabel 가능한 곳 없음'
+        : '${_placeOr(sido)} $shortLabel 가능한 곳 ${ranked.length}곳';
+    _hint = AnswerHint(
+      kind: AnswerKind.venueList,
+      headline: withPeriod.length <= 24
+          ? withPeriod
+          : (ranked.isEmpty ? '${_placeOr(sido)} 그 기간 가능한 곳 없음' : '${_placeOr(sido)} 가능한 곳 ${ranked.length}곳'),
+      sentence: '${label.replaceAll(RegExp(r'\(.*?\)'), '').trim()} 날짜를 확인했어요.',
+    );
     final cards = [for (final v in ranked) _venueCard(v, badge: '${counts[v]}/${dates.length}일 가능')];
-    final more = _startMore(cards, '$label 가능한 $sido 공공예식장', tab: 0);
+    final more = _startMore(cards, '${_placeOr(sido)} 가능한 곳', tab: 0);
     return ChatMessage(
       fromUser: false,
       basis: '$sido · $label (${dates.length}일)',
@@ -1597,31 +1835,49 @@ class ConsultAgent implements ChatAgent {
     final vq = _vq;
     final sidos = vq != null && vq.sidos.isNotEmpty ? vq.sidos : [_known.sido!];
     final sido = sidos.join('·');
-    final guests = vq?.guests ?? _known.guests;
+    final noGuests = _plan?.args['no_guests'] == true;
+    final guests = noGuests ? null : (vq?.guests ?? _known.guests);
     final notes = <String>[];
     final conds = <String>[];
     List<Venue> list;
     String? town;
+    var scopeTowns = <String>[];
+    var auto = false;
     if (vq != null) {
-      // 도구 조건: 시도 여러 개 + 구 여러 개
-      final one = vq.towns.length == 1 ? vq.towns.first : null;
+      // 도구 조건: 시도 여러 개 + 구 여러 개. 질문에 장소가 없으면 내 시·군·구부터 (R9, 넓히기는 칩으로)
+      var towns = vq.towns;
+      if (towns.isEmpty && _autoTownOk(sidos)) {
+        towns = [_known.sigungu!];
+        auto = true;
+      }
+      final one = towns.length == 1 ? towns.first : null;
       list = [
         for (final s in sidos) ...await ConsultTools.searchVenues(sido: s, guests: guests, sigungu: one ?? _known.sigungu),
       ];
-      if (vq.towns.isNotEmpty) {
-        final inTowns = list.where((v) => vq.towns.contains(v.sigungu)).toList();
-        final label = vq.towns.join('·');
-        final missingTowns = [for (final t in vq.towns) if (!inTowns.any((v) => v.sigungu == t)) t];
+      if (towns.isNotEmpty) {
+        final inTowns = list.where((v) => towns.contains(v.sigungu)).toList();
+        final label = towns.join('·');
+        final missingTowns = [for (final t in towns) if (!inTowns.any((v) => v.sigungu == t)) t];
         if (inTowns.isEmpty) {
           notes.add('• $label에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
         } else {
-          // 구 순서대로 (강남구 먼저, 그다음 송파구)
-          inTowns.sort((a, b) => vq.towns.indexOf(a.sigungu).compareTo(vq.towns.indexOf(b.sigungu)));
-          notes.add('• $label만: $sido ${list.length}곳 → ${inTowns.length}곳'
+          // 구마다 번갈아 (강남구 1등 → 송파구 1등 → 강남구 2등 …): 여러 구를 물으면 첫 카드들에 구가 고루 나오게 (7차)
+          final byTown = {for (final t in towns) t: [for (final v in inTowns) if (v.sigungu == t) v]};
+          final mixed = <Venue>[];
+          for (var k = 0; mixed.length < inTowns.length; k++) {
+            for (final t in towns) {
+              if (k < byTown[t]!.length) mixed.add(byTown[t]![k]);
+            }
+          }
+          inTowns
+            ..clear()
+            ..addAll(mixed);
+          notes.add('• $label${auto ? '(내 지역)부터' : '만'}: $sido ${list.length}곳 → ${inTowns.length}곳'
               '${missingTowns.isEmpty ? '' : ' (${missingTowns.join('·')}에는 등록된 곳이 없어요)'}');
           conds.add('$label만');
           list = inTowns;
           town = label;
+          scopeTowns = [for (final t in towns) if (inTowns.any((v) => v.sigungu == t)) t];
         }
       }
       if (vq.maxFee != null) {
@@ -1633,15 +1889,20 @@ class ConsultAgent implements ChatAgent {
     } else {
       // 예전 경로: 질문에서 찾는 시·군·구 ("송파구만", "강남구 말고 송파구") → 그 구만. 내 정보의 시군구는 먼저 보여 주기만 한다
       town = _askedTown(u, sido);
+      if (town == null && _autoTownOk(sidos) && !_isFollowUp) {
+        town = _known.sigungu;
+        auto = true;
+      }
       list = await ConsultTools.searchVenues(sido: sido, guests: guests, sigungu: town ?? _known.sigungu);
       if (town != null) {
         final inTown = list.where((v) => v.sigungu == town).toList();
         if (inTown.isEmpty) {
           notes.add('• $town에는 등록된 공공예식장이 없어서 $sido 전체에서 찾았어요');
         } else {
-          notes.add('• $town만: $sido ${list.length}곳 → ${inTown.length}곳');
+          notes.add('• $town${auto ? '(내 지역)부터' : '만'}: $sido ${list.length}곳 → ${inTown.length}곳');
           conds.add('$town만');
           list = inTown;
+          scopeTowns = [town];
         }
       }
     }
@@ -1706,9 +1967,59 @@ class ConsultAgent implements ChatAgent {
       notes.add('• 정원(최대 인원)이 큰 순으로 정렬 (정원 모르는 ${list.where((v) => v.capacity == null).length}곳은 뒤로)');
     }
     _lastVenueConds = (filter: filter, exclude: u.exclude, needs: u.needs);
+    // 이번 검색에 실제로 적용된 조건 → 조건 칩·넓히기·K1 검사의 기준
+    final sortKey = vq?.sort ?? (conds.contains('정원 큰 순') ? 'capacity_high' : 'default');
+    final excl = vq?.excludeTowns.isNotEmpty == true ? vq!.excludeTowns : u.exclude;
+    final free = filter == 'free' || (vq?.freeOnly ?? false);
+    _lastScope = QueryScope(
+      sidos: sidos,
+      towns: scopeTowns,
+      excludeTowns: excl,
+      freeOnly: free,
+      maxFee: vq?.maxFee,
+      guests: guests,
+      date: _askDate,
+      periodLabel: _askDate == null ? _period?.label : null,
+      needs: u.needs,
+      sortLabel: const {'fee_low': '대관료 낮은 순', 'capacity_high': '정원 큰 순', 'open_days': '빈 날 많은 순'}[sortKey],
+      autoTown: auto,
+    );
+    _lastVenueArgs = {
+      'sido': sidos,
+      if (scopeTowns.isNotEmpty) 'sigungu': scopeTowns,
+      if (scopeTowns.isEmpty && (vq?.towns.isEmpty ?? true)) 'whole_sido': true,
+      if (excl.isNotEmpty) 'exclude_sigungu': excl,
+      if (free) 'free_only': true,
+      if (vq?.maxFee != null) 'max_fee_won': vq!.maxFee,
+      if (vq?.guests != null) 'guests': vq!.guests,
+      if (noGuests) 'no_guests': true,
+      if (u.needs.isNotEmpty) 'needs': u.needs,
+      if (_askDate != null) 'date': BookingStatus.key(_askDate!),
+      if (_askDate == null && vq?.from != null) 'date_from': BookingStatus.key(vq!.from!),
+      if (_askDate == null && vq?.to != null) 'date_to': BookingStatus.key(vq!.to!),
+      if (_askDate == null && vq != null && vq.weekdays.isNotEmpty)
+        'weekdays': [for (final w in vq.weekdays) const {1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat', 7: 'sun'}[w]],
+      if (sortKey != 'default') 'sort': sortKey,
+    };
     _lookupNote = '$sido 공공예식장 $total곳${conds.isEmpty ? '' : ' → 조건(${conds.join(', ')}) 적용 ${list.length}곳'} → '
         '${town == null && _known.sigungu != null ? '${_known.sigungu} 먼저 · ' : ''}하객 수용 · 무료 · 예약 가능 순';
     return (list: list, notes: notes, conds: conds);
+  }
+
+  /// 질문에 장소가 없으면 내 시·군·구부터 보여 줄지 (R9). 시도·구를 말했거나 '전체'를 원하면 아니다
+  bool _autoTownOk(List<String> sidos) {
+    final mine = _known.sigungu;
+    if (mine == null || sidos.length != 1 || sidos.first != _known.sido) return false;
+    if (_plan?.args['whole_sido'] == true) return false;
+    if (kSidoList.any(_question.contains) || findSigungus(_question).isNotEmpty) return false;
+    if (RegExp(r'전체|전국|다른\s*(구|곳|지역|동네)|어디든|넓혀').hasMatch(_question)) return false;
+    return (Repos.venue.cached ?? const <Venue>[]).any((v) => sidoMatches(v.sido, sidos.first) && v.sigungu == mine);
+  }
+
+  /// 짧은 후속 질문 ("그중에 무료만", "큰 순으로")
+  bool get _isFollowUp {
+    final q = _question.trim();
+    return q.startsWith('그중') || (q.length <= 20 && _turns.lastOrNull?.intent == ConsultIntent.venue && !RegExp(r'추천|알려|찾아').hasMatch(q));
   }
 
   /// 예식장 한 곳의 정보 (원문 그대로): 정원·요금·예약·접수 기간·이용 대상·주차·피로연·예식 가능일·기타 안내
@@ -1783,8 +2094,42 @@ class ConsultAgent implements ChatAgent {
         ref: 'venue:${v.id}',
       );
 
+  AnswerHint _venueDetailHint(Venue v) {
+    final b = Repos.booking.cached?[v.id];
+    final today = DateTime.now();
+    final weekends = b == null
+        ? const <DateTime>[]
+        : b.openBetween(today, DateTime(today.year, today.month + 6, today.day)).where((d) => d.weekday >= DateTime.saturday).toList();
+    final g = _known.guests;
+    final judge = _askDate == null ? null : (bookingJudge(b, _askDate!) ?? ruleJudgeDate(v, _askDate!));
+    return AnswerHint(
+      kind: AnswerKind.venueDetail,
+      headline: v.name.length <= 24 ? v.name : '${v.name.substring(0, 23)}…',
+      headBadges: [
+        if (v.rentalFee == 0) const BlockBadge('무료', Tone.good),
+        if (g != null) switch (v.fits(g)) {
+          true => BlockBadge('$g명 OK', Tone.good),
+          false => BlockBadge('${v.capacity}명까지', Tone.no),
+          null => const BlockBadge('정원 정보 없음', Tone.check),
+        },
+        if (judge != null)
+          BlockBadge('${_askDate!.month}/${_askDate!.day} ${switch (judge.fit) { DateFit.possible => '가능', DateFit.impossible => '안 됨', _ => '확인 필요' }}',
+              switch (judge.fit) { DateFit.possible => Tone.good, DateFit.impossible => Tone.no, _ => Tone.check }),
+      ].take(2).toList(),
+      columns: const [],
+      rows: [
+        ['예약', '${v.bookingType.label}${v.applyPeriod != null && v.applyPeriod!.length <= 20 ? ' · ${v.applyPeriod}' : ''}'],
+        ['주차', VenueFeatures.parking(v).label],
+        ['피로연', VenueFeatures.reception(v).label],
+        if (b != null) ['빈 주말', weekends.isEmpty ? '6개월 안 없음' : weekends.take(3).map(formatDateWithDay).join(', ')],
+        ['문의', v.bookingContact.length > 30 ? '${v.bookingContact.substring(0, 29)}…' : v.bookingContact],
+      ],
+    );
+  }
+
   ChatMessage _venueDetailAnswer(Venue v, Understanding u) {
     _lookupNote = '질문에 나온 이름으로 공공예식장 데이터에서 "${v.name}" 찾음 → 정원·요금·예약·주차·피로연·예식 가능일 원문';
+    _hint = _venueDetailHint(v);
     return ChatMessage(
       fromUser: false,
       basis: v.name,
@@ -1802,6 +2147,23 @@ class ConsultAgent implements ChatAgent {
   Future<ChatMessage> _compareAnswer(List<Venue> vs, Understanding u) async {
     final guests = _known.guests;
     _lookupNote = '질문에 나온 이름으로 예식장 ${vs.length}곳 찾음 → 정원·대관료·예약·주차·피로연·예식 가능일 비교';
+    String short(Venue v) {
+      final n = v.name.split('(').first.trim();
+      return n.length > 12 ? '${n.substring(0, 11)}…' : n;
+    }
+    _hint = AnswerHint(
+      kind: AnswerKind.venueCompare,
+      headline: '예식장 ${vs.length}곳 비교',
+      columns: ['', for (final v in vs) short(v)],
+      rows: [
+        ['지역', for (final v in vs) v.sigungu.isEmpty ? v.sido : v.sigungu],
+        ['정원', for (final v in vs) capShort(v)],
+        ['대관료', for (final v in vs) feeShort(v)],
+        ['주차', for (final v in vs) VenueFeatures.parking(v).label],
+        ['피로연', for (final v in vs) VenueFeatures.reception(v).label],
+        if (guests != null) ['하객 $guests명', for (final v in vs) switch (v.fits(guests)) { true => '수용', false => '부족', _ => '정원 미확인' }],
+      ],
+    );
     String row(String label, String Function(Venue) f) => '• $label: ${vs.map((v) => f(v)).join('  |  ')}';
     final fits = guests == null
         ? null
@@ -1827,6 +2189,7 @@ class ConsultAgent implements ChatAgent {
   ChatMessage _calcAnswer(String expr) {
     final v = evalExpr(expr)!;
     _lookupNote = '질문 속 숫자로 식을 만들고(Gemini/규칙) 앱이 계산: ${exprLabel(expr)}';
+    _hint = AnswerHint(kind: AnswerKind.calc, headline: wonLabel(v), sentence: '${exprLabel(expr)} = ${wonLabel(v)}');
     return ChatMessage(
       fromUser: false,
       basis: '계산 ${exprLabel(expr)}',
@@ -1880,6 +2243,19 @@ class ConsultAgent implements ChatAgent {
       }
     }
     final dupNotes = RegExp(r'동시|중복|두\s*(군데|곳)|여러\s*(곳|군데)').hasMatch(_question) ? await _venueTextNotes(RegExp(r'중복|동시\s*(신청|접수|예약)')) : null;
+    {
+      final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+      final bullets = [for (final l in lines) if (l.startsWith('•') || l.startsWith('-')) l.replaceFirst(RegExp(r'^[•\-]\s*'), '')];
+      final head = lines.where((l) => !l.startsWith('•') && !l.startsWith('-')).firstOrNull;
+      String cut(String t, int n) => t.length > n ? '${t.substring(0, n - 1)}…' : t;
+      _hint = AnswerHint(
+        kind: AnswerKind.general,
+        headline: head != null && head.length <= 24 ? head : '일반 안내',
+        headBadges: const [BlockBadge('일반 안내 · 앱 데이터 아님', Tone.no)],
+        steps: [for (final b in bullets.take(4)) cut(b.split(RegExp(r'[:：]')).first.trim(), 20)],
+        sentence: head != null && head.length > 24 ? cut(head, 60) : null,
+      );
+    }
     final policyHead = topicEmpty
         ? '${u.topic!.label} 분야 정책은 ${_known.sido} 기준으로 앱 데이터에 없어요. 대신 받을 수 있는 정책'
         : '앱 데이터에서 ${_known.sido} 기준으로 찾은 관련 정책';
@@ -1954,6 +2330,19 @@ class ConsultAgent implements ChatAgent {
       final pub = picked.fold<int>(0, (a, o) => a + o.publicCost(guests));
       final gen = picked.fold<int>(0, (a, o) => a + o.generalCost(guests));
       final cap = u.itemBudget;
+      String avg(WeddingOption o) => o.averagePrice == 0 ? '보통 포함' : '${(o.averagePrice * (o.perGuest ? guests / 100 : 1)).round()}만원';
+      String add(WeddingOption o) => o.hiddenExtra > 0 ? '${(o.hiddenExtra * (o.perGuest ? guests / 100 : 1)).round()}만원' : '-';
+      _hint = AnswerHint(
+        kind: AnswerKind.cost,
+        headline: '공공·실속 약 $pub만원',
+        headBadges: [
+          BlockBadge('일반 약 $gen만원', Tone.info),
+          if (cap != null) BlockBadge(cap >= pub ? '$cap만원이면 가능' : '${pub - cap}만원 부족', cap >= pub ? Tone.good : Tone.no),
+        ],
+        columns: const ['', '공공·실속', '일반 평균', '추가금'],
+        rows: [for (final o in picked.take(5)) [o.label.split(' (').first, '${o.publicCost(guests)}만원', avg(o), add(o)]],
+        sentence: '하객 $guests명 기준 참고 금액이에요.',
+      );
       return ChatMessage(
         fromUser: false,
         basis: '하객 $guests명 · 업체_요소 단가표',
@@ -1974,6 +2363,17 @@ class ConsultAgent implements ChatAgent {
     final gen = base.fold<int>(0, (a, o) => a + o.generalCost(guests));
     final big = [...base]..sort((a, b) => b.publicCost(guests).compareTo(a.publicCost(guests)));
     final budget = u.facts.budget ?? (_question.contains('예산') ? _known.budget : null);
+    _hint = AnswerHint(
+      kind: AnswerKind.cost,
+      headline: '공공·실속 약 $pub만원',
+      headBadges: [
+        BlockBadge('일반 약 $gen만원', Tone.info),
+        if (budget != null) BlockBadge(budget >= pub ? '예산 안' : '${pub - budget}만원 부족', budget >= pub ? Tone.good : Tone.no),
+      ],
+      budgetRows: [for (final o in big.take(5)) [o.label.split(' (').first, '${o.publicCost(guests)}만원']],
+      budgetTotal: '기본 ${base.length}개 합계 약 $pub만원 (하객 $guests명)',
+      sentence: '대관료가 무료여도 식대·장식비는 따로 들어요.',
+    );
     _lookupNote = '업체_요소 단가표의 기본 항목 ${base.length}개 합산 (하객 $guests명 기준: 공공·실속 vs 일반 평균+추가금)';
     return ChatMessage(
       fromUser: false,
@@ -2006,6 +2406,12 @@ class ConsultAgent implements ChatAgent {
     }
     final sum = picks.fold<int>(0, (a, v) => a + v.estimate(guests: guests));
     final cap = u.itemBudget;
+    _hint = AnswerHint(
+      kind: AnswerKind.vendorList,
+      headline: '최저가로 고르면 약 $sum만원',
+      headBadges: [if (cap != null) BlockBadge(sum <= cap ? '$cap만원 안' : '${sum - cap}만원 초과', sum <= cap ? Tone.good : Tone.no)],
+      sentence: '[시연] 업체는 가격 비교용 가상 업체예요.',
+    );
     _lookupNote = '$sido 시연용 업체에서 ${u.items.map((i) => i.label).join('·')} 항목마다 가장 저렴한 곳 → 합계 $sum만원'
         '${cap == null ? '' : ' vs 말씀하신 $cap만원'}';
     return ChatMessage(
@@ -2094,7 +2500,9 @@ class ConsultAgent implements ChatAgent {
     final guests = _known.guests;
     final pool = await _venuePool(u);
     final list = pool.list;
-    if (list.isEmpty && pool.notes.isNotEmpty) {
+    final sidoHasAny = (Repos.venue.cached ?? const <Venue>[]).any((v) => sido.split('·').any((sd) => sidoMatches(v.sido, sd)));
+    if (list.isEmpty && pool.notes.isNotEmpty && sidoHasAny) {
+      _hint = const AnswerHint(kind: AnswerKind.venueList, headline: '조건에 맞는 곳이 없어요', sentence: '조건을 하나 빼거나 넓혀 볼 수 있어요.');
       return ChatMessage(
         fromUser: false,
         basis: [sido, ...pool.conds].join(' · '),
@@ -2105,13 +2513,15 @@ class ConsultAgent implements ChatAgent {
       );
     }
     if (list.isEmpty) {
+      _hint = AnswerHint(kind: AnswerKind.venueList, headline: '$sido에는 공공예식장이 없어요', sentence: '가까운 지역을 볼 수 있어요.');
       return ChatMessage(
         fromUser: false,
         basis: sido,
         text: '$sido에는 등록된 공공예식장이 없어요. 가까운 지역으로 찾아볼까요?',
         quickReplies: [
-          for (final s in kSidoList.where((s) => s != sido).take(4))
-            QuickReply('$s 예식장', text: '$s 공공예식장 추천해줘'),
+          for (final (s, n) in VenueScope.nearbySidos(Repos.venue.cached ?? const [], sido, n: 3))
+            QuickReply('$s $n곳', action: 'refine', value: <String, Object?>{'set': {'sido': [s]}, 'remove': const ['sigungu']}),
+          const QuickReply('지원 정책 보기', text: '받을 수 있는 정책 알려줘'),
         ],
         sources: const ['전국 공공예식장 현황'],
       );
@@ -2130,7 +2540,7 @@ class ConsultAgent implements ChatAgent {
           open: () => VenueDetailScreen(venue: v),
           ref: 'venue:${v.id}',
         );
-    final more = _startMore([for (final v in list) venueCard(v)], '$sido 공공예식장', tab: 0);
+    final more = _startMore([for (final v in list) venueCard(v)], '${_placeOr(sido)} 공공예식장', tab: 0);
     return ChatMessage(
       fromUser: false,
       basis: [sido, if (guests != null) '하객 $guests명', ...pool.conds].join(' · '),
@@ -2161,6 +2571,16 @@ class ConsultAgent implements ChatAgent {
         ? '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 금액이 없어 $order'
         : '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 예산 $budget만원 안 $inBudget곳 먼저, $order';
     if (cheapest) _flowNote = '이전 질문을 이어서 더 싼 곳부터 다시 고름';
+    _hintBudget = budget;
+    _hint = AnswerHint(
+      kind: AnswerKind.vendorList,
+      headline: budget == null
+          ? '$sido ${item.label} 업체 $count곳'
+          : inBudget == 0
+              ? '예산 $budget만원 안 업체가 없어요'
+              : '예산 안 ${item.label} 업체 $inBudget곳',
+      sentence: '[시연] 업체는 가격 비교용 가상 업체예요.',
+    );
     final String head;
     if (budget == null) {
       head = '$sido ${item.label} 업체 $count곳 중 $order으로 골랐어요.';
@@ -2236,6 +2656,7 @@ class ConsultAgent implements ChatAgent {
         final v = (await Repos.venue.loadAll()).where((v) => v.id == id).firstOrNull;
         if (v == null) break;
         _lookupNote = '공공예식장 데이터에서 ${v.name} 정보 조회 (주차·피로연·예식 가능일 원문 포함)';
+        _hint = _venueDetailHint(v); // 앞 목록의 한 곳 = 예식장 상세 (목록 제목이 아니라 그곳 이름)
         return ChatMessage(
           fromUser: false,
           basis: '이전 목록 ${index + 1}번째',
@@ -2323,6 +2744,16 @@ class ConsultAgent implements ChatAgent {
     }
     String line(PlanItem i) =>
         '• ${i.name} ${formatManwon(i.amount!)}${i.status == ItemStatus.todo ? '' : ' (${i.status.label})'}';
+    _hint = AnswerHint(
+      kind: AnswerKind.budget,
+      headline: left >= 0 ? '남은 예산 ${formatManwon(left)}' : '${formatManwon(-left)} 초과예요',
+      headBadges: [
+        BlockBadge('계약 ${formatManwon(confirmed)}', Tone.good),
+        if (missing.isNotEmpty) BlockBadge('금액 미정 ${missing.length}개', Tone.check),
+      ],
+      budgetRows: [for (final i in withAmount.take(6)) [i.name, formatManwon(i.amount!)]],
+      budgetTotal: '총예산 ${formatManwon(total)}',
+    );
     return ChatMessage(
       fromUser: false,
       basis: '총예산 ${formatManwon(total)} · 준비 항목에 정한 금액',
@@ -2346,6 +2777,17 @@ class ConsultAgent implements ChatAgent {
     // 권장 시기(예식 D-N)가 이미 지난 일: 남은 날보다 D-N이 크면 늦은 것
     bool late(ChecklistTask t) => daysLeft != null && t.dMinus > daysLeft;
     final lateCount = tasks.where(late).length;
+    String cut(String t) => t.length > 18 ? '${t.substring(0, 17)}…' : t;
+    _hint = AnswerHint(
+      kind: AnswerKind.schedule,
+      headline: tasks.isEmpty ? '남은 할 일이 없어요' : '지금은 ${cut(tasks.first.title)}',
+      headBadges: [
+        if (daysLeft != null) BlockBadge('D-$daysLeft', Tone.info),
+        if (lateCount > 0) BlockBadge('시기 지남 $lateCount개', Tone.check),
+      ],
+      steps: [for (final t in tasks.take(4)) cut(t.title)],
+      sentence: date == null ? '예식일을 정하면 날짜별로 알려 드려요.' : null,
+    );
     final head = date == null
         ? '예식일이 아직 정해지지 않았다면, 날짜·지역·예산을 먼저 정하는 게 시작이에요.'
         : '예식일 ${formatDate(date)}까지 $daysLeft일 남았어요.'
@@ -2380,6 +2822,11 @@ class ConsultAgent implements ChatAgent {
             '${budget - used >= 0 ? '남은 예산 ${formatManwon(budget - used)}' : '${formatManwon(used - budget)} 초과'}';
     final tasks = ConsultTools.nextTasks(count: 2);
     _lookupNote = '예식장 검색 · 정책 판정 · 내 예산 현황 · 할 일 도구의 결과를 모아 정리';
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: '내 정보로 고른 추천이에요',
+      steps: [for (final t in tasks) t.title.length > 18 ? '${t.title.substring(0, 17)}…' : t.title],
+    );
 
     return ChatMessage(
       fromUser: false,
@@ -2429,7 +2876,17 @@ class ConsultAgent implements ChatAgent {
     QuickReply('뭐부터 해야 해?', text: '뭐부터 해야 해?'),
   ];
 
-  ChatMessage _help() => const ChatMessage(
+  ChatMessage _help() {
+    _templateOnly = '도움말';
+    _hint = const AnswerHint(
+      kind: AnswerKind.other,
+      headline: '이런 걸 물어볼 수 있어요',
+      steps: ['받을 수 있는 정책', '하객 수에 맞는 예식장', '예산 안 업체', '지금 할 일'],
+    );
+    return _helpMessage;
+  }
+
+  static const _helpMessage = ChatMessage(
         fromUser: false,
         text: '이런 걸 물어보실 수 있어요.\n'
             '• "20대 청년이 신혼생활에 받을 수 있는 정책이 뭐가 있어?"\n'

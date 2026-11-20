@@ -370,16 +370,19 @@ void main() {
     });
   });
 
-  testWidgets('내 정보를 입력하면 시작하자마자 추천하고 되묻지 않는다', (tester) async {
+  testWidgets('내 정보를 입력하면 첫 화면은 질문 추천만, 이후 답은 되묻지 않는다', (tester) async {
     await _preload(tester);
     AppState.instance.saveProfile(const UserProfile(
       sido: '서울', age: 29, stage: MarriageStage.engaged, guests: 120, budget: 3000, homeless: true));
     final agent = ConsultAgent();
     await tester.runAsync(() async {
       final first = await agent.start();
-      expect(first.text, contains('공공예식장'));
-      expect(first.text, contains('받을 수 있는 정책'));
-      expect(first.cards, isNotEmpty);
+      expect(first.cards, isEmpty); // 처음부터 예식장 목록을 보여주지 않는다
+      expect(first.text, contains('무엇부터'));
+      final labels = first.quickReplies.map((q) => q.label).toList();
+      expect(labels, contains('서울 공공예식장'));
+      expect(labels, contains('예산 나누기'));
+      expect(labels, contains('받을 수 있는 정책'));
 
       final p = await agent.reply('받을 수 있는 정책 있어?');
       expect(p.isQuestion, isFalse);

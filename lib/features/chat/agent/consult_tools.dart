@@ -22,8 +22,14 @@ class ConsultTools {
         (guests == null ? 0 : (v.fits(guests) == true ? 0 : (v.fits(guests) == null ? 4 : 8))) +
         (v.isFree ? 0 : 2) +
         (v.isLimited ? 1 : 0);
+    // 같은 점수면 정원 큰 곳 → ID 순 (2026-11-20 7차: 실행마다 같은 카드·같은 순서가 되도록 순서를 끝까지 정함)
     return all.where((v) => sidoMatches(v.sido, sido)).toList()
-      ..sort((a, b) => score(a).compareTo(score(b)));
+      ..sort((a, b) {
+        final s = score(a).compareTo(score(b));
+        if (s != 0) return s;
+        final c = (b.capacity ?? -1).compareTo(a.capacity ?? -1);
+        return c != 0 ? c : a.id.compareTo(b.id);
+      });
   }
 
   /// 지원 정책: 규칙으로 대상 판정 + 분야로 거르기

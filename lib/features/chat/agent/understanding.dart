@@ -206,7 +206,10 @@ class RuleUnderstander implements Understander {
     MarriageStage? stage;
     if (_has(t, ['예비부부', '예비신혼', '결혼예정', '결혼할', '결혼준비', '아직결혼', '혼인신고전', '혼인신고안', '신고안했'])) {
       stage = MarriageStage.engaged;
-    } else if (_has(t, ['혼인신고했', '결혼했', '신혼부부', '혼인신고후', '년차'])) {
+    } else if (_has(
+        // "신혼부부 전세대출", "신혼부부 특공"은 정책 이름이지 내 결혼 단계가 아니다
+        t.replaceAll(RegExp(r'신혼부부\s*(전용)?\s*(전세|대출|구입|특공|특별공급|임대|주택|정책|지원|버팀목)'), ''),
+        ['혼인신고했', '결혼했', '신혼부부', '혼인신고후', '년차'])) {
       stage = MarriageStage.married;
     }
 

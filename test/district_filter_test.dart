@@ -35,7 +35,7 @@ void main() {
     test('"송파구의 결혼식장만" → 더 보기도 송파구 안에서만', () async {
       final m = await ConsultAgent().reply('송파구의 결혼식장만 보여줘');
       final songpa = (await Repos.venue.loadAll()).where((v) => v.sido == '서울' && v.sigungu == '송파구').length;
-      final more = m.quickReplies.where((r) => r.label.startsWith('더 보기')).firstOrNull;
+      final more = m.quickReplies.where((r) => r.action == 'more').firstOrNull;
       if (songpa <= 3) {
         expect(more, isNull);
       } else {
@@ -52,7 +52,7 @@ void main() {
 
     test('구 이름 없이 "서울 예식장"이면 내 구(강남구)로 거르지 않는다', () async {
       final m = await ConsultAgent().reply('서울 예식장 추천해줘');
-      expect(m.quickReplies.any((r) => r.label.startsWith('더 보기')), isTrue);
+      expect(m.quickReplies.any((r) => r.action == 'more'), isTrue);
       expect(m.trace.join(' '), isNot(contains('강남구만')));
     });
 

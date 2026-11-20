@@ -51,7 +51,7 @@ for (const spec of paths) {
     for (const type of ['mousePressed', 'mouseReleased']) {
       await send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
     }
-    await sleep(800);
+    await sleep(Number(process.env.CLICK_WAIT_MS ?? 800));
   }
   const shot = await send('Page.captureScreenshot', { format: 'png' });
   const name = spec.replace(/[^a-z0-9=_-]+/gi, '_').replace(/^_+/, '') || 'home';

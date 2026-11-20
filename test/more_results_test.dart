@@ -20,7 +20,7 @@ void main() {
     final first = await agent.reply('서울 공공예식장 추천해줘');
     expect(first.cards.length, 3);
     final more = first.quickReplies.firstWhere((r) => r.action == 'more');
-    expect(more.label, startsWith('더 보기 ('));
+    expect(more.label, endsWith('더 보기')); // 블록 답 칩: 'n곳 더 보기' (12자 이내)
 
     final second = await agent.choose(more);
     expect(second.cards.length, 3);
@@ -49,6 +49,8 @@ void main() {
       m = await agent.choose(m.quickReplies.firstWhere((r) => r.action == 'more'));
     }
     expect(m.text, contains('여기까지가 전부예요'));
-    expect(m.quickReplies.single.action, 'open_tab');
+    // 2026-11-20 블록 답: 끝나면 [더 보기]는 없고 탭에서 전체 보기 (+ 넓히기 칩이 함께 올 수 있음)
+    expect(m.quickReplies.any((r) => r.action == 'open_tab'), isTrue);
+    expect(m.quickReplies.any((r) => r.action == 'more'), isFalse);
   });
 }

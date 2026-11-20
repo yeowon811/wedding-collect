@@ -8,6 +8,7 @@ import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
 import 'agent/gemini_client.dart';
+import 'answer/answer_view.dart';
 import '../../core/widgets/inputs.dart';
 import 'chat_agent.dart';
 import 'chat_card_link.dart';
@@ -228,8 +229,11 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _setupView() => ProfileSetupView(
         editing: _editingProfile,
         onDone: () {
+          // 처음 입력할 때는 인사말만, 대화 중에 고쳤을 때만 저장 안내를 남긴다
+          if (_editingProfile) {
+            _app.addChat(const ChatMessage(fromUser: false, text: '내 정보를 저장했어요. 바뀐 정보로 답해 드릴게요.'));
+          }
           setState(() => _editingProfile = false);
-          _app.addChat(const ChatMessage(fromUser: false, text: '내 정보를 저장했어요. 새로 추천해 드릴게요.'));
           _begin();
         },
         onSkip: _editingProfile
@@ -360,7 +364,12 @@ class _ChatScreenState extends State<ChatScreen> {
               return Column(
                 crossAxisAlignment: m.fromUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  _Bubble(message: m),
+                  _Bubble(
+                    message: m,
+                    interactive: isLast && !_busy,
+                    onRefine: (set, remove, label) => _choose(QuickReply(label,
+                        action: 'refine', value: <String, Object?>{'set': set, 'remove': remove})),
+                  ),
                   if (isLast && !m.fromUser && m.quickReplies.isNotEmpty && !_busy)
                     Padding(
                       padding: const EdgeInsets.only(top: 6, bottom: 8),
@@ -441,9 +450,11 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message});
+  const _Bubble({required this.message, this.interactive = false, this.onRefine});
 
   final ChatMessage message;
+  final bool interactive;
+  final void Function(Map<String, Object?> set, List<String> remove, String label)? onRefine;
 
   @override
   Widget build(BuildContext context) {
@@ -484,7 +495,9 @@ class _Bubble extends StatelessWidget {
             bottomRight: Radius.circular(18),
           ),
         ),
-        child: Column(
+        child: m.blocks.isNotEmpty
+            ? AnswerView(blocks: m.blocks, interactive: interactive, onRefine: onRefine)
+            : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (m.isQuestion || m.aiWritten)

@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'answer/answer_blocks.dart';
+
 /// 답변 안에 붙는 결과 카드 (누르면 해당 상세 화면으로 이동)
 class ChatCard {
   const ChatCard({
@@ -43,6 +45,7 @@ class ChatMessage {
     this.isQuestion = false,
     this.aiWritten = false,
     this.trace = const [],
+    this.blocks = const [],
   });
 
   final bool fromUser;
@@ -54,8 +57,11 @@ class ChatMessage {
   final bool isQuestion; // 정보를 되묻는 메시지인지
   final bool aiWritten; // 생성형 AI(Gemini)가 앱 데이터로 문장을 쓴 답변인지
   final List<String> trace; // "왜 이렇게 답했나요?": 질문 이해 → 사용한 정보 → 데이터 조회 → 답변 작성
+  final List<AnswerBlock> blocks; // 새 답 화면 (블록). 비어 있으면 예전처럼 글 + 카드로 보여 준다
 
-  ChatMessage copyWith({String? text, bool? aiWritten, List<String>? trace, List<QuickReply>? quickReplies}) => ChatMessage(
+  ChatMessage copyWith(
+          {String? text, bool? aiWritten, List<String>? trace, List<QuickReply>? quickReplies, List<AnswerBlock>? blocks}) =>
+      ChatMessage(
         fromUser: fromUser,
         text: text ?? this.text,
         cards: cards,
@@ -65,6 +71,7 @@ class ChatMessage {
         isQuestion: isQuestion,
         aiWritten: aiWritten ?? this.aiWritten,
         trace: trace ?? this.trace,
+        blocks: blocks ?? this.blocks,
       );
 }
 

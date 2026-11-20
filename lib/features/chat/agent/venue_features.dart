@@ -84,6 +84,28 @@ const _generic = [
 ];
 
 /// 질문(또는 Gemini가 뽑은 이름)에 나온 예식장 찾기. 이름의 괄호 앞/안 부분도 본다(4글자 이상).
+/// 예식장마다 그 곳에만 있는 짧은 이름 (첫 낱말·괄호 속 이름, 4자 이상, 흔한 말 제외)
+Map<String, Set<String>> _uniqueTokens(List<Venue> all) {
+  if (identical(_tokCacheFor, all) && _tokCache != null) return _tokCache!;
+  final tokensOf = <String, Set<String>>{};
+  final count = <String, int>{};
+  for (final v in all) {
+    final t = <String>{
+      normName(v.name.split(RegExp(r'[\s(]')).first),
+      if (v.name.contains('(')) normName(v.name.split('(')[1].split(')').first),
+    }..removeWhere((p) => p.length < 4 || _generic.contains(p));
+    tokensOf[v.id] = t;
+    for (final x in t) {
+      count[x] = (count[x] ?? 0) + 1;
+    }
+  }
+  _tokCacheFor = all;
+  return _tokCache = {for (final e in tokensOf.entries) e.key: {for (final x in e.value) if (count[x] == 1) x}};
+}
+
+List<Venue>? _tokCacheFor;
+Map<String, Set<String>>? _tokCache;
+
 List<Venue> findVenuesByName(List<Venue> all, String text, {List<String> names = const []}) {
   final q = normName(text);
   final asked = [for (final n in names) normName(n)].where((n) => n.length >= 3).toList();
@@ -95,7 +117,9 @@ List<Venue> findVenuesByName(List<Venue> all, String text, {List<String> names =
       normName(v.name.split('(').first),
       if (v.name.contains('(')) normName(v.name.split('(')[1].split(')').first),
     }.where((p) => p.length >= 4 && !_generic.any((g) => p == g || (p.length <= g.length + 2 && p.contains(g))));
-    final byText = parts.any(q.contains);
+    // 이름의 첫 낱말·괄호 속 이름이 전체 예식장 중 한 곳에만 있으면 그것만으로도 찾는다 ("SETEC이랑", "마루공원 몇 명")
+    final unique = _uniqueTokens(all)[v.id] ?? const <String>{};
+    final byText = parts.any(q.contains) || unique.any(q.contains);
     final byName = asked.any((n) => full.contains(n) || (n.length >= 6 && n.contains(normName(v.name.split('(').first))));
     if (byText || byName) hits.add(v);
   }

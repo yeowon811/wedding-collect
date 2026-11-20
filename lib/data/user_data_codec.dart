@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show Icons, IconData;
 
 import '../features/chat/agent/gemini_client.dart';
+import '../features/chat/answer/answer_blocks.dart';
 import '../features/chat/chat_agent.dart';
 import 'app_state.dart';
 import 'models/review.dart';
@@ -118,6 +119,7 @@ class UserDataCodec {
         if (m.aiWritten) 'ai': true,
         if (m.isQuestion) 'q': true,
         if (m.trace.isNotEmpty) 'trace': m.trace,
+        if (m.blocks.isNotEmpty) 'blocks': [for (final b in m.blocks) b.toJson()],
         if (m.cards.isNotEmpty)
           'cards': [
             for (final c in m.cards)
@@ -145,6 +147,10 @@ class UserDataCodec {
         aiWritten: m['ai'] == true,
         isQuestion: m['q'] == true,
         trace: ((m['trace'] as List?) ?? const []).cast<String>(),
+        blocks: [
+          for (final b in ((m['blocks'] as List?) ?? const []).whereType<Map>())
+            if (AnswerBlock.fromJson(b) case final x?) x,
+        ],
         cards: [
           for (final c in ((m['cards'] as List?) ?? const []).cast<Map>())
             ChatCard(

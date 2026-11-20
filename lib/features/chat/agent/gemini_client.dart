@@ -11,6 +11,7 @@ import '../../../data/models/policy.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
 import '../../../firebase_options.dart';
+import '../answer/answer_ai.dart';
 import 'tool_planner.dart';
 import 'understanding.dart';
 
@@ -70,7 +71,8 @@ class GeminiClient {
           toolConfig: ToolConfig(functionCallingConfig: FunctionCallingConfig.any(ToolPlanner.tools.toSet())),
           generationConfig: GenerationConfig(
             temperature: 0,
-            thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
+            // 2026-11-20 4차 평가: minimal에서 "공공예식장 추천해줘"에 전체 추천을 고름 → low로 (앱 가드도 함께)
+            thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
           ),
         ),
       );
@@ -212,7 +214,7 @@ class GeminiClient {
         if (expecting != null) 'expecting: ${expecting.name}',
         '질문: ${maskPersonalInfo(text)}',
       ].join('\n');
-      final res = await _call(_understandModel, prompt, timeout ?? _timeout);
+      final res = await _call(_understandModel, prompt, timeout ?? _timeout, kind: 'understand');
       final raw = res.text;
       if (raw == null) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -236,7 +238,7 @@ class GeminiClient {
         if (context != null && context.isNotEmpty) maskPersonalInfo(context),
         '질문: ${maskPersonalInfo(text)}',
       ].join('\n');
-      final res = await _call(_planModel, prompt, timeout ?? _timeout);
+      final res = await _call(_planModel, prompt, timeout ?? _timeout, kind: 'plan');
       final call = res.functionCalls.firstOrNull;
       if (call == null) return null;
       lastPlanRaw = '${call.name} ${jsonEncode(call.args)}';
@@ -325,16 +327,188 @@ class GeminiClient {
           if (x is String && x.trim().isNotEmpty && x.length <= 40) x.trim(),
       ].take(max).toList();
 
-  /// 무료 사용량(분당 요청 수)을 넘으면 잠깐 쉬고 한 번만 다시 묻는다
-  static Future<GenerateContentResponse> _call(GenerativeModel model, String prompt, Duration timeout) async {
+  /// 이 앱 실행 중 Gemini를 부른 횟수 (평가: 질문당 호출 수)
+  static int callCount = 0;
+
+  /// 하루 한도 초과를 받은 뒤 다시 부르기 시작할 시각 (그 전에는 바로 실패 → 규칙·기본 틀)
+  static DateTime? pausedUntil;
+
+  /// 평가용 사용량: 종류별 호출 수·토큰 (입력·캐시·출력·생각), 검색·지도 그라운딩 호출 수
+  /// - in: 입력 전체(캐시 포함) · cached: 그중 암묵적 캐시로 싸게 처리된 토큰 (같은 앞부분 1024토큰 이상일 때)
+  static final usage = <String, int>{};
+
+  /// 호출마다 기록 (종류·걸린 시간·토큰·성공 여부). 평가 보고서에 그대로 남긴다
+  static final callLog = <Map<String, Object?>>[];
+
+  static void _count(String kind, GenerateContentResponse r, int ms) {
+    usage['calls.$kind'] = (usage['calls.$kind'] ?? 0) + 1;
+    final u = r.usageMetadata;
+    final input = (u?.promptTokenCount ?? 0) + (u?.toolUsePromptTokenCount ?? 0);
+    final cached = u?.cachedContentTokenCount ?? 0;
+    final out = u?.candidatesTokenCount ?? 0;
+    final think = u?.thoughtsTokenCount ?? 0;
+    usage['in'] = (usage['in'] ?? 0) + input;
+    usage['cached'] = (usage['cached'] ?? 0) + cached;
+    usage['out'] = (usage['out'] ?? 0) + out;
+    usage['think'] = (usage['think'] ?? 0) + think;
+    callLog.add({'kind': kind, 'ms': ms, 'in': input, 'cached': cached, 'out': out, 'think': think, 'ok': true});
+  }
+
+  static Future<GenerateContentResponse> _call(GenerativeModel model, String prompt, Duration timeout,
+      {String kind = 'other'}) async {
+    // 하루 한도를 넘긴 뒤에는 한동안 부르지 않는다 (턴마다 실패 호출 3~4번·1~2초를 아낌 → 바로 기본 틀)
+    final paused = pausedUntil;
+    if (paused != null && DateTime.now().isBefore(paused)) throw StateError('Gemini 사용 불가(한도 초과·결제 오류)로 잠시 쉼');
+    callCount++;
+    final sw = Stopwatch()..start();
     try {
-      return await model.generateContent([Content.text(prompt)]).timeout(timeout);
+      final r = await model.generateContent([Content.text(prompt)]).timeout(timeout);
+      _count(kind, r, sw.elapsedMilliseconds);
+      return r;
     } catch (e) {
       final m = '$e'.toLowerCase();
+      callLog.add({'kind': kind, 'ms': sw.elapsedMilliseconds, 'ok': false, 'error': '$e'.split('\n').first});
+      // 결제 문제(선불 크레딧 소진·결제 미설정)도 다시 불러도 실패 → 하루 한도와 같이 잠시 쉼
+      if (m.contains('prepayment') || m.contains('credits are depleted') || m.contains('billing')) {
+        pausedUntil = DateTime.now().add(const Duration(minutes: 10));
+        rethrow;
+      }
       if (!(m.contains('quota') || m.contains('429') || m.contains('exhausted') || m.contains('rate'))) rethrow;
+      // 하루 한도 초과(quota)는 다시 불러도 실패하므로 바로 넘긴다 (분당 한도만 3초 뒤 1번 더)
+      if (m.contains('per day') || m.contains('daily')) {
+        pausedUntil = DateTime.now().add(const Duration(minutes: 10));
+        rethrow;
+      }
       debugPrint('Gemini 사용량 초과 → 3초 뒤 다시 시도');
       await Future<void>.delayed(const Duration(seconds: 3));
-      return model.generateContent([Content.text(prompt)]).timeout(timeout);
+      callCount++;
+      final sw2 = Stopwatch()..start();
+      final r = await model.generateContent([Content.text(prompt)]).timeout(timeout);
+      _count(kind, r, sw2.elapsedMilliseconds);
+      return r;
+    }
+  }
+
+  // ───────────────────────── ④ 답 블록 작성 · ⑤ 검토 · ③ 보충 조사 (2026-11-20) ─────────────────────────
+
+  GenerativeModel? _writerCache;
+  GenerativeModel get _writer => _writerCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system(AnswerAi.writerPrompt),
+        generationConfig: GenerationConfig(
+          // Gemini 3 안내: temperature는 기본값(1.0) 권장 (낮추면 반복·성능 저하 가능). 형식은 스키마·앱 검사가 잡는다
+          maxOutputTokens: 1024,
+          responseMimeType: 'application/json',
+          responseSchema: AnswerAi.writerSchema,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
+        ),
+      );
+
+  GenerativeModel? _reviewerCache;
+  GenerativeModel get _reviewer => _reviewerCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system(AnswerAi.reviewerPrompt),
+        generationConfig: GenerationConfig(
+          maxOutputTokens: 512,
+          responseMimeType: 'application/json',
+          responseSchema: AnswerAi.reviewSchema,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
+        ),
+      );
+
+  /// 답 블록 JSON (Gemini가 배치만 고름). 실패하면 null → 기본 틀
+  Future<Map<String, Object?>?> writeBlocks(String input, {Duration timeout = const Duration(seconds: 15)}) async {
+    try {
+      final res = await _call(_writer, maskPersonalInfo(input), timeout, kind: 'write');
+      final raw = res.text;
+      if (raw == null) return null;
+      return (jsonDecode(raw) as Map).cast<String, Object?>();
+    } catch (e) {
+      debugPrint('Gemini 답 작성 실패: $e');
+      return null;
+    }
+  }
+
+  /// 답 검토 판정 JSON. 실패하면 null (검토 없이 앱 검사만으로 내보냄)
+  Future<Map<String, Object?>?> reviewAnswer(String input, {Duration timeout = const Duration(seconds: 12)}) async {
+    try {
+      final res = await _call(_reviewer, maskPersonalInfo(input), timeout, kind: 'review');
+      final raw = res.text;
+      if (raw == null) return null;
+      return (jsonDecode(raw) as Map).cast<String, Object?>();
+    } catch (e) {
+      debugPrint('Gemini 답 검토 실패: $e');
+      return null;
+    }
+  }
+
+  // 보충 조사: 검색·지도 도구는 함수 호출과 한 요청에 섞지 않고 따로 부른다
+  GenerativeModel? _searchCache;
+  GenerativeModel get _search => _searchCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system('''
+너는 결혼 준비 앱의 "웹 보충 조사" 단계다. Google 검색으로 질문의 사실(공고 기간·신청 방법·장소 위치 등)을 찾아
+한국어 해요체로 2문장 이내, 60자 안팎으로 답한다. 찾은 값만 쓰고 추측하지 않는다. 못 찾으면 "찾지 못했어요"라고만 쓴다.
+예식장의 정원·대관료 같은 값은 쓰지 않는다.'''),
+        tools: [Tool.googleSearch()],
+        generationConfig: GenerationConfig(
+          temperature: 0,
+          maxOutputTokens: 400,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
+        ),
+      );
+
+  GenerativeModel? _mapsCache;
+  GenerativeModel get _maps => _mapsCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system('''
+너는 장소 좌표 찾기 단계다. Google 지도에서 장소를 찾아 다음 한 줄 형식으로만 답한다:
+LAT,LNG|정확한 장소 이름
+예: 37.5088,127.0631|삼성역 2호선. 못 찾으면 NONE.'''),
+        tools: [Tool.googleMaps()],
+        generationConfig: GenerationConfig(
+          temperature: 0,
+          maxOutputTokens: 100,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
+        ),
+      );
+
+  /// Google 검색 보충 조사. 출처(웹 주소)가 하나도 없으면 null (R12: 출처 없는 웹 값은 쓰지 않음)
+  Future<WebResearch?> research(String question, {Duration timeout = const Duration(seconds: 20)}) async {
+    try {
+      final res = await _call(_search, maskPersonalInfo(question), timeout, kind: 'search');
+      final text = res.text?.trim();
+      final meta = res.candidates.firstOrNull?.groundingMetadata;
+      final links = [
+        for (final c in meta?.groundingChunks ?? const <GroundingChunk>[])
+          if (c.web?.uri != null) (title: c.web!.title ?? c.web!.domain ?? '출처', uri: c.web!.uri!),
+      ];
+      if (text == null || text.isEmpty || links.isEmpty || text.contains('찾지 못했')) return null;
+      return WebResearch(
+        text: text.replaceAll('**', ''),
+        links: links.take(3).toList(),
+        queries: meta?.webSearchQueries ?? const [],
+      );
+    } catch (e) {
+      debugPrint('Gemini 웹 조사 실패: $e');
+      return null;
+    }
+  }
+
+  /// 장소 좌표 (Google 지도). 거리는 앱이 좌표로 계산한다
+  Future<({double lat, double lng, String name, String? uri})?> locate(String place,
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    try {
+      final res = await _call(_maps, '장소: ${maskPersonalInfo(place)} (대한민국)', timeout, kind: 'maps');
+      final m = RegExp(r'(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\|\s*([^\n]+)').firstMatch(res.text ?? '');
+      if (m == null) return null;
+      final lat = double.parse(m[1]!), lng = double.parse(m[2]!);
+      if (lat < 33 || lat > 39 || lng < 124 || lng > 132) return null; // 한국 밖이면 버림
+      final chunk = res.candidates.firstOrNull?.groundingMetadata?.groundingChunks.where((c) => c.maps?.uri != null).firstOrNull;
+      return (lat: lat, lng: lng, name: m[3]!.trim(), uri: chunk?.maps?.uri);
+    } catch (e) {
+      debugPrint('Gemini 장소 찾기 실패: $e');
+      return null;
     }
   }
 
@@ -411,7 +585,7 @@ class GeminiClient {
         '날짜: ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} (${wd[date.weekday - 1]}요일)',
         for (final e in items.entries) '- id ${e.key}: ${e.value}',
       ].join('\n');
-      final res = await _call(_dateModel, prompt, const Duration(seconds: 30));
+      final res = await _call(_dateModel, prompt, const Duration(seconds: 30), kind: 'date');
       final raw = res.text;
       if (raw == null) return null;
       final out = <String, ({String status, String reason})>{};
@@ -556,4 +730,13 @@ class GeminiClient {
         .toSet();
     return nums(source).containsAll(nums(text));
   }
+}
+
+/// 웹 보충 조사 결과: 한두 문장 + 출처 링크 + 검색어(Google 검색 제안 표시용)
+class WebResearch {
+  const WebResearch({required this.text, required this.links, this.queries = const []});
+
+  final String text;
+  final List<({String title, String uri})> links;
+  final List<String> queries;
 }
