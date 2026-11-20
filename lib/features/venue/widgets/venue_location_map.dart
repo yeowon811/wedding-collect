@@ -95,20 +95,30 @@ class VenueLocationMap extends StatelessWidget {
         ),
         ),
         const SizedBox(height: 10),
-        // 주소와 버튼은 지도 아래 가운데에
-        Center(
-          child: Text(venue.address,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-              maxLines: 2),
-        ),
-        const SizedBox(height: 8),
-        Center(
-          child: OutlinedButton.icon(
-            onPressed: () => onOpen(naverMapUri(venue)),
-            icon: const Icon(Icons.map_outlined, size: 18),
-            label: const Text('네이버 지도로 보기'),
-          ),
+        // 지도 아래: 왼쪽 주소, 오른쪽 작은 버튼 (지도와 같은 양옆 여백)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Expanded(
+              child: Text(venue.address,
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary), maxLines: 2),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () => onOpen(naverMapUri(venue)),
+              // 작은 버튼: 글자·아이콘은 버튼 안 가운데
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                alignment: Alignment.center,
+                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              icon: const Icon(Icons.map_outlined, size: 16),
+              label: const Text('네이버 지도로 보기', textAlign: TextAlign.center),
+            ),
+          ]),
         ),
       ]),
     );
