@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wedding_collect/features/venue/widgets/venue_location_map.dart';
 import 'package:wedding_collect/app/app.dart';
 import 'package:wedding_collect/app/main_shell.dart';
 import 'package:wedding_collect/data/app_state.dart';
@@ -34,7 +35,8 @@ Future<void> back(WidgetTester tester) async {
 }
 
 void main() {
-  LookbookAd.enabled = false; // 앱 시작 광고는 따로 시험
+  LookbookAd.enabled = false;
+  VenueLocationMap.showTiles = false; // 테스트에서는 지도 타일(네트워크)을 받지 않음 // 앱 시작 광고는 따로 시험
   testWidgets('5개 탭이 모두 열린다', (tester) async {
     await _preload(tester);
     tester.view.physicalSize = const Size(1170, 2532);
