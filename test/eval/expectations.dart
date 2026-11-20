@@ -23,6 +23,8 @@ class Exp {
     this.notText,
     this.notTowns = const [],
     this.noChip,
+    this.filter,
+    this.noFilter,
   });
 
   final List<String>? towns; // 예식장 카드가 모두 이 구 안
@@ -43,6 +45,8 @@ class Exp {
   final String? notText;
   final List<String> notTowns; // 예식장 카드에 없어야 할 구
   final String? noChip; // 없어야 할 칩 (정규식)
+  final String? filter; // 있어야 할 조건 칩 (정규식)
+  final String? noFilter; // 없어야 할 조건 칩 (정규식, 예: 총예산이 '3000만원 이하' 칩이 되면 안 됨)
 }
 
 /// 대화 하나: 턴마다 질문(또는 '#칩 이름') + 기대값
@@ -161,6 +165,11 @@ const extraCases = <EvalCase>[
     Exp(towns: ['강남구'], headline: '강남구'),
   ]),
   EvalCase('X20', '반복 질문', ['공공예식장 추천해줘', '공공예식장 추천해줘'], [null, Exp(towns: ['강남구'])]),
+  // Red Team Phase 2 (2026-11-20): 총예산은 대관료 상한이 아니다 · 대관료를 직접 말하면 상한
+  EvalCase('R1', '총예산≠대관료', ['예산 3000만원으로 서울 웨딩홀 추천해줘'],
+      [Exp(sidos: ['서울'], minCards: 1, noFilter: '이하', text: '식대·꽃장식')]),
+  EvalCase('R2', '대관료 상한', ['대관료 50만원 이하 서울 예식장'],
+      [Exp(sidos: ['서울'], maxFee: 500000, filter: '50만원 이하', minCards: 1)]),
 ];
 
 List<EvalCase> fromPredicted(List<PredictedCase> cases, Map<String, List<Exp?>> exps) => [

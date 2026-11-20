@@ -52,7 +52,7 @@ void main() {
     expect(c.calls, 1); // 위험 낮은 예식장 목록 → 검토 생략 (앱 검사만)
     expect(c.blocks.last.log.join(), contains('검토 생략'));
     expect(c.blocks.first.title, startsWith('강남구'));
-    expect(c.blocks.allCards.first.reason, '대관료 무료'); // 이유 문장은 앱이 데이터로
+    expect(c.blocks.allCards.first.reason, '대관료 무료 · 식대 별도'); // 이유 문장은 앱이 데이터로 (Red Team P1-2: 식대 별도)
     expect(c.blocks.last.type, BlockType.fold);
   });
 

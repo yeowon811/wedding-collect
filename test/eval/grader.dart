@@ -106,6 +106,18 @@ Future<Map<String, Object?>> gradeTurn(String set, EvalCase c, int i, String q, 
     fails.add('${x.code} ${x.message}');
   }
 
+  // Red Team P1-3: 화면에 보이는 접힌 줄(검증·과정·조건·계산)에 함수 이름·JSON·ms·검사 코드가 없어야
+  final internal = RegExp(r'[a-z]+_[a-z]+|\{|\d+\s*ms|K\d');
+  for (final b in blocks.where((b) => b.type == BlockType.fold)) {
+    for (final l in [...b.items, ...b.met, ...b.pending, ...b.calc]) {
+      if (internal.hasMatch(l)) fails.add('접힌 줄에 내부 기록: $l');
+    }
+  }
+  // Red Team P1-2: 예식장 카드가 있으면 예상 총 예식비 줄이 한 번
+  if (refs.any((r) => r.startsWith('venue:')) && blocks.where((b) => b.type == BlockType.estimate).length != 1) {
+    fails.add('예상 비용 줄 없음·중복');
+  }
+
   final e = i < c.exps.length ? c.exps[i] : null;
   if (e != null) {
     final vs = [for (final id in venueIds) if (venues[id] != null) venues[id]!];
@@ -136,6 +148,11 @@ Future<Map<String, Object?>> gradeTurn(String set, EvalCase c, int i, String q, 
     if (e.kind != null && f?.kind.name != e.kind) fails.add('종류 ${f?.kind.name} ≠ ${e.kind}');
     if (e.chip != null && !chips.any((x) => RegExp(e.chip!).hasMatch(x))) fails.add('칩 /${e.chip}/ 없음');
     if (e.noChip != null && chips.any((x) => RegExp(e.noChip!).hasMatch(x))) fails.add('칩 /${e.noChip}/ 있음');
+    final filterLabels = [for (final b in blocks.where((b) => b.type == BlockType.filters)) for (final x in b.filters) x.label];
+    if (e.filter != null && !filterLabels.any((x) => RegExp(e.filter!).hasMatch(x))) fails.add('조건 칩 /${e.filter}/ 없음');
+    if (e.noFilter != null && filterLabels.any((x) => RegExp(e.noFilter!).hasMatch(x))) {
+      fails.add('조건 칩 /${e.noFilter}/ 있음: ${filterLabels.join(', ')}');
+    }
     for (final t in e.blocks) {
       if (!blocks.any((b) => b.type.name == t)) fails.add('$t 블록 없음');
     }
@@ -168,6 +185,12 @@ Future<Map<String, Object?>> gradeTurn(String set, EvalCase c, int i, String q, 
     'old_chars': m.text.length,
     'verdict': v?.summary,
     'log': [for (final b in blocks.where((b) => b.type == BlockType.fold)) ...b.log],
+    'estimate': blocks.firstOf(BlockType.estimate)?.toJson(),
+    'fold_view': [
+      for (final b in blocks.where((b) => b.type == BlockType.fold))
+        {'verify': [for (final x in b.badges) x.text], 'steps': b.items, 'met': b.met, 'pending': b.pending},
+    ],
+    'filters': [for (final b in blocks.where((b) => b.type == BlockType.filters)) for (final x in b.filters) x.label],
     'plan': GeminiClient.instance?.lastPlanRaw,
     'trace': m.trace,
     'checks': [for (final x in issues) '$x'],

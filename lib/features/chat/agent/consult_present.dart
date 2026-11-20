@@ -17,6 +17,31 @@ extension _Present on ConsultAgent {
     if (_lastU == null && m.sources.isEmpty && m.cards.isEmpty && !m.isQuestion) {
       blocks = blocks.where((b) => b.type != BlockType.fold).toList();
     }
+    // 예상 총 예식비 (Red Team P1-2): 예식장 답에는 '대관료 무료'만 두지 않고 식대·꽃장식 등 예상 범위를 한 번 (참고 단가표 추정)
+    if (f.kind.isVenue) {
+      final shown = [
+        for (final c in blocks.allCards)
+          if (c.ref.startsWith('venue:') && f.byId(c.ref)?.venue != null) f.byId(c.ref)!.venue!,
+      ];
+      final vs = shown.isNotEmpty ? shown : [for (final i in f.items) if (i.venue != null) i.venue!];
+      final est = vs.isEmpty
+          ? null
+          : VenueCostEstimate.of(await Repos.vendor.options(),
+              guests: f.scope?.guests ?? _known.guests,
+              budget: _known.budget,
+              allFree: vs.every((v) => v.isFree),
+              anyFree: vs.any((v) => v.isFree));
+      if (est != null) {
+        final at = blocks.indexWhere((b) => b.type != BlockType.headline && b.type != BlockType.ask);
+        blocks = [...blocks]..insert(at < 0 ? blocks.length : at, est.block);
+        blocks = [
+          for (final b in blocks)
+            b.type == BlockType.fold
+                ? b.copyWith(calc: est.formula, pending: [...b.pending, '실제 식대·꽃장식 비용 (업체 견적으로 확인)'].take(6).toList())
+                : b,
+        ];
+      }
+    }
     final note = _appliedNote;
     if (note != null) {
       final at = blocks.indexWhere((b) => b.type == BlockType.next || b.type == BlockType.fold);
@@ -165,6 +190,10 @@ extension _Present on ConsultAgent {
       cardLimit: _cardLimit,
       // 답의 주인공 카드 (질문에 이름이 나온 대출이 소득 초과일 때)
       pinned: [for (final c in m.cards) if (c.badge == '소득 초과' && c.ref != null) c.ref!],
+      // '어떻게 찾았나요' 사용자 말 요약 재료 (Red Team P1-3)
+      steps: _funnel,
+      pending: [for (final x in _unsupported) '"$x" (앱 데이터로 확인할 수 없어요)'],
+      profile: _known,
     );
   }
 

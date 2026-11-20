@@ -18,7 +18,8 @@ enum BlockType {
   web, // 웹에서 찾은 값 + 출처 링크
   next, // 다음 행동 칩 최대 4개
   fold, // 접힌 한 줄: 출처 보기 · 어떻게 찾았나요
-  notice; // 앱 전용 알림 줄 ("내 정보에 반영: …"). Gemini는 고르지 않는다
+  notice, // 앱 전용 알림 줄 ("내 정보에 반영: …"). Gemini는 고르지 않는다
+  estimate; // 앱 전용: 예상 총 예식비 한 줄 (참고 단가표 추정, Red Team P1-2)
 
   static BlockType? byName(Object? n) => BlockType.values.where((t) => t.name == n).firstOrNull;
 
@@ -60,6 +61,7 @@ class BlockCard {
     this.values = const [],
     this.reason,
     this.contact,
+    this.tags = const [],
   });
 
   final String ref; // 'venue:H078' 등 (누르면 상세)
@@ -68,6 +70,7 @@ class BlockCard {
   final List<String> values;
   final String? reason; // 15자 안팎 (첫 카드만)
   final String? contact; // 빈 값 안내용 문의처 (☎ …)
+  final List<String> tags; // 카드 위 속성 배지 (데이터로 분류: 실내 대강당·야외·피로연·주차, 최대 3)
 
   BlockCard copyWith({String? reason, bool clearReason = false}) => BlockCard(
         ref: ref,
@@ -76,6 +79,7 @@ class BlockCard {
         values: values,
         reason: clearReason ? null : (reason ?? this.reason),
         contact: contact,
+        tags: tags,
       );
 
   Map<String, Object?> toJson() => {
@@ -85,6 +89,7 @@ class BlockCard {
         if (values.isNotEmpty) 'values': values,
         if (reason != null) 'reason': reason,
         if (contact != null) 'contact': contact,
+        if (tags.isNotEmpty) 'tags': tags,
       };
 
   static BlockCard fromJson(Map m) => BlockCard(
@@ -94,6 +99,7 @@ class BlockCard {
         values: ((m['values'] as List?) ?? const []).cast<String>(),
         reason: m['reason'] as String?,
         contact: m['contact'] as String?,
+        tags: [for (final x in ((m['tags'] as List?) ?? const [])) if (x is String) x],
       );
 }
 
@@ -139,6 +145,9 @@ class AnswerBlock {
     this.sources = const [],
     this.log = const [],
     this.detail,
+    this.met = const [],
+    this.pending = const [],
+    this.calc = const [],
   });
 
   final BlockType type;
@@ -155,6 +164,11 @@ class AnswerBlock {
   final List<String> sources; // fold: 출처
   final List<String> log; // fold: 어떻게 찾았나요 (검사 기록 포함)
   final String? detail; // fold: 자세한 설명 (예전 긴 글, 접어서 보관)
+  // fold (Red Team P1-3): badges = 검증 배지, items = 걸러진 과정, met = 충족한 조건, pending = 확인이 필요한 조건,
+  // calc = 예상 비용 계산식. log(내부 기록)는 화면에 보이지 않고 평가·개발용으로만 남긴다
+  final List<String> met;
+  final List<String> pending;
+  final List<String> calc;
 
   Map<String, Object?> toJson() => {
         'type': type.name,
@@ -171,6 +185,9 @@ class AnswerBlock {
         if (sources.isNotEmpty) 'sources': sources,
         if (log.isNotEmpty) 'log': log,
         if (detail != null) 'detail': detail,
+        if (met.isNotEmpty) 'met': met,
+        if (pending.isNotEmpty) 'pend': pending,
+        if (calc.isNotEmpty) 'calc': calc,
       };
 
   static AnswerBlock? fromJson(Map m) {
@@ -193,6 +210,9 @@ class AnswerBlock {
       sources: strs('sources'),
       log: strs('log'),
       detail: m['detail'] as String?,
+      met: strs('met'),
+      pending: strs('pend'),
+      calc: strs('calc'),
     );
   }
 
@@ -204,6 +224,8 @@ class AnswerBlock {
     List<String>? items,
     List<String>? log,
     List<String>? sources,
+    List<String>? pending,
+    List<String>? calc,
   }) =>
       AnswerBlock(
         type,
@@ -220,6 +242,9 @@ class AnswerBlock {
         sources: sources ?? this.sources,
         log: log ?? this.log,
         detail: detail,
+        met: met,
+        pending: pending ?? this.pending,
+        calc: calc ?? this.calc,
       );
 }
 
@@ -245,6 +270,8 @@ extension AnswerBlocksX on List<AnswerBlock> {
         case BlockType.text:
         case BlockType.notice:
           if ((b.text ?? '').trim().isNotEmpty) out.add(b.text!.trim());
+        case BlockType.estimate:
+          out.add('${b.text ?? ''}${b.badges.isEmpty ? '' : ' (${b.badges.map((x) => x.text).join(' · ')})'}');
         case BlockType.cards:
           for (final c in b.cards) {
             out.add([
@@ -326,6 +353,8 @@ extension AnswerBlocksX on List<AnswerBlock> {
           }
         case BlockType.notice:
           out.add(b.text ?? '');
+        case BlockType.estimate:
+          out.add('${b.text ?? ''}${b.badges.isEmpty ? '' : ' (${b.badges.map((x) => x.text).join(' · ')})'}');
         case BlockType.next:
         case BlockType.fold:
           break;

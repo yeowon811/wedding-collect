@@ -15,18 +15,11 @@ class VendorPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (url != null) return ColoredBox(color: AppColors.fill, child: VenueImage(url: url!));
+    if (url != null) return VenueImage(url: url!, placeholderIcon: category.icon);
     final stock = StockPhotos.pick(category, vendorId);
-    if (stock != null) {
-      return ColoredBox(color: AppColors.fill, child: VenueImage(url: stock.url));
-    }
-    return _icon();
+    if (stock != null) return VenueImage(url: stock.url, placeholderIcon: category.icon);
+    return PhotoPlaceholder(icon: category.icon);
   }
-
-  Widget _icon() => ColoredBox(
-        color: AppColors.fill,
-        child: Center(child: Icon(category.icon, size: 36, color: AppColors.textHint)),
-      );
 }
 
 /// 상세 화면 맨 위 사진과 출처: 홈페이지 사진이면 "사진: 도메인", 무료 사진이면 저작자·라이선스

@@ -1,5 +1,6 @@
 import '../../../data/models/booking_status.dart';
 import '../../../data/models/policy.dart';
+import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
 import '../../../data/models/venue.dart';
 import '../../policy/policy_matcher.dart';
@@ -93,6 +94,7 @@ class FactItem {
     this.level,
     this.fields = const {},
     this.rankValue,
+    this.tags = const [],
   });
 
   final String ref;
@@ -106,6 +108,7 @@ class FactItem {
   final MatchLevel? level;
   final Map<String, String> fields; // 표 칸 값 (정원·대관료·주차 …)
   final String? rankValue; // 순위 블록 값 (빈 날 5일 · 3.2km)
+  final List<String> tags; // 카드 위 속성 배지 (Red Team P1-4)
 
   /// 카드 이유 후보: 키 → 앱이 데이터로 확인한 짧은 문장 (Gemini는 키만 고름, 6차). [fillReasons]가 채운다
   final Map<String, String> reasons = {};
@@ -113,7 +116,7 @@ class FactItem {
   String get id => ref.split(':').last;
 
   BlockCard toCard({String? reason}) =>
-      BlockCard(ref: ref, title: name, badge: badge, values: values, reason: reason, contact: contact);
+      BlockCard(ref: ref, title: name, badge: badge, values: values, reason: reason, contact: contact, tags: tags);
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -201,6 +204,9 @@ class AnswerFacts {
     this.allowMixed = false,
     this.cardLimit,
     this.pinned = const [],
+    this.steps = const [],
+    this.pending = const [],
+    this.profile,
   });
 
   final String question;
@@ -223,6 +229,10 @@ class AnswerFacts {
   final bool allowMixed; // 예식장·정책 카드를 섞어도 되는 답 (전체 추천·두 목적 질문)
   final int? cardLimit; // "3개만"처럼 사용자가 정한 카드 수 (1~5). 있으면 그 수만큼, 더 보기 없음
   final List<String> pinned; // 꼭 맨 앞에 보여 줄 카드 (답의 주인공, 예: "그 대출은 대상이 아니에요"의 그 대출)
+  // '어떻게 찾았나요' 사용자 말 요약 (Red Team P1-3): 앱이 센 걸러진 과정 · 앱 데이터로 못 보는 조건 · 이번 답에 쓴 내 정보
+  final List<String> steps;
+  final List<String> pending;
+  final UserProfile? profile;
 
   int get count => total ?? items.length;
 
@@ -347,7 +357,8 @@ FactItem venueFact(Venue v, {QueryScope? scope, BookingStatus? booking, bool mul
   final values = <String>[
     place,
     if (v.capacity != null) capShort(v),
-    if (v.rentalFee != null) feeShort(v),
+    // 대관료 무료만 따로 보이지 않게 (Red Team P1-2): 식대·꽃장식은 따로 든다
+    if (v.rentalFee != null) v.rentalFee == 0 ? '무료 · 식대 별도' : feeShort(v),
     if (needs.contains('parking')) parking.label,
     if (needs.contains('reception')) reception.label,
     if (dateValue != null && badge.tone != Tone.good) dateValue,
@@ -361,10 +372,11 @@ FactItem venueFact(Venue v, {QueryScope? scope, BookingStatus? booking, bool mul
     empty: empty,
     venue: v,
     rankValue: override?.text,
+    tags: VenueFeatures.traits(v, fee: false),
     fields: {
       '지역': v.region,
       '정원': capShort(v),
-      '대관료': feeShort(v),
+      '대관료': v.rentalFee == 0 ? '무료 (식대 별도)' : feeShort(v),
       '예약': v.bookingType.label,
       '주차': parking.label,
       '피로연': reception.label,
@@ -460,7 +472,7 @@ void fillReasons(List<FactItem> items, {int? guests, DateTime? date}) {
     final r = i.reasons;
     if (maxCap != null && v.capacity == maxCap) r['biggest'] = '정원이 가장 큼 ($maxCap명)';
     if (minFee != null && v.rentalFee == minFee) r['cheapest'] = '대관료가 가장 낮음';
-    if (v.rentalFee == 0) r['free'] = '대관료 무료';
+    if (v.rentalFee == 0) r['free'] = '대관료 무료 · 식대 별도';
     if (guests != null && v.fits(guests) == true) r['fits'] = '하객 $guests명 수용';
     final p = VenueFeatures.parking(v);
     if (p.ok == Avail.yes) r['parking'] = p.spaces != null ? '주차 ${p.spaces}대' : '주차 가능';

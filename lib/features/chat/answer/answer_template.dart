@@ -1,6 +1,7 @@
 import '../agent/date_check.dart';
 import 'answer_blocks.dart';
 import 'answer_facts.dart';
+import 'answer_fold.dart';
 
 /// 기본 틀 (R14): Gemini가 없거나 실패·검사 탈락이면 앱이 같은 블록을 정해진 문형으로 채운다.
 /// headline → (text) → filters → cards/표/단계 → next → fold
@@ -105,11 +106,17 @@ class AnswerTemplate {
     ].take(maxChips).toList();
   }
 
+  /// 접힌 줄: 화면에는 검증 배지·걸러진 과정·충족/확인 필요 조건·출처 (사용자 말, Red Team P1-3).
+  /// log(도구 이름·조건 JSON·검사 코드가 섞인 내부 기록)는 평가·개발용으로만 남긴다
   static AnswerBlock foldOf(AnswerFacts f, {List<String> extraLog = const []}) => AnswerBlock(
         BlockType.fold,
         sources: f.sources,
         log: [...f.log, ...extraLog],
         detail: f.detail.trim().isEmpty ? null : f.detail.trim(),
+        badges: [?FoldSummary.verify(f)],
+        items: FoldSummary.steps(f),
+        met: FoldSummary.met(f),
+        pending: FoldSummary.pending(f),
       );
 
   /// 적용된 조건 칩 (✕ = 그 조건 빼고 다시 찾기)

@@ -62,6 +62,27 @@ class VenueFeatures {
     return Reception(Avail.unknown, text: t);
   }
 
+  /// 카드 위 속성 배지 (Red Team P1-4, 2026-11-20): 원문·이름으로 분류한 것만, 최대 [max]개.
+  /// 순서: 대관료 무료 → 실내 대강당/야외 → 외부 케이터링·피로연 → 주차. 이름에 '강당'이 있으면 공원 안이어도 실내로 본다
+  static List<String> traits(Venue v, {bool fee = true, int max = 3}) {
+    final o = outdoor(v);
+    final hall = v.name.contains('강당') && !(v.indoorOutdoor?.contains('실외') ?? false);
+    final place = hall
+        ? '실내 대강당'
+        : o.ok == Avail.yes
+            ? (v.name.contains('잔디') ? '야외·잔디' : '야외')
+            : o.ok == Avail.no
+                ? '실내'
+                : null;
+    final r = reception(v);
+    return [
+      if (fee && v.rentalFee == 0) '대관료 무료',
+      ?place,
+      if (r.ok == Avail.yes) r.kinds.contains('케이터링') ? '외부 케이터링' : '피로연 가능',
+      if (parking(v).ok == Avail.yes) '주차 가능',
+    ].take(max).toList();
+  }
+
   static const _outdoorWords = ['잔디', '공원', '광장', '마당', '정원', '야외', '숲', '루프탑', '가든', '무대', '쉼터'];
 
   /// 야외 예식 가능 여부. 실내외 칸이 비어 있으면 이름으로 추정(guessed=true)

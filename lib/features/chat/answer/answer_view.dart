@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/info_badge.dart';
+import '../../../core/widgets/trait_chips.dart';
 import '../chat_card_link.dart';
 import 'answer_blocks.dart';
 
@@ -73,6 +74,7 @@ class AnswerView extends StatelessWidget {
         BlockType.ask => _Headline(b, ask: true),
         BlockType.text => Text(b.text ?? '', style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.textBody)),
         BlockType.notice => _Notice(b.text ?? ''),
+        BlockType.estimate => _Estimate(b),
         BlockType.filters => _Filters(b.filters, onRefine: interactive ? onRefine : null),
         BlockType.cards => Column(children: [
             for (final (i, c) in b.cards.indexed) ...[if (i > 0) const SizedBox(height: 8), AnswerCardView(card: c)],
@@ -144,6 +146,40 @@ class _Notice extends StatelessWidget {
           Icon(Icons.person_outline, size: 16, color: AppColors.primary),
           const SizedBox(width: 6),
           Expanded(child: Text(text, style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.textBody))),
+        ]),
+      );
+}
+
+/// 예상 총 예식비 한 줄 (Red Team P1-2): '대관료 무료'만 보이지 않게 식대·꽃장식 등 예상 범위 + 내 총예산 비교 (추정)
+class _Estimate extends StatelessWidget {
+  const _Estimate(this.b);
+
+  final AnswerBlock b;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.fill,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(Icons.calculate_outlined, size: 16, color: AppColors.textSecondary),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(b.text ?? '', style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.textBody)),
+              if (b.badges.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Wrap(spacing: 6, runSpacing: 6, children: [for (final x in b.badges) ToneBadge(x)]),
+              ],
+            ]),
+          ),
         ]),
       );
 }
@@ -260,6 +296,8 @@ class AnswerCardView extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // 카드 위 속성 배지 (데이터로 분류, Red Team P1-4)
+            if (c.tags.isNotEmpty) ...[TraitChips(c.tags), const SizedBox(height: 6)],
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Text(c.title,
@@ -478,7 +516,7 @@ class _FoldState extends State<_Fold> {
   @override
   Widget build(BuildContext context) {
     final b = widget.b;
-    if (b.sources.isEmpty && b.log.isEmpty && b.detail == null) {
+    if (b.sources.isEmpty && b.items.isEmpty && b.met.isEmpty && b.pending.isEmpty && b.calc.isEmpty && b.detail == null) {
       return widget.trailing == null ? const SizedBox.shrink() : Align(alignment: Alignment.centerRight, child: widget.trailing);
     }
     final small = TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.textBody);
@@ -519,17 +557,48 @@ class _FoldState extends State<_Fold> {
           margin: const EdgeInsets.only(top: 4),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(color: AppColors.fill, borderRadius: BorderRadius.circular(10)),
+          // 사용자 말로 3단 (Red Team P1-3): ① 검증 배지 ② 걸러진 과정 ③ 충족한 조건 / 확인이 필요한 조건 + 출처.
+          // 내부 기록(log: 도구 이름·조건·검사 코드)은 화면에 보이지 않는다 (평가·개발용)
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (b.badges.isNotEmpty) ...[
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final x in b.badges)
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(x.tone == Tone.good ? Icons.verified_outlined : Icons.info_outline, size: 15, color: toneColor(x.tone)),
+                    const SizedBox(width: 4),
+                    ToneBadge(x),
+                  ]),
+              ]),
+              const SizedBox(height: 10),
+            ],
+            if (b.items.isNotEmpty) ...[
+              Text('어떻게 찾았나요', style: label),
+              const SizedBox(height: 4),
+              Text(b.items.join('  →  '), style: small),
+              const SizedBox(height: 10),
+            ],
+            if (b.met.isNotEmpty) ...[
+              Text('충족한 조건', style: label),
+              const SizedBox(height: 4),
+              for (final s in b.met) _FoldLine(s, icon: Icons.check, color: AppColors.success, style: small),
+              const SizedBox(height: 10),
+            ],
+            if (b.pending.isNotEmpty) ...[
+              Text('확인이 필요한 조건 (미입력·현장 확인)', style: label),
+              const SizedBox(height: 4),
+              for (final s in b.pending) _FoldLine(s, icon: Icons.help_outline, color: AppColors.warning, style: small),
+              const SizedBox(height: 10),
+            ],
+            if (b.calc.isNotEmpty) ...[
+              Text('예상 비용 계산 (참고 단가표 추정)', style: label),
+              const SizedBox(height: 4),
+              for (final s in b.calc) Text('· $s', style: small),
+              const SizedBox(height: 10),
+            ],
             if (b.sources.isNotEmpty) ...[
               Text('출처', style: label),
               const SizedBox(height: 4),
               for (final s in b.sources) Text('· $s', style: small),
-              const SizedBox(height: 10),
-            ],
-            if (b.log.isNotEmpty) ...[
-              Text('어떻게 찾았나요', style: label),
-              const SizedBox(height: 4),
-              for (final (i, s) in b.log.indexed) Text('${i + 1}. $s', style: small),
             ],
             if (b.detail != null) ...[
               const SizedBox(height: 10),
@@ -541,4 +610,24 @@ class _FoldState extends State<_Fold> {
         ),
     ]);
   }
+}
+
+/// 접힌 줄의 조건 한 줄 (아이콘 + 글)
+class _FoldLine extends StatelessWidget {
+  const _FoldLine(this.text, {required this.icon, required this.color, required this.style});
+
+  final String text;
+  final IconData icon;
+  final Color color;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, size: 13, color: color)),
+          const SizedBox(width: 5),
+          Expanded(child: Text(text, style: style)),
+        ]),
+      );
 }

@@ -152,7 +152,9 @@ class ToolPlanner {
             'sigungu': Schema.array(items: Schema.string(), description: '이 시·군·구만 ("강남구, 송파구만" → 둘 다)'),
             'exclude_sigungu': Schema.array(items: Schema.string(), description: '빼 달라는 시·군·구 ("강남구 말고")'),
             'free_only': Schema.boolean(description: '대관료 무료만'),
-            'max_fee_won': Schema.integer(description: '대관료 상한 (원)'),
+            'max_fee_won': Schema.integer(
+                description: '대관료(대관비) 상한 (원). 질문이 대관료·대관비를 직접 말할 때만. "예산 3000만원"·총예산·결혼 비용은 넣지 않는다 '
+                    '(그건 user_facts의 budget_manwon)'),
             'guests': Schema.integer(description: '하객 수 기준 (정원)'),
             'needs': Schema.array(items: Schema.enumString(enumValues: ['parking', 'reception', 'outdoor'])),
             ..._dateParams,
@@ -288,6 +290,8 @@ class ToolPlanner {
   registered_marriage(true) · married_years · income_manwon(부부 합산 연소득 만원). 예: "lives_sido=경기; lives_sigungu=수원시; guests=100"
 - "공공예식장 추천해줘", "예식장 알려줘", "괜찮은 예식장"처럼 예식장만 물으면 search_venues (장소를 말하지 않았으면 sido·sigungu를 비운다: 앱이 내 지역부터 찾음).
   recommend_overview는 예식장·정책·할 일을 한꺼번에 원할 때만.
+- 총예산과 대관료는 다르다: "예산 3000만원으로 서울 웨딩홀"의 3000만원은 결혼 전체 예산이라 user_facts의 budget_manwon이고
+  max_fee_won이 아니다. max_fee_won은 "대관료 50만원 이하"처럼 대관료·대관비를 직접 말할 때만 채운다.
 - 이름이 나온 특정 예식장은 venue_info, 특정 정책 이름은 search_policies의 names.
 - 수량·뜻·방법·절차·상식·감정 상담은 general_answer. 숫자 계산은 calculate.
 - "역에서 가까운", "○○역 근처"는 near_place (장소가 없으면 place를 비우고 candidates에 내 구 근처 역 3개).
@@ -491,6 +495,33 @@ class ToolPlanner {
     };
     final again = parse('search_venues', args)!;
     return (plan: AgentPlan(tool: 'search_venues', self: p.self, venue: again.venue, args: again.args), note: why);
+  }
+
+  static final _feeWord = RegExp(r'대관|대여료|사용료|이용료');
+  static final _budgetWord = RegExp(r'예산|결혼\s*비용|총\s*비용|웨딩\s*비용');
+
+  /// 총예산 ≠ 대관료 (Red Team P1-1): 질문에 '예산'이 있고 '대관'이 없는데 Gemini가 대관료 상한(max_fee_won)을 채웠으면
+  /// 그 값을 빼고 총예산(budget_manwon, 만원)으로 옮긴다. "예산 3000만원으로 서울 웨딩홀"이 '3000만원 이하' 조건이 되지 않게.
+  /// 바꾸지 않으면 note는 null
+  static ({AgentPlan plan, String? note}) feeGuard(AgentPlan p, String q) {
+    final fee = p.args['max_fee_won'];
+    if (fee == null || _feeWord.hasMatch(q) || !_budgetWord.hasMatch(q)) return (plan: p, note: null);
+    final args = {...p.args}..remove('max_fee_won');
+    final again = parse(p.tool, args) ?? p;
+    final won = fee is num ? fee.round() : null;
+    final manwon = won == null ? null : (won >= 100000 ? won ~/ 10000 : won); // 원이면 만원으로
+    final budget = p.self.profile.budget ?? (manwon != null && manwon >= 10 && manwon <= 100000 ? manwon : null);
+    return (
+      plan: AgentPlan(
+        tool: again.tool,
+        self: SelfFacts(profile: p.self.profile.merge(UserProfile(budget: budget)), livesGiven: p.self.livesGiven),
+        venue: again.venue,
+        names: again.names,
+        unsupported: p.unsupported,
+        args: again.args,
+      ),
+      note: '"예산"은 총예산이라 대관료 상한으로 쓰지 않음${budget == null ? '' : ' (총예산 $budget만원)'}',
+    );
   }
 
   /// "그중에 주차 넓은 곳"에 Gemini가 앞 목록 가리키기(번호 없음)를 고른 경우: 앞 예식장 검색을 고치는 후속 질문으로 바꾼다

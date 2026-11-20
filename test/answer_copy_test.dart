@@ -76,9 +76,11 @@ void main() {
     await tester.tap(find.byTooltip('답변 복사'));
     await tester.pump();
     expect(find.textContaining('복사 버튼이 막혀 있어요'), findsOneWidget);
-    // 접힌 줄은 그대로 열린다 (선택 영역 안에서도 버튼 동작)
+    // 접힌 줄은 그대로 열린다 (선택 영역 안에서도 버튼 동작). 내부 기록(log)은 화면에 보이지 않는다 (Red Team P1-3)
     await tester.tap(find.text('출처 보기 · 어떻게 찾았나요'));
     await tester.pump();
-    expect(find.text('어떻게 찾았나요'), findsOneWidget);
+    expect(find.text('출처'), findsOneWidget);
+    expect(find.text('자세한 설명'), findsOneWidget);
+    expect(find.textContaining('앱 검사'), findsNothing);
   });
 }
