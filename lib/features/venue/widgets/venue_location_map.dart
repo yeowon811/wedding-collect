@@ -40,7 +40,10 @@ class VenueLocationMap extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('위치', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
-        ClipRRect(
+        // 양옆을 조금 줄여 가운데에 (화면 폭과 같으면 답답해 보여서)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(
             height: 170,
@@ -90,19 +93,23 @@ class VenueLocationMap extends StatelessWidget {
                 : Center(child: Icon(Icons.map_outlined, size: 36, color: AppColors.textHint)),
           ),
         ),
+        ),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(
-            child: Text(venue.address,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary), maxLines: 2),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
+        // 주소와 버튼은 지도 아래 가운데에
+        Center(
+          child: Text(venue.address,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              maxLines: 2),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: OutlinedButton.icon(
             onPressed: () => onOpen(naverMapUri(venue)),
             icon: const Icon(Icons.map_outlined, size: 18),
             label: const Text('네이버 지도로 보기'),
           ),
-        ]),
+        ),
       ]),
     );
   }
