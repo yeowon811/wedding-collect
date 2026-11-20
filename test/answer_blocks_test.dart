@@ -104,7 +104,9 @@ void main() {
       expect(out.issues.map((i) => i.code), contains('K2'));
     });
 
-    test('K5: 긴 제목·칩 5개·긴 칩·두 문장', () {
+    test('K5: 긴 제목·칩 5개·긴 칩·두 문장 (짧은 형식 freeText=false)', () {
+      AnswerAi.freeText = false;
+      addTearDown(() => AnswerAi.freeText = true);
       final out = AnswerChecks.run([
         const AnswerBlock(BlockType.headline, title: '송파구에 있는 공공예식장을 모두 정리해서 보여 드릴게요'),
         const AnswerBlock(BlockType.text, text: '모두 무료예요. 주차도 돼요.'),

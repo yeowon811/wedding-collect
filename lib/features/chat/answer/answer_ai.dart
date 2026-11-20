@@ -13,7 +13,55 @@ import 'answer_template.dart';
 class AnswerAi {
   // ───────────────────────── ④ 답 작성 ─────────────────────────
 
-  static const writerPrompt = '''
+  /// 설명 글 제한을 풀지 (2026-11-20 동료 요청: "제한 없이 풀어서 결과를 보자"). false면 7차까지의 짧은 형식(F2·F3·F14)
+  /// 바꾸면 Gemini 작성 모델을 다시 만들어야 하므로 앱 시작 전에 정한다
+  static bool freeText = true;
+
+  static String get writerPrompt => freeText ? freePrompt : limitedPrompt;
+
+  /// 설명 글 제한 없음: 매 답에 자연스러운 설명(이유·주의·다음 할 일), 카드마다 이유 키
+  static const freePrompt = '''
+너는 결혼 준비 앱 AI 상담의 "답 쓰기" 단계다. 앱이 데이터에서 찾은 결과(facts)를 보고,
+정해 둔 블록으로 화면을 JSON으로 만들고, 사용자에게 자연스러운 설명을 쓴다.
+
+블록:
+- headline: title_kind로 고른다.
+  - "app": 앱이 범위·건수를 넣은 제목(facts.app_headline)을 그대로 쓴다. 목록·날짜·정책·업체·계산·비용·일정 답은 항상 app.
+  - "custom": 비교·상세·일반 안내에서만 title을 직접 쓴다 (숫자 없이).
+  badges는 badge_keys의 키만(0~2개).
+- text: **항상 쓴다.** 상담사가 말하듯 사용자에게 하는 자연스러운 설명(해요체). 길이 제한 없음, 여러 문장·문단 가능.
+  담을 것: 왜 이 결과인지(어떤 조건·범위·순서로 골랐는지), 주의할 점(정보 없음·확인 필요·예약 현황은 바뀔 수 있음 등),
+  다음에 하면 좋은 일. 숫자·이름은 facts(items·notes·app_text·app_sentence)에 있는 것만 쓰고 지어내지 않는다.
+- cards: 목록 답(facts.app_cards=true)은 앱이 카드와 순서를 정한다 (facts.items 앞에서부터). ids는 비운다.
+  그 밖(비교·상세 등)은 ids에 facts.items의 id를 최대 3개.
+  reason_keys: 카드마다(카드 순서대로) 그 item의 reasons에 있는 키 하나씩 (없으면 ""). 문장은 앱이 데이터로 쓴다.
+  키 뜻: biggest 정원 가장 큼 · cheapest 대관료 가장 낮음 · free 무료 · fits 하객 수용 · parking 주차 · reception 피로연 ·
+  outdoor 야외 · open_on_date 그날 빔 · likely 조건 잘 맞음 · max_amount 지원 금액 · in_budget 예산 안 · top_rating 평점 최고 · official 공식 업체
+- table: 비교할 때. ids(2~5개) + fields(facts.items[].fields의 이름, 최대 5개).
+- ranking: 순서가 답일 때(거리 등). ids 최대 3개.
+- steps: 순서·절차. items 최대 4개.
+- budget·web: facts.app_blocks에 있을 때만 (내용은 앱이 채움).
+- ask: 답에 꼭 필요한 정보가 없을 때 되묻기. title + items 선택지 2~4개.
+- next: options의 label 그대로 고르거나(넓히기·더 보기는 앱이 먼저 붙임), 12자 이내의 짧은 질문 칩을 1개까지 새로 만든다.
+
+규칙:
+- 첫 블록은 headline 또는 ask. 순서: headline → text → cards/table/ranking/steps/budget/web → next.
+- 숫자·이름은 facts에 있는 것만. 제목의 건수·범위는 앱이 채운다.
+- cards는 facts.items에 있는 종류만.
+- 결과가 0건이면 그렇게 말하고 넓혀 볼 곳을 설명한다. 지어내지 않는다.
+- facts.ai_general이 true면 앱 데이터가 아닌 일반 안내다: 일반적인 내용을 설명하고, 구체적인 금액·기관명은 만들지 않는다.
+- 질문이 앞 답의 후속인데 결과가 같으면 설명에서 먼저 그렇게 말한다.
+- fix가 주어지면 그 점을 고쳐 다시 만든다.
+
+예시 (예식장 목록)
+{"blocks":[{"type":"headline","title_kind":"app","badges":["all_free","fit_count"]},
+{"type":"text","text":"사시는 강남구부터 찾았어요. 하객 수가 들어가는 곳을 먼저, 그다음 무료·정원 큰 순으로 놓았어요. 마루공원은 정원 정보가 없어 문의가 필요해요. 더 넓게 보려면 서초·송파까지 넓혀 보세요."},
+{"type":"cards","reason_keys":["biggest","fits","free"]},
+{"type":"next","items":["이 지역 지원 정책"]}]}
+''';
+
+  /// 짧은 형식 (7차까지): 설명은 꼭 필요할 때 한 문장
+  static const limitedPrompt = '''
 너는 결혼 준비 앱 AI 상담의 "답 화면 배치" 단계다. 앱이 데이터에서 찾은 결과(facts)를 보고,
 정해 둔 블록 목록에서 골라 3초 안에 답이 보이는 화면을 JSON으로 만든다. 글은 최소로.
 
@@ -73,10 +121,11 @@ class AnswerAi {
           'badges': Schema.array(items: Schema.string()),
           'ids': Schema.array(items: Schema.string()),
           'reason_key': Schema.string(),
+          'reason_keys': Schema.array(items: Schema.string()),
           'fields': Schema.array(items: Schema.string()),
           'items': Schema.array(items: Schema.string()),
         },
-        optionalProperties: const ['title_kind', 'title', 'text', 'badges', 'ids', 'reason_key', 'fields', 'items'],
+        optionalProperties: const ['title_kind', 'title', 'text', 'badges', 'ids', 'reason_key', 'reason_keys', 'fields', 'items'],
       ),
     ),
   });
@@ -119,7 +168,11 @@ class AnswerAi {
         if (h != null && h.budgetRows.isNotEmpty) 'budget',
         if (h != null && h.web.isNotEmpty) 'web',
       ],
-      if (f.aiGeneral && (h == null || h.steps.isEmpty) && f.detail.isNotEmpty) 'app_text': _cut(f.detail, 300),
+      if (freeText && f.notes.isNotEmpty) 'notes': f.notes.take(5).toList(),
+      if (freeText && f.detail.isNotEmpty)
+        'app_text': _cut(f.detail, 600)
+      else if (f.aiGeneral && (h == null || h.steps.isEmpty) && f.detail.isNotEmpty)
+        'app_text': _cut(f.detail, 300),
       if (f.aiGeneral) 'ai_general': true,
       if (f.followUp && f.previous != null) 'previous_headline': f.previous!.headline,
     });
@@ -184,10 +237,18 @@ class AnswerAi {
             ];
           }
           if (take.isEmpty) continue;
-          // 이유는 앱이 데이터로 확인한 문장만 (Gemini는 키만 고름, 1). 모르는 키면 이유 없음
+          // 이유는 앱이 데이터로 확인한 문장만 (Gemini는 키만 고름, 1). 모르는 키면 이유 없음.
+          // 제한 없을 때(freeText)는 카드마다 reason_keys, 아니면 첫 카드에만 reason_key
           final key = (b['reason_key'] as String?)?.trim();
+          final keys = strs(b['reason_keys']);
+          String? reasonFor(int k, FactItem it) {
+            if (freeText && k < keys.length) return it.reasons[keys[k]];
+            if (freeText && keys.isEmpty && k == 0 && key != null) return it.reasons[key];
+            return !freeText && k == 0 && cardsUsed == 0 && key != null ? it.reasons[key] : null;
+          }
+
           out.add(AnswerBlock(type, cards: [
-            for (final (k, it) in take.indexed) it.toCard(reason: k == 0 && cardsUsed == 0 && key != null ? it.reasons[key] : null),
+            for (final (k, it) in take.indexed) it.toCard(reason: reasonFor(cardsUsed + k, it)),
           ]));
           cardsUsed += take.length;
         case BlockType.table:

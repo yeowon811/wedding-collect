@@ -111,6 +111,18 @@ extension _Present on ConsultAgent {
         ? _lastScope
         : QueryScope(guests: _known.guests, date: _askDate);
     final items = await _itemsFor(cards, scope);
+    // K2 이름 검사용 이름 목록 (한 번만): 괄호 앞 이름 5자 이상
+    // (Gemini가 설명을 쓸 때만 필요. 못 읽으면 이름 검사 없이 숫자 검사만)
+    if (_llm != null && AnswerChecks.knownNames.isEmpty) {
+      try {
+        AnswerChecks.knownNames = {
+          for (final v in await Repos.venue.loadAll())
+            if (v.name.split('(').first.trim().length >= 5) v.name.split('(').first.trim(),
+          for (final p in await Repos.policy.loadAll())
+            if (p.name.split('(').first.trim().length >= 6) p.name.split('(').first.trim(),
+        };
+      } catch (_) {}
+    }
     // 카드 이유 후보: 데이터로 참인 것만 앱이 문장으로 (Gemini는 키만 고름)
     fillReasons(items, guests: scope?.guests ?? _known.guests, date: scope?.date);
     final options = <NextOption>[

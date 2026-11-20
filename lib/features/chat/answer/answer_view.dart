@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -6,12 +7,47 @@ import '../../../core/widgets/info_badge.dart';
 import '../chat_card_link.dart';
 import 'answer_blocks.dart';
 
+/// 답 복사 버튼: 깔끔한 글(제목·배지·설명·카드·표·단계·출처)을 클립보드에 넣고 "답변을 복사했어요"
+class CopyAnswerButton extends StatelessWidget {
+  const CopyAnswerButton({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: '답변 복사',
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        padding: EdgeInsets.zero,
+        icon: Icon(Icons.content_copy_rounded, size: 17, color: AppColors.textSecondary),
+        onPressed: () async {
+          // 브라우저가 클립보드 쓰기를 막으면(권한 거부·내장 브라우저) 조용히 실패하지 않고 직접 고르는 방법을 알려 준다
+          var ok = true;
+          try {
+            await Clipboard.setData(ClipboardData(text: text)).timeout(const Duration(seconds: 3));
+          } catch (_) {
+            ok = false;
+          }
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+              content: Text(ok ? '답변을 복사했어요' : '이 브라우저에서는 복사 버튼이 막혀 있어요. 글을 끌거나 길게 눌러 선택해 복사해 주세요'),
+              duration: Duration(seconds: ok ? 2 : 4),
+            ));
+        },
+      );
+}
+
 /// 블록 답 화면 (시안 A: 흰 바탕·1px 테두리·파랑 포인트 하나, 그림자 없음).
 /// 칩(next·ask 선택지)은 말풍선 아래 기존 선택 버튼 줄이 보여 준다.
 class AnswerView extends StatelessWidget {
-  const AnswerView({super.key, required this.blocks, this.onRefine, this.interactive = false});
+  const AnswerView({super.key, required this.blocks, this.onRefine, this.interactive = false, this.footer});
 
   final List<AnswerBlock> blocks;
+
+  /// 맨 아래 줄 오른쪽 (예: 답 복사 버튼). 접힌 줄이 있으면 그 줄 오른쪽에, 없으면 맨 아래 오른쪽에
+  final Widget? footer;
 
   /// 조건 칩 ✕ / + 조건: (바꿀 값, 뺄 조건, 칩 이름)
   final void Function(Map<String, Object?> set, List<String> remove, String label)? onRefine;
@@ -25,6 +61,9 @@ class AnswerView extends StatelessWidget {
       if (w == null) continue;
       if (children.isNotEmpty) children.add(SizedBox(height: b.type == BlockType.text ? 6 : 12));
       children.add(w);
+    }
+    if (footer != null && !blocks.any((b) => b.type == BlockType.fold)) {
+      children.add(Align(alignment: Alignment.centerRight, child: footer));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);
   }
@@ -43,7 +82,7 @@ class AnswerView extends StatelessWidget {
         BlockType.steps => _Steps(b.items),
         BlockType.budget => _Budget(b),
         BlockType.web => _Web(b),
-        BlockType.fold => _Fold(b),
+        BlockType.fold => _Fold(b, trailing: footer),
         BlockType.next => null, // 말풍선 아래 선택 버튼 줄
       };
 }
@@ -424,9 +463,10 @@ class _Web extends StatelessWidget {
 
 /// 접힌 한 줄: "출처 보기 · 어떻게 찾았나요" (F9, 기본 접힘)
 class _Fold extends StatefulWidget {
-  const _Fold(this.b);
+  const _Fold(this.b, {this.trailing});
 
   final AnswerBlock b;
+  final Widget? trailing; // 같은 줄 오른쪽 (답 복사 버튼)
 
   @override
   State<_Fold> createState() => _FoldState();
@@ -438,22 +478,28 @@ class _FoldState extends State<_Fold> {
   @override
   Widget build(BuildContext context) {
     final b = widget.b;
-    if (b.sources.isEmpty && b.log.isEmpty && b.detail == null) return const SizedBox.shrink();
+    if (b.sources.isEmpty && b.log.isEmpty && b.detail == null) {
+      return widget.trailing == null ? const SizedBox.shrink() : Align(alignment: Alignment.centerRight, child: widget.trailing);
+    }
     final small = TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.textBody);
     final label = TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => setState(() => _open = !_open),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('출처 보기 · 어떻게 찾았나요',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-            Icon(_open ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textSecondary),
-          ]),
+      Row(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('출처 보기 · 어떻게 찾았나요',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Icon(_open ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textSecondary),
+            ]),
+          ),
         ),
-      ),
+        const Spacer(),
+        ?widget.trailing,
+      ]),
       if (_open)
         Container(
           width: double.infinity,

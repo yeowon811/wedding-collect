@@ -32,6 +32,7 @@ import 'gemini_client.dart';
 import 'understanding.dart';
 import '../answer/answer_ai.dart';
 import '../answer/answer_blocks.dart';
+import '../answer/answer_checks.dart';
 import '../answer/answer_composer.dart';
 import '../answer/answer_facts.dart';
 import '../answer/venue_scope.dart';
@@ -1153,8 +1154,10 @@ class ConsultAgent implements ChatAgent {
       }
       matches = matches.where((m) => !over.contains(m)).toList();
       final noNumber = matches.where((m) => m.policy.hasIncomeLimit && incomeCap(m.policy.eligibility) == null).length;
+      // 내 정보에 소득이 이미 있어 판정에서 빠진 경우(over 0건)에도 물어본 정책이 상한을 넘으면 그렇게 말한다 ("0건 뺐어요"와 "대상 아님"이 어긋나지 않게)
+      final shown = over.isNotEmpty ? over : overAsked;
       notes.add('부부합산 연소득 ${manwonLabel(income)} 기준으로 원문의 소득 상한을 비교했어요. '
-          '상한을 넘는 ${over.length}건은 뺐어요${over.isEmpty ? '' : ' (${over.take(2).map((m) => m.policy.name).join(', ')}${over.length > 2 ? ' 외' : ''})'}'
+          '${shown.isEmpty ? '상한을 넘는 정책은 없어요' : '상한을 넘는 정책: ${shown.take(2).map((m) => '${m.policy.name.split('(').first.trim()}(연 ${manwonLabel(incomeCap(m.policy.eligibility)!)})').join(', ')}${shown.length > 2 ? ' 외' : ''}'}'
           '${noNumber > 0 ? ', 소득 조건이 숫자로 적혀 있지 않은 $noNumber건은 기관에 확인이 필요해요' : ''}.');
     }
     if (byAmount) {

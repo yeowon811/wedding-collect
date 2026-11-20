@@ -8,6 +8,7 @@ import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
 import 'agent/consult_agent.dart';
 import 'agent/gemini_client.dart';
+import 'answer/answer_blocks.dart';
 import 'answer/answer_view.dart';
 import '../../core/widgets/inputs.dart';
 import 'chat_agent.dart';
@@ -449,6 +450,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+/// 예전 글 답의 복사용 글 (블록이 없는 저장된 대화)
+String _plainOld(ChatMessage m) => [
+      m.text,
+      for (final c in m.cards) '${c.title} — ${c.subtitle}${c.badge == null ? '' : ' (${c.badge})'}',
+      if (m.sources.isNotEmpty) '출처: ${m.sources.join(' · ')}',
+    ].where((l) => l.trim().isNotEmpty).join('\n');
+
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.message, this.interactive = false, this.onRefine});
 
@@ -476,7 +484,8 @@ class _Bubble extends StatelessWidget {
               bottomRight: Radius.circular(4),
             ),
           ),
-          child: Text(m.text, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5)),
+          child: SelectionArea(
+              child: Text(m.text, style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5))),
         ),
       );
     }
@@ -495,8 +504,15 @@ class _Bubble extends StatelessWidget {
             bottomRight: Radius.circular(18),
           ),
         ),
-        child: m.blocks.isNotEmpty
-            ? AnswerView(blocks: m.blocks, interactive: interactive, onRefine: onRefine)
+        // 답 내용을 끌어서(데스크톱)·길게 눌러서(휴대폰) 고르고 복사할 수 있게 (2026-11-20)
+        child: SelectionArea(
+            child: m.blocks.isNotEmpty
+            ? AnswerView(
+                blocks: m.blocks,
+                interactive: interactive,
+                onRefine: onRefine,
+                footer: CopyAnswerButton(text: m.blocks.copyText),
+              )
             : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -525,8 +541,9 @@ class _Bubble extends StatelessWidget {
               Text('출처 · ${m.sources.join(' · ')}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
             if (m.trace.isNotEmpty) _WhyThisAnswer(trace: m.trace),
+            Align(alignment: Alignment.centerRight, child: CopyAnswerButton(text: _plainOld(m))),
           ],
-        ),
+        )),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/data/repositories/repositories.dart';
+import 'package:wedding_collect/features/chat/answer/answer_ai.dart';
 import 'package:wedding_collect/features/chat/answer/answer_blocks.dart';
 import 'package:wedding_collect/features/chat/answer/answer_composer.dart';
 import 'package:wedding_collect/features/chat/answer/answer_facts.dart';
@@ -55,7 +56,9 @@ void main() {
     expect(c.blocks.last.type, BlockType.fold);
   });
 
-  test('형식 검사(K5)에 걸리면 고칠 점을 붙여 한 번 다시 쓴다', () async {
+  test('형식 검사(K5)에 걸리면 고칠 점을 붙여 한 번 다시 쓴다 (짧은 형식 freeText=false)', () async {
+    AnswerAi.freeText = false;
+    addTearDown(() => AnswerAi.freeText = true);
     final inputs = <String>[];
     var n = 0;
     final c = await AnswerComposer.fake(

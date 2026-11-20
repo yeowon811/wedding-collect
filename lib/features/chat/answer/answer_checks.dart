@@ -1,4 +1,5 @@
 import '../../../core/utils/region.dart';
+import 'answer_ai.dart';
 import 'answer_blocks.dart';
 import 'answer_facts.dart';
 
@@ -48,6 +49,9 @@ class AnswerChecks {
     final n = RegExp(r'(요|다|죠|까)[.?!]?(\s|$)|[.?!](\s|$)').allMatches(t).length;
     return n == 0 ? 1 : n;
   }
+
+  /// 앱 데이터의 예식장·정책 이름 (K2 이름 검사용, 앱이 데이터를 읽을 때 채움). 비어 있으면 이름 검사 안 함
+  static Set<String> knownNames = {};
 
   static CheckResult run(List<AnswerBlock> input, AnswerFacts f, {bool strictFormat = true}) {
     final issues = <CheckIssue>[];
@@ -135,6 +139,16 @@ class AnswerChecks {
       if (extra.isNotEmpty) issues.add(CheckIssue('K2', '$where에 조회 결과에 없는 숫자 ${extra.join(', ')}'));
     }
 
+    // 이름: 설명 글에 나온 예식장·정책 이름은 이번 결과에 있어야 한다 (제한 없는 설명에서 다른 곳을 끌어오는 것 막기)
+    void checkNames(String where, String? s) {
+      if (s == null || knownNames.isEmpty) return;
+      final bad = [
+        for (final n in knownNames)
+          if (s.contains(n) && !f.items.any((i) => i.name.contains(n)) && !f.question.contains(n)) n,
+      ];
+      if (bad.isNotEmpty) issues.add(CheckIssue('K2', '$where에 결과에 없는 이름 ${bad.take(3).join(', ')}'));
+    }
+
     for (final b in blocks) {
       switch (b.type) {
         case BlockType.headline:
@@ -142,6 +156,7 @@ class AnswerChecks {
           checkNums('제목', b.title);
         case BlockType.text:
           checkNums('설명', b.text);
+          checkNames('설명', b.text);
         case BlockType.cards:
           for (final c in b.cards) {
             checkNums('카드 이유', c.reason);
@@ -173,7 +188,7 @@ class AnswerChecks {
         blocks = [
           ...blocks.take(at),
           same,
-          ...blocks.skip(at).where((b) => b.type != BlockType.text),
+          ...blocks.skip(at).where((b) => AnswerAi.freeText || b.type != BlockType.text),
         ];
         fixed.add('K3 앞 답과 결과가 같아 안내 문장을 넣음');
       }
@@ -243,8 +258,9 @@ class AnswerChecks {
     final tMax = head?.type == BlockType.ask ? askMax : titleMax;
     if (title.length > tMax) out.add(CheckIssue('K5', '제목 ${title.length}자 > $tMax자 (F1)'));
     if ((head?.badges.length ?? 0) > 2) out.add(const CheckIssue('K5', '배지 3개 이상'));
+    final free = AnswerAi.freeText;
     var sentenceCount = 0;
-    for (final b in blocks.where((b) => b.type == BlockType.text)) {
+    for (final b in blocks.where((b) => !free && b.type == BlockType.text)) {
       final t = b.text ?? '';
       sentenceCount += sentences(t);
       if (t.length > textMax) out.add(CheckIssue('K5', '설명 ${t.length}자 > $textMax자 (F3)'));
@@ -256,7 +272,7 @@ class AnswerChecks {
     if (cards.length > maxCards) out.add(CheckIssue('K5', '카드 ${cards.length}개 > $maxCards개 (F5)'));
     for (final (i, c) in cards.indexed) {
       if (c.reason == null) continue;
-      if (i > 0) out.add(const CheckIssue('K5', '이유는 첫 카드에만'));
+      if (i > 0 && !free) out.add(const CheckIssue('K5', '이유는 첫 카드에만'));
       if (c.reason!.length > reasonMax) out.add(CheckIssue('K5', '카드 이유 ${c.reason!.length}자 > $reasonMax자'));
     }
     final next = blocks.firstOf(BlockType.next);
@@ -275,7 +291,7 @@ class AnswerChecks {
     }
     // F14: 제목의 숫자를 설명·카드 이유에서 다시 쓰지 않기
     final headNums = numbers(title).where((n) => n.length >= 1 && n != '0').toSet();
-    if (headNums.isNotEmpty) {
+    if (headNums.isNotEmpty && !free) {
       final body = [
         for (final b in blocks.where((b) => b.type == BlockType.text)) b.text ?? '',
         for (final c in cards) c.reason ?? '',

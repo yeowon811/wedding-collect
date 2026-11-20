@@ -231,6 +231,59 @@ extension AnswerBlocksX on List<AnswerBlock> {
 
   String? get headline => firstOf(BlockType.headline)?.title ?? firstOf(BlockType.ask)?.title;
 
+  /// 복사용 글 (답 복사 버튼, 2026-11-20): 제목(배지) → 설명 → 카드 "이름 — 값 · 값 (배지) · 이유" → 표 → 단계 → 예산 → 웹 → 출처.
+  /// 칩·버튼·조건 칩·접힌 기록은 넣지 않는다
+  String get copyText {
+    final out = <String>[];
+    var sources = <String>[];
+    for (final b in this) {
+      switch (b.type) {
+        case BlockType.headline:
+        case BlockType.ask:
+          final badges = b.badges.map((x) => x.text).join(' · ');
+          out.add('${b.title ?? ''}${badges.isEmpty ? '' : ' ($badges)'}');
+        case BlockType.text:
+        case BlockType.notice:
+          if ((b.text ?? '').trim().isNotEmpty) out.add(b.text!.trim());
+        case BlockType.cards:
+          for (final c in b.cards) {
+            out.add([
+              c.values.isEmpty ? c.title : '${c.title} — ${c.values.join(' · ')}',
+              if (c.badge != null) '(${c.badge!.text})',
+              if (c.reason != null) '· ${c.reason}',
+              if (c.contact != null) '· 문의 ${c.contact}',
+            ].join(' '));
+          }
+        case BlockType.table:
+          if (b.columns.isNotEmpty) out.add(b.columns.where((x) => x.isNotEmpty).join(' | '));
+          for (final r in b.rows) {
+            out.add(r.length > 1 ? '${r.first}: ${r.skip(1).join(' | ')}' : r.join(''));
+          }
+        case BlockType.ranking:
+        case BlockType.steps:
+          for (final (i, x) in b.items.indexed) {
+            out.add('${i + 1}. $x');
+          }
+        case BlockType.budget:
+          for (final r in b.rows) {
+            out.add(r.join(' '));
+          }
+          if (b.title != null) out.add(b.title!);
+        case BlockType.web:
+          for (final w in b.web) {
+            out.add('${w.text}${w.url == null ? '' : ' (${w.source ?? w.url})'}');
+          }
+        case BlockType.fold:
+          sources = b.sources;
+        case BlockType.filters:
+        case BlockType.next:
+          break;
+      }
+    }
+    if (sources.isNotEmpty) out.add('출처: ${sources.join(' · ')}');
+    return out.where((l) => l.trim().isNotEmpty).join('\n');
+  }
+
   /// 사람이 읽는 글로 (대화 기억·평가·검토용). 접힌 칸(fold)과 칩은 넣지 않는다
   String get plainText {
     final out = <String>[];

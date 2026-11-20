@@ -225,6 +225,8 @@ void main() {
     final m = await ConsultAgent().reply('부부 합쳐 연봉 8천인데 신혼부부 전세대출 돼?');
     expect(m.blocks.headline, '그 대출은 대상이 아니에요');
     expect(m.blocks.allCards.first.badge!.text, '소득 초과');
+    expect(m.text, contains('상한을 넘는 정책: 신혼부부전용 전세자금 대출(연 7,500만원)')); // "0건 뺐어요"와 어긋나지 않게
+    expect(m.text, isNot(contains('0건은 뺐어요')));
     AppState.instance.resetProfile();
   });
 

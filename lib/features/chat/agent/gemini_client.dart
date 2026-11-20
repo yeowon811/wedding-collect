@@ -397,7 +397,8 @@ class GeminiClient {
         systemInstruction: Content.system(AnswerAi.writerPrompt),
         generationConfig: GenerationConfig(
           // Gemini 3 안내: temperature는 기본값(1.0) 권장 (낮추면 반복·성능 저하 가능). 형식은 스키마·앱 검사가 잡는다
-          maxOutputTokens: 1024,
+          // 설명 글 제한을 풀면(freeText) 글이 길어져 출력 한도를 늘린다
+          maxOutputTokens: AnswerAi.freeText ? 2048 : 1024,
           responseMimeType: 'application/json',
           responseSchema: AnswerAi.writerSchema,
           thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.minimal),
