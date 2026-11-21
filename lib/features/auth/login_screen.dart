@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/inputs.dart';
 import '../../data/account_service.dart';
 
-/// 첫 화면: 로그인 / 회원가입 / 로그인 없이 둘러보기
+/// 첫 화면: 로그인 / 회원가입 / 로그인 없이 둘러보기 (11-21 시안 배치: 위 로고 · 이메일 아이디로 로그인 · 칸 2개 · 채우면 켜지는 로그인 버튼 · 회원가입 링크 · 비밀번호 찾기 · 둘러보기)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -76,164 +75,191 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// 로그인 칸 (시안: 흰 바탕 + 연한 테두리, 이름표 없이 안내 글자만)
+  InputDecoration _box(String hint, {Widget? suffix}) => InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: AppColors.surface,
+        suffixIcon: suffix,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.4),
+        ),
+      );
+
+  /// 가운데 글자 + 양옆 선 ("이메일 아이디로 로그인")
+  Widget _dividerTitle(String text) => Row(children: [
+        Expanded(child: Divider(color: AppColors.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(text, style: TextStyle(fontSize: 15, color: AppColors.textBody)),
+        ),
+        Expanded(child: Divider(color: AppColors.border)),
+      ]);
+
+  /// 밑줄 친 작은 글자 버튼 (비밀번호 찾기 · 로그인 없이 둘러보기)
+  Widget _underlined(String text, VoidCallback? onTap) => TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+        child: Text(text,
+            style: TextStyle(
+              fontSize: 14,
+              decoration: TextDecoration.underline,
+              decorationColor: AppColors.textSecondary,
+              color: AppColors.textSecondary,
+            )),
+      );
+
   @override
   Widget build(BuildContext context) {
+    // 로그인 버튼은 두 칸을 다 채우면 켠다 (시안처럼 비어 있으면 회색)
+    final filled = _email.text.trim().isNotEmpty && _password.text.isNotEmpty;
     return Scaffold(
+      appBar: AppBar(
+        // 왼쪽 위 집 = 로그인 없이 둘러보기 (첫 화면이라 뒤로 갈 곳이 없음)
+        leading: IconButton(
+          tooltip: '로그인 없이 둘러보기',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: _busy ? null : _account.continueAsGuest,
+        ),
+        title: Text(_signUp ? '회원가입' : '로그인'),
+      ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-                children: [
-                  Text(
-                    '결혼 준비,\n한 곳에서 정리해요',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.3,
-                      color: AppColors.textPrimary,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              children: [
+                // 로고 (앱 링 로고 + 이름)
+                Center(
+                  child: Image.asset('assets/images/brand/rings_rose.png',
+                      height: 64, errorBuilder: (_, _, _) => const SizedBox(height: 64)),
+                ),
+                const SizedBox(height: 10),
+                Center(
+                  child: Text('We Connect',
+                      style: TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: AppColors.primary)),
+                ),
+                const SizedBox(height: 4),
+                Center(
+                  child: Text('청년 결혼지원 통합플랫폼', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 40),
+                _dividerTitle(_signUp ? '이메일로 회원가입' : '이메일 아이디로 로그인'),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  onChanged: (_) => setState(() {}),
+                  decoration: _box('아이디(이메일)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _password,
+                  obscureText: _hide,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _signUp ? null : _submit(),
+                  decoration: _box(
+                    _signUp ? '비밀번호 (6자 이상)' : '비밀번호',
+                    suffix: IconButton(
+                      tooltip: _hide ? '비밀번호 보기' : '비밀번호 숨기기',
+                      icon: Icon(_hide ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      onPressed: () => setState(() => _hide = !_hide),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '공공예식장·지원 정책·업체를 찾고, 예산과 준비 일정을 기록해요.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.5,
-                      color: AppColors.textSecondary,
-                    ),
+                ),
+                if (_signUp) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _confirm,
+                    obscureText: _hide,
+                    decoration: _box('비밀번호 확인'),
                   ),
-                  const SizedBox(height: 36),
-                  ChoiceRow<bool>(
-                    options: const [(false, '로그인'), (true, '회원가입')],
-                    value: _signUp,
-                    onChanged: (v) => setState(() {
-                      _signUp = v;
-                      _error = null;
-                    }),
-                  ),
-                  const SizedBox(height: 24),
-                  FormSection(
-                    title: '이메일',
-                    child: TextField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        hintText: 'name@example.com',
-                      ),
-                    ),
-                  ),
-                  FormSection(
-                    title: '비밀번호',
-                    child: TextField(
-                      controller: _password,
-                      obscureText: _hide,
-                      decoration: InputDecoration(
-                        hintText: '6자 이상',
-                        suffixIcon: IconButton(
-                          tooltip: _hide ? '비밀번호 보기' : '비밀번호 숨기기',
-                          icon: Icon(
-                            _hide
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                          onPressed: () => setState(() => _hide = !_hide),
-                        ),
-                      ),
-                      onSubmitted: (_) => _signUp ? null : _submit(),
-                    ),
-                  ),
-                  if (_signUp) ...[
-                    FormSection(
-                      title: '비밀번호 확인',
-                      child: TextField(
-                        controller: _confirm,
-                        obscureText: _hide,
-                        decoration: const InputDecoration(hintText: '한 번 더 입력'),
-                      ),
-                    ),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => setState(() => _agree = !_agree),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: _agree,
-                            onChanged: (v) =>
-                                setState(() => _agree = v ?? false),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Text(
-                                '개인정보 수집·이용 동의 (필수)\n'
-                                '이메일과 앱에 입력한 결혼 준비 정보를 계정 저장에만 써요. '
-                                'AI에는 이메일·이름을 보내지 않아요.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  height: 1.5,
-                                  color: AppColors.textBody,
-                                ),
-                              ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => setState(() => _agree = !_agree),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(value: _agree, onChanged: (v) => setState(() => _agree = v ?? false)),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              '개인정보 수집·이용 동의 (필수)\n'
+                              '이메일과 앱에 입력한 결혼 준비 정보를 계정 저장에만 써요. '
+                              'AI에는 이메일·이름을 보내지 않아요.',
+                              style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.textBody),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.warningSoft,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.warning,
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                  if (!_signUp)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: _reset,
-                        child: const Text('비밀번호를 잊으셨나요?'),
-                      ),
-                    ),
+                  ),
                 ],
-              ),
-            ),
-            BottomActionBar(
-              children: [
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(10)),
+                    child: Text(_error!, style: const TextStyle(fontSize: 14, color: AppColors.warning)),
+                  ),
+                ],
+                const SizedBox(height: 24),
                 SizedBox(
-                  width: double.infinity,
+                  height: 56,
                   child: FilledButton(
-                    onPressed: _busy ? null : _submit,
+                    onPressed: _busy || !filled ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      disabledBackgroundColor: AppColors.fill,
+                      disabledForegroundColor: AppColors.textHint,
+                      textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
                     child: _busy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(_signUp ? '가입하고 시작하기' : '로그인'),
                   ),
                 ),
-                TextButton(
-                  onPressed: _busy ? null : _account.continueAsGuest,
-                  child: const Text('로그인 없이 둘러보기'),
+                const SizedBox(height: 24),
+                // 로그인 <-> 회원가입 전환 (시안: "처음 오셨나요? 회원가입")
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(_signUp ? '이미 계정이 있나요?' : 'We Connect에 처음 오셨나요?',
+                        style: TextStyle(fontSize: 15, color: AppColors.textBody)),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => setState(() {
+                                _signUp = !_signUp;
+                                _error = null;
+                              }),
+                      child: Text(_signUp ? '로그인' : '회원가입',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
+                            color: AppColors.primary,
+                          )),
+                    ),
+                  ],
                 ),
+                if (!_signUp) Center(child: _underlined('비밀번호 찾기', _busy ? null : _reset)),
+                Center(child: _underlined('로그인 없이 둘러보기', _busy ? null : _account.continueAsGuest)),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
