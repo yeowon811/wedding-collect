@@ -6,7 +6,7 @@ import 'app_palette.dart';
 class AppColors {
   AppColors._();
 
-  static const AppPalette palette = AppPalette.clean;
+  static const AppPalette palette = AppPalette.rose;
 
   static Color get primary => palette.primary;
   static Color get primaryDark => palette.primaryDark;
@@ -27,7 +27,7 @@ class AppColors {
   static Color get onHeader => palette.textPrimary;
 
   static const surface = Colors.white;
-  static const divider = Color(0xFFE5E8EB);
+  static const divider = Color(0xFFEFE4E8);
 
   // 상태 표시 (글자로 써도 흰 바탕에서 읽히는 진한 값)
   static const success = Color(0xFF1B7A4B);

@@ -21,6 +21,9 @@ class VenueHomeScreen extends StatefulWidget {
 
   final VenueRepository repository;
 
+  /// 홈 '무료 예식장 BEST'로 열 때: 무료만 보기로 바꾼다 (true를 넣으면 적용하고 false로 되돌림)
+  static final freeOnlyRequest = ValueNotifier<bool>(false);
+
   @override
   State<VenueHomeScreen> createState() => _VenueHomeScreenState();
 }
@@ -32,9 +35,23 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
   String _query = '';
 
   @override
+  void initState() {
+    super.initState();
+    VenueHomeScreen.freeOnlyRequest.addListener(_onFreeRequest);
+    _onFreeRequest();
+  }
+
+  @override
   void dispose() {
+    VenueHomeScreen.freeOnlyRequest.removeListener(_onFreeRequest);
     _search.dispose();
     super.dispose();
+  }
+
+  void _onFreeRequest() {
+    if (!VenueHomeScreen.freeOnlyRequest.value) return;
+    VenueHomeScreen.freeOnlyRequest.value = false;
+    if (mounted) setState(() => _freeOnly = true);
   }
 
   /// 고른 지역 (여러 곳 가능): 시도 → 고른 시군구 (비어 있으면 그 시도 전체). 지도가 비면 전국
@@ -205,7 +222,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             children: [
               Expanded(
                 child: Text(
-                  'We Connect',
+                  '공공예식장',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,

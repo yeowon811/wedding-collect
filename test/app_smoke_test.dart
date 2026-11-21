@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_location_map.dart';
 import 'package:wedding_collect/app/app.dart';
 import 'package:wedding_collect/app/main_shell.dart';
+import 'package:wedding_collect/features/home/home_screen.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
 import 'package:wedding_collect/data/repositories/stock_photos.dart';
@@ -37,8 +38,9 @@ Future<void> back(WidgetTester tester) async {
 
 void main() {
   LookbookAd.enabled = false;
+  HomeScreen.autoPlay = false; // 홈 배너 자동 넘김 끔
   VenueLocationMap.showTiles = false; // 테스트에서는 지도 타일(네트워크)을 받지 않음 // 앱 시작 광고는 따로 시험
-  testWidgets('5개 탭이 모두 열린다', (tester) async {
+  testWidgets('홈과 아래 탭 5개가 모두 열린다', (tester) async {
     await _preload(tester);
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
@@ -47,13 +49,23 @@ void main() {
     MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
-    expect(find.text('We Connect'), findsOneWidget);
+    expect(find.text('공공예식장'), findsWidgets);
     expect(find.textContaining('전국 240곳'), findsNothing); // 제목 아래 개수 줄은 없앰
 
-    for (final tab in ['정책', '업체', '체크리스트', 'AI 상담', '예식장']) {
+    for (final tab in ['홈', '정책', '체크리스트', 'AI 상담', '예식장']) {
       await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text(tab)));
       await tester.pumpAndSettle();
     }
+    // 홈: 바로가기 '웨딩업체' → 업체 화면(아래 탭에는 없음), 뒤로 가면 홈
+    await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('홈')));
+    await tester.pumpAndSettle();
+    expect(find.text('맞춤 지원 찾아보기'), findsOneWidget);
+    expect(find.text('대한민국 정부'), findsNothing);
+    await tester.tap(find.text('웨딩업체'));
+    await tester.pumpAndSettle();
+    expect(find.text('업체 찾기'), findsOneWidget);
+    await back(tester);
+    expect(find.text('맞춤 지원 찾아보기'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -119,8 +131,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('서울 · 강남구 외 1'), findsNothing);
 
-    // 업체: 드레스 2곳 비교
-    await tab('업체');
+    // 업체: 드레스 2곳 비교 (업체는 아래 탭이 아니라 화면으로 열린다)
+    MainShell.goTo(MainShell.vendor);
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, '드레스'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 2; i++) {
@@ -191,7 +204,8 @@ void main() {
     expect(find.byType(RealVendorTile), findsWidgets);
     expect(find.text('공식전담(서울시)'), findsWidgets);
 
-    // 체크리스트에 상담 일정·계약 반영
+    // 체크리스트에 상담 일정·계약 반영 (업체 화면을 닫고)
+    await back(tester);
     await tab('체크리스트');
     final list = find.byType(Scrollable).last;
     await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);

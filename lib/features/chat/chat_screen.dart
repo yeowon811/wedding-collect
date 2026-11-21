@@ -24,6 +24,9 @@ import 'share_summary.dart';
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
+  /// 다른 화면(홈 '예산별 웨딩 가이드' 등)에서 질문을 넘길 때. 내 정보 입력 화면이면 입력칸에 넣어 두기만 한다
+  static final questionRequest = ValueNotifier<String?>(null);
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -58,10 +61,24 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     _syncAgent();
     if (!_needsProfile && _messages.isEmpty && !_app.chatFromSaved) _begin();
+    ChatScreen.questionRequest.addListener(_onQuestionRequest);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onQuestionRequest());
+  }
+
+  void _onQuestionRequest() {
+    final q = ChatScreen.questionRequest.value;
+    if (q == null || !mounted) return;
+    ChatScreen.questionRequest.value = null;
+    if (_needsProfile || _busy) {
+      _input.text = q;
+    } else {
+      _send(q);
+    }
   }
 
   @override
   void dispose() {
+    ChatScreen.questionRequest.removeListener(_onQuestionRequest);
     _input.dispose();
     _scroll.dispose();
     super.dispose();

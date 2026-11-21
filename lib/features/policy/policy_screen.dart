@@ -25,6 +25,9 @@ class PolicyScreen extends StatefulWidget {
 
   final PolicyRepository repository;
 
+  /// 홈 '지원금 혜택 모음'처럼 분야를 골라 열 때 (값을 넣으면 그 분야로 바꾸고 비운다)
+  static final categoryRequest = ValueNotifier<PolicyCategory?>(null);
+
   @override
   State<PolicyScreen> createState() => _PolicyScreenState();
 }
@@ -40,6 +43,26 @@ class _PolicyScreenState extends State<PolicyScreen> {
   UserProfile get _me => _app.profile;
   bool get _blank => _me.sido == null && _me.age == null && _me.stage == null;
   PolicyProfile get _profile => PolicyProfile.fromUser(_me);
+
+  @override
+  void initState() {
+    super.initState();
+    PolicyScreen.categoryRequest.addListener(_onCategoryRequest);
+    _onCategoryRequest();
+  }
+
+  @override
+  void dispose() {
+    PolicyScreen.categoryRequest.removeListener(_onCategoryRequest);
+    super.dispose();
+  }
+
+  void _onCategoryRequest() {
+    final c = PolicyScreen.categoryRequest.value;
+    if (c == null) return;
+    PolicyScreen.categoryRequest.value = null;
+    if (mounted) setState(() => _category = _savedCategory = c);
+  }
 
   @override
   Widget build(BuildContext context) {

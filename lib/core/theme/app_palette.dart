@@ -45,4 +45,21 @@ class AppPalette {
     placeholder: Color(0xFFE9ECEF),
     ink: Color(0xFF191F28),
   );
+
+  /// "We Connect" 로즈 (2026-11-21 사용자 확정: 앱 아이콘·홈 시안의 핑크 톤을 앱 전체에).
+  /// 포인트 로즈는 흰 글자를 얹어도 읽히는 진한 값(대비 흰 바탕 5.3:1 · 연핑크 면 4.7:1), 면은 아주 연한 핑크.
+  static const rose = AppPalette(
+    primary: Color(0xFFB04862),
+    primaryDark: Color(0xFF9C3B57),
+    primarySoft: Color(0xFFFCEEF2),
+    background: Color(0xFFFFFFFF),
+    fill: Color(0xFFF8F2F4),
+    border: Color(0xFFEFE4E8),
+    textPrimary: Color(0xFF1F1A1C),
+    textBody: Color(0xFF51484C),
+    textSecondary: Color(0xFF6F6569),
+    textHint: Color(0xFF948A8E),
+    placeholder: Color(0xFFF1E9EC),
+    ink: Color(0xFF2A1F23),
+  );
 }
