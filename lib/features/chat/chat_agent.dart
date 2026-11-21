@@ -11,6 +11,7 @@ class ChatCard {
     this.badge,
     this.open,
     this.ref,
+    this.note,
   });
 
   final String title;
@@ -19,6 +20,7 @@ class ChatCard {
   final String? badge;
   final Widget Function()? open; // 상세 화면
   final String? ref; // 저장용 연결 정보: 'venue:H078', 'policy:<ID>', 'vendor:D0001' (다시 열 때 상세 화면을 찾음)
+  final String? note; // 카드 아래 한 줄 (기간 질문의 '가능한 날 3월 7, 14일')
 }
 
 /// 답변 아래에 보여주는 선택 버튼.

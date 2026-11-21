@@ -215,16 +215,17 @@ extension _Present on ConsultAgent {
       for (final c in cards)
         switch (c.ref?.split(':')) {
           ['venue', final id] when venues[id] != null =>
-            venueFact(venues[id]!,
+            (venueFact(venues[id]!,
                 scope: scope,
                 booking: bookings[id],
                 multiSido: multiSido,
-                // 기간 질문의 '10일 중 3일 가능'·'10일 모두 가능' 배지는 앱이 센 값 그대로
-                override: RegExp(r'^\d+일 (중 \d+일|모두) 가능$').hasMatch(c.badge ?? '')
+                // 기간 질문의 '8일 가능'·'13일 모두 가능' 배지와 가능한 날 줄은 앱이 센 값 그대로
+                override: RegExp(r'^\d+일 (모두 )?가능$').hasMatch(c.badge ?? '')
                     ? BlockBadge(c.badge!, Tone.good)
                     : RegExp(r'^[\d.]+km$').hasMatch(c.badge ?? '')
                         ? BlockBadge(c.badge!, Tone.info)
-                        : null),
+                        : null))
+              ..note = c.note,
           ['policy', final id] when policies[id] != null => () {
               final hit = judged!.matches.where((x) => x.policy.id == id).firstOrNull;
               final miss = judged.misses.where((x) => x.policy.id == id).firstOrNull;

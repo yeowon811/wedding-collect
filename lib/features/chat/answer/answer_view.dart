@@ -324,6 +324,10 @@ class AnswerCardView extends StatelessWidget {
                 if (addable) AddToChecklistButton(ref: c.ref),
               ]),
             ],
+            if (c.note != null) ...[
+              const SizedBox(height: 4),
+              Text(c.note!, style: TextStyle(fontSize: 13, height: 1.4, color: toneColor(Tone.good))),
+            ],
             if (c.reason != null) ...[
               const SizedBox(height: 4),
               Text('✦ ${c.reason}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),

@@ -109,6 +109,7 @@ class FactItem {
   final Map<String, String> fields; // 표 칸 값 (정원·대관료·주차 …)
   final String? rankValue; // 순위 블록 값 (빈 날 5일 · 3.2km)
   final List<String> tags; // 카드 위 속성 배지 (Red Team P1-4)
+  String? note; // 카드 값 아래 한 줄 (앱이 센 값, 예: 가능한 날 3월 7, 14일)
 
   /// 카드 이유 후보: 키 → 앱이 데이터로 확인한 짧은 문장 (Gemini는 키만 고름, 6차). [fillReasons]가 채운다
   final Map<String, String> reasons = {};
@@ -116,7 +117,7 @@ class FactItem {
   String get id => ref.split(':').last;
 
   BlockCard toCard({String? reason}) =>
-      BlockCard(ref: ref, title: name, badge: badge, values: values, reason: reason, contact: contact, tags: tags);
+      BlockCard(ref: ref, title: name, badge: badge, values: values, reason: reason, contact: contact, tags: tags, note: note);
 
   Map<String, Object?> toJson() => {
         'id': id,

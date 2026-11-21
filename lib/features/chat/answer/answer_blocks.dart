@@ -62,6 +62,7 @@ class BlockCard {
     this.reason,
     this.contact,
     this.tags = const [],
+    this.note,
   });
 
   final String ref; // 'venue:H078' 등 (누르면 상세)
@@ -71,6 +72,7 @@ class BlockCard {
   final String? reason; // 15자 안팎 (첫 카드만)
   final String? contact; // 빈 값 안내용 문의처 (☎ …)
   final List<String> tags; // 카드 위 속성 배지 (데이터로 분류: 실내 대강당·야외·피로연·주차, 최대 3)
+  final String? note; // 값 아래 한 줄 (앱이 센 값: 가능한 날 3월 7, 14일)
 
   BlockCard copyWith({String? reason, bool clearReason = false}) => BlockCard(
         ref: ref,
@@ -80,6 +82,7 @@ class BlockCard {
         reason: clearReason ? null : (reason ?? this.reason),
         contact: contact,
         tags: tags,
+        note: note,
       );
 
   Map<String, Object?> toJson() => {
@@ -90,6 +93,7 @@ class BlockCard {
         if (reason != null) 'reason': reason,
         if (contact != null) 'contact': contact,
         if (tags.isNotEmpty) 'tags': tags,
+        if (note != null) 'note': note,
       };
 
   static BlockCard fromJson(Map m) => BlockCard(
@@ -100,6 +104,7 @@ class BlockCard {
         reason: m['reason'] as String?,
         contact: m['contact'] as String?,
         tags: [for (final x in ((m['tags'] as List?) ?? const [])) if (x is String) x],
+        note: m['note'] as String?,
       );
 }
 
@@ -277,6 +282,7 @@ extension AnswerBlocksX on List<AnswerBlock> {
             out.add([
               c.values.isEmpty ? c.title : '${c.title} — ${c.values.join(' · ')}',
               if (c.badge != null) '(${c.badge!.text})',
+              if (c.note != null) '· ${c.note}',
               if (c.reason != null) '· ${c.reason}',
               if (c.contact != null) '· 문의 ${c.contact}',
             ].join(' '));

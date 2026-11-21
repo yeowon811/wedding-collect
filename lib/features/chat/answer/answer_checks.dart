@@ -127,6 +127,7 @@ class AnswerChecks {
                   reason: c.reason,
                   contact: c.contact ?? item.contact,
                   tags: c.tags,
+                  note: c.note,
                 );
               }(),
           ]),

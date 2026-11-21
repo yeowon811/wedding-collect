@@ -1907,6 +1907,7 @@ class ConsultAgent implements ChatAgent {
     final pool = await _venuePool(u);
     final bookings = Repos.booking.cached ?? const <String, BookingStatus>{};
     final counts = <Venue, int>{};
+    final openDays = <Venue, List<DateTime>>{};
     var unknown = 0, none = 0, byBooking = 0;
     for (final v in pool.list) {
       // 날짜마다 예약 현황(달력)이 있으면 그것, 없으면 예식 가능일 원문 규칙
@@ -1915,6 +1916,7 @@ class ConsultAgent implements ChatAgent {
       final ok = fits.where((f) => f == DateFit.possible).length;
       if (ok > 0) {
         counts[v] = ok;
+        openDays[v] = [for (final (i, d) in dates.indexed) if (fits[i] == DateFit.possible) d];
       } else if (fits.every((f) => f == DateFit.impossible)) {
         none++;
       } else {
@@ -1937,9 +1939,12 @@ class ConsultAgent implements ChatAgent {
           : (ranked.isEmpty ? '${_placeOr(sido)} 그 기간 가능한 곳 없음' : '${_placeOr(sido)} 가능한 곳 ${ranked.length}곳'),
       sentence: '${label.replaceAll(RegExp(r'\(.*?\)'), '').trim()} 날짜를 확인했어요.',
     );
-    // '10/10일 가능'은 10월 10일처럼 읽혀서 날짜로 오해하지 않는 말로 (2026-11-21 피드백)
-    String daysBadge(int n) => n == dates.length ? '${dates.length}일 모두 가능' : '${dates.length}일 중 $n일 가능';
-    final cards = [for (final v in ranked) _venueCard(v, badge: daysBadge(counts[v]!))];
+    // 배지는 개수만 짧게('8일 가능', '13일 모두 가능'), 실제 날짜는 카드 아래 줄에 (2026-11-21 피드백:
+    // '10/10일 가능'은 10월 10일처럼 읽히고, 개수만으로는 어느 날인지 모름)
+    String daysBadge(int n) => n == dates.length ? '$n일 모두 가능' : '$n일 가능';
+    final cards = [
+      for (final v in ranked) _venueCard(v, badge: daysBadge(counts[v]!), note: '가능한 날 ${dayList(openDays[v]!)}')
+    ];
     final more = _startMore(cards, '${_placeOr(sido)} 가능한 곳', tab: 0);
     return ChatMessage(
       fromUser: false,
@@ -1949,7 +1954,7 @@ class ConsultAgent implements ChatAgent {
           '• 그중 하루라도 예식이 가능한 곳: ${ranked.length}곳\n'
           '• 그 기간엔 예식이 없는 곳: $none곳\n'
           '• 원문만으로는 알 수 없는 곳(지정일·협의·정보 없음): $unknown곳\n\n'
-          '${ranked.take(3).map((v) => '• ${v.name}: ${dates.length}일 중 ${counts[v]}일 가능 (${v.capacityLabel} · ${v.feeLabel})').join('\n')}\n\n'
+          '${ranked.take(3).map((v) => '• ${v.name}: ${dayList(openDays[v]!)} 가능 (${v.capacityLabel} · ${v.feeLabel})').join('\n')}\n\n'
           '날짜를 하나 정하면 그날 기준으로 다시 확인해 드려요. '
           '${byBooking > 0 ? '예약 현황은 수집한 날 기준이라 그사이 바뀔 수 있고, 달력이 없는 곳은 이미 찬 날짜를 알 수 없어요.' : '이미 찬 날짜는 앱에서 알 수 없어요.'}',
       cards: cards.take(3).toList(),
@@ -2277,7 +2282,8 @@ class ConsultAgent implements ChatAgent {
     ].join('\n');
   }
 
-  ChatCard _venueCard(Venue v, {String? badge}) => ChatCard(
+  ChatCard _venueCard(Venue v, {String? badge, String? note}) => ChatCard(
+        note: note,
         title: v.name,
         subtitle: '${v.region} · ${v.capacityLabel} · ${v.feeLabel}',
         icon: Icons.location_city,
@@ -3089,4 +3095,24 @@ class ConsultAgent implements ChatAgent {
             '필요한 정보가 없으면 제가 하나씩 여쭤볼게요.',
         quickReplies: _starterReplies,
       );
+}
+
+/// 날짜 목록을 달마다 묶어 짧게: '3월 7, 14, 21일 · 4월 4일'. [max]개 넘으면 '외 n일'
+/// ('10/10'처럼 날짜와 헷갈리는 표기는 쓰지 않는다)
+String dayList(List<DateTime> days, {int max = 10}) {
+  final shown = days.take(max).toList();
+  final byMonth = <String, List<int>>{};
+  for (final d in shown) {
+    byMonth.putIfAbsent('${d.year}-${d.month}', () => []).add(d.day);
+  }
+  final years = shown.map((d) => d.year).toSet();
+  final parts = [
+    for (final e in byMonth.entries)
+      () {
+        final [y, m] = e.key.split('-');
+        return '${years.length > 1 ? '$y년 ' : ''}$m월 ${e.value.join(', ')}일';
+      }(),
+  ];
+  final rest = days.length - shown.length;
+  return '${parts.join(' · ')}${rest > 0 ? ' 외 $rest일' : ''}';
 }

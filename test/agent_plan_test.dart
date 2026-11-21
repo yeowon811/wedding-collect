@@ -4,6 +4,7 @@ import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/calc.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
 import 'package:wedding_collect/features/chat/agent/policy_text.dart';
+import 'package:wedding_collect/features/chat/answer/answer_blocks.dart';
 
 /// 예상 질문 평가(docs/ai-eval/predicted_report.md)에서 틀렸던 질문: 계획(질문 종류·조건)대로 도구를 쓰는지
 /// Gemini 없이 규칙만으로도 되는 부분을 확인한다.
@@ -105,9 +106,21 @@ void main() {
   test('D02 내년 봄 토요일: 그 기간 토요일 전부 확인', () async {
     final m = await ConsultAgent().reply('내년 봄 토요일에 되는 예식장 있어?');
     expect(m.text, contains('봄(3~5월) 토요일'));
-    // '10/10일 가능'은 10월 10일처럼 읽혀서 쓰지 않는다 → '13일 모두 가능' / '13일 중 9일 가능'
+    // '10/10일 가능'은 10월 10일처럼 읽혀서 쓰지 않는다 → 배지 '8일 가능'·'13일 모두 가능' + 가능한 날 목록
     expect(m.cards.first.badge, isNot(matches(RegExp(r'\d+/\d+'))));
-    expect(m.cards.first.badge, matches(RegExp(r'^\d+일 (중 \d+일|모두) 가능$')));
+    expect(m.cards.first.badge, matches(RegExp(r'^\d+일 (모두 )?가능$')));
+    expect(m.cards.first.note, matches(RegExp(r'^가능한 날 \d+월 \d+')));
+    // 블록 답의 카드에도 그대로
+    final card = m.blocks.firstWhere((b) => b.type == BlockType.cards).cards.first;
+    expect(card.note, startsWith('가능한 날 '));
+    expect(card.badge!.text, m.cards.first.badge);
+  });
+
+  test('가능한 날 목록: 달마다 묶고 많으면 외 n일', () {
+    expect(dayList([DateTime(2027, 3, 6), DateTime(2027, 3, 13), DateTime(2027, 4, 3)]), '3월 6, 13일 · 4월 3일');
+    final many = [for (var i = 1; i <= 12; i++) DateTime(2027, 5, i)];
+    expect(dayList(many), '5월 1, 2, 3, 4, 5, 6, 7, 8, 9, 10일 외 2일');
+    expect(dayList([DateTime(2026, 12, 26), DateTime(2027, 1, 2)]), '2026년 12월 26일 · 2027년 1월 2일');
   });
 
   test('E04 소득: 원문 소득 상한과 비교', () async {
