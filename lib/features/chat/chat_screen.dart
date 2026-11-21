@@ -255,12 +255,18 @@ class _ChatScreenState extends State<ChatScreen> {
               if (!setup && !resume)
                 IconButton(
                   tooltip: '파트너에게 공유',
+                  // 계정 버튼 기준 8px 간격 (11-21, 하트·종과 같은 규칙): 칸 32 = 아이콘 24 + 오른쪽 8
+                  padding: const EdgeInsets.only(right: 8),
+                  constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 48),
                   icon: const Icon(Icons.ios_share_rounded),
                   onPressed: _share,
                 ),
               if (!setup && !resume)
                 IconButton(
                   tooltip: '새 상담 시작',
+                  // 계정 버튼 기준 8px 간격 (11-21, 하트·종과 같은 규칙): 칸 32 = 아이콘 24 + 오른쪽 8
+                  padding: const EdgeInsets.only(right: 8),
+                  constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 48),
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: _newChat,
                 ),

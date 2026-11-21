@@ -147,7 +147,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final has = _HomeNotices.of(AppState.instance).isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 8, 6),
+      padding: const EdgeInsets.fromLTRB(20, 10, 0, 6), // 오른쪽 0: 계정 아이콘을 다른 탭과 같은 자리에
       child: Row(children: [
         Image.asset('assets/images/brand/rings_rose.png', height: 30, errorBuilder: (_, _, _) => const SizedBox()),
         const SizedBox(width: 9),
@@ -165,9 +165,9 @@ class _Header extends StatelessWidget {
         ),
         IconButton(
           tooltip: '알림',
-          // 하트와 같은 간격으로 붙인다 (11-21): 버튼 폭 36, 오른쪽 여백 없이
-          padding: const EdgeInsets.only(left: 6),
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 48),
+          // 계정 버튼 기준 왼쪽으로 8px 간격 (11-21 사용자 요청): 칸 32px = 아이콘 24 + 오른쪽 8px
+          padding: const EdgeInsets.only(right: 8),
+          constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 48),
           onPressed: onBell,
           icon: Badge(
             isLabelVisible: has,

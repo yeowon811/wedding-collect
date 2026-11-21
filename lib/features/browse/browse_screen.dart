@@ -24,7 +24,7 @@ class BrowseScreen extends StatelessWidget {
         bottom: false,
         child: Column(children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 4, 4, 0),
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 0), // 오른쪽 0: 계정 아이콘을 다른 탭과 같은 자리에
             child: SizedBox(
               height: 48,
               child: NavigationToolbar(

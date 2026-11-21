@@ -276,6 +276,10 @@ class AccountButton extends StatelessWidget {
     if (account.mode == AccountMode.unavailable) return const SizedBox.shrink();
     return IconButton(
       tooltip: '내 계정',
+      // 아이콘 위치는 예전(48px 칸 가운데)과 같게 두고 왼쪽 빈칸만 없앤다: 칸 36px = 아이콘 24 + 오른쪽 12px.
+      // 왼쪽의 하트·종은 각각 오른쪽 8px를 두어 아이콘 사이가 8px (11-21 사용자 요청: 계정 기준 간격)
+      padding: const EdgeInsets.only(right: 12),
+      constraints: const BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 48),
       icon: const Icon(Icons.account_circle_outlined),
       onPressed: () => showModalBottomSheet<void>(
         context: context,
