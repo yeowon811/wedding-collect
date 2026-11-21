@@ -450,7 +450,7 @@ class GeminiClient {
         systemInstruction: Content.system('''
 너는 결혼 준비 앱의 "웹 보충 조사" 단계다. Google 검색으로 질문의 사실(공고 기간·신청 방법·장소 위치 등)을 찾아
 한국어 해요체로 2문장 이내, 60자 안팎으로 답한다. 찾은 값만 쓰고 추측하지 않는다. 못 찾으면 "찾지 못했어요"라고만 쓴다.
-예식장의 정원·대관료 같은 값은 쓰지 않는다.'''),
+예식장의 정원·대관료 같은 값은 쓰지 않는다. 결혼 준비와 관계없는 질문이면 검색하지 말고 OFF_TOPIC 한 단어만 쓴다.'''),
         tools: [Tool.googleSearch()],
         generationConfig: GenerationConfig(
           temperature: 0,
@@ -494,9 +494,14 @@ LAT,LNG|정확한 장소 이름
   /// Google 검색 보충 조사. 출처(웹 주소)가 하나도 없으면 null (R12: 출처 없는 웹 값은 쓰지 않음)
   Future<WebResearch?> research(String question,
       {Duration timeout = const Duration(seconds: 20), bool venueList = false}) async {
+    lastOffTopic = false;
     try {
       final res = await _call(venueList ? _searchList : _search, maskPersonalInfo(question), timeout, kind: 'search');
       final text = res.text?.trim();
+      if (text != null && text.contains('OFF_TOPIC')) {
+        lastOffTopic = true;
+        return null;
+      }
       final meta = res.candidates.firstOrNull?.groundingMetadata;
       final links = [
         for (final c in meta?.groundingChunks ?? const <GroundingChunk>[])
@@ -655,15 +660,25 @@ LAT,LNG|정확한 장소 이름
 - 이 앱이 할 수 있는 일을 지어내지 않는다. 앱은 대신 연락·예약·신청을 해 주지 않고, 전화번호를 받지 않는다.
   앱에서 할 수 있는 것은 정책 찾기, 공공예식장 찾기, 업체 비교·상담 신청(시연), 예산·할 일 정리뿐이다.
 - 마크다운 굵게(**)·제목(#)·표는 쓰지 않는다.
+- 특정 주식·코인·투자 상품을 추천하지 않는다.
+- 결혼 준비·신혼생활·가족과 관계없는 질문(주식·날씨·코딩·연예·정치·숙제 등)이면 다른 말 없이 OFF_TOPIC 한 단어만 쓴다.
 ''';
 
   /// 앱 데이터가 아닌 일반 지식 질문 → Gemini 일반 안내 (숫자가 섞이면 버림). 실패하면 null
+  /// 바로 앞 일반 안내·웹 조사에서 Gemini가 '결혼 준비와 관계없는 질문'(OFF_TOPIC)이라고 답했는지
+  bool lastOffTopic = false;
+
   Future<String?> general(String question) async {
+    lastOffTopic = false;
     try {
       // 일반 안내는 문장이 길어 시간이 더 걸린다 (12초면 자주 넘김, 2026-11-20)
       final res = await _call(_writeModel, '$_generalPrompt\n질문: ${maskPersonalInfo(question)}', const Duration(seconds: 20));
       final text = res.text?.trim();
       if (text == null || text.isEmpty) return null;
+      if (text.contains('OFF_TOPIC')) {
+        lastOffTopic = true;
+        return null;
+      }
       // 근거 없는 숫자를 만들지 않도록: 두 자리 이상 숫자는 질문에 나온 숫자만 허용 ("하객 150명이면…")
       final asked = RegExp(r'\d+').allMatches(question).map((m) => m[0]).toSet();
       if (RegExp(r'\d{2,}').allMatches(text).any((m) => !asked.contains(m[0]))) return null;

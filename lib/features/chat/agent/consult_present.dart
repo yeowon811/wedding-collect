@@ -390,8 +390,11 @@ extension _Present on ConsultAgent {
     _scopeReplies = [QuickReply('${place}공공예식장 보기', text: '${place}공공예식장 추천해줘')];
     _lookupNote = '"$word" 예식장은 앱 데이터(공공예식장) 밖이라 공공예식장 검색을 쓰지 않음';
     if (_llm != null) {
-      return _webAnswer('$place$word 웨딩홀 추천 (공공예식장 제외)',
+      final m = await _webAnswer('$place$word 웨딩홀 추천 (공공예식장 제외)',
           venueList: true, headline: '$place$word 예식장 · 웹 검색', notFound: '$place$word 예식장을 웹에서 찾지 못했어요');
+      // Gemini 설명을 다시 쓰지 않는다: 앱 조회 결과가 없어 "0건·찾지 못했어요"처럼 앱 데이터 문제로 읽히게 씀 (11-21 실측)
+      _templateOnly ??= '앱 데이터 밖 예식장 (범위 안내 + 웹 목록)';
+      return m;
     }
     _hint = AnswerHint(
       kind: AnswerKind.other,
@@ -407,6 +410,7 @@ extension _Present on ConsultAgent {
 
   Future<ChatMessage> _webAnswer(String query, {bool venueList = false, String? headline, String? notFound}) async {
     final r = await _llm!.research(query, venueList: venueList);
+    if (r == null && _llm.lastOffTopic) return _offTopicAnswer();
     // 앱 정책 데이터에 같은 이름이 있으면 카드로 함께 (신청 링크는 앱 데이터)
     final q = normName(query);
     final policies = [
@@ -465,6 +469,80 @@ extension _Present on ConsultAgent {
         'Google 검색 (웹 정보는 바뀔 수 있어요)',
       ],
       quickReplies: ConsultAgent._starterReplies,
+    );
+  }
+
+  /// 공공예식장(앱 데이터) vs 일반 예식장(한국소비자원 참가격 조사) 금액 비교 표.
+  /// 숫자는 모두 앱이 데이터에서 계산한다: 공공 = 수집한 대관료 + 참고 단가표 추정, 일반 = 소비자원 지역별 중간값.
+  /// Gemini는 부르지 않는다 (조사값·추정값 숫자를 바꿔 쓰면 안 되므로)
+  Future<ChatMessage> _venueCostCompareAnswer(String text) async {
+    final asked = [for (final s in kSidoList) if (text.contains(s)) s].firstOrNull;
+    final sido = asked ?? _known.sido;
+    final town = asked == null || asked == _known.sido ? _known.sigungu : findSigungu(text, sido: asked)?.$2;
+    final prices = await ConsumerPrices.load();
+    final region = prices.region(sido, sigungu: town);
+    final venues = [for (final v in await Repos.venue.loadAll()) if (sido == null || sidoMatches(v.sido, sido)) v];
+    final free = venues.where((v) => v.rentalFee == 0).length;
+    final paid = [for (final v in venues) if ((v.rentalFee ?? 0) > 0) v.rentalFee! / 10000]..sort();
+    final unknownFee = venues.where((v) => v.rentalFee == null).length;
+    final paidMedian = paid.isEmpty ? null : paid[paid.length ~/ 2].round();
+    final guestsGiven = _known.guests != null;
+    final guests = _known.guests ?? VenueCostEstimate.defaultGuests;
+    final est = VenueCostEstimate.of(await Repos.vendor.options(), guests: guests);
+    String won(num manwon) => '${VenueCostEstimate.fmt(manwon.round())}만원';
+    String meal(num manwon) => '${manwon.toStringAsFixed(manwon % 1 == 0 ? 0 : 1)}만원';
+    final place = sido == null ? '전국' : sido;
+    final minG = region.minGuests.median.round();
+    final billed = guests < minG ? minG : guests; // 일반 예식장은 최소 보증인원만큼 식대를 낸다
+    final generalEst = region.rentalFee.median + region.mealPerGuest.median * billed;
+    final publicMeal = est == null ? null : est.parts.firstWhere((p) => p.id == 'meal');
+    final publicLow = est?.low;
+    final publicHigh = est == null ? null : est.low + (paidMedian ?? 0);
+    final rows = <List<String>>[
+      ['대관료', '무료 $free곳 · 유료 중간 ${paidMedian == null ? '-' : won(paidMedian)}', '중간 ${won(region.rentalFee.median)}'],
+      ['1인당 식대', publicMeal == null ? '업체마다 다름' : '약 ${meal(publicMeal.low / guests)} (외부 케이터링 참고가)', '중간 ${meal(region.mealPerGuest.median)}'],
+      ['최소 보증인원', '예식장마다 달라요', '중간 $minG명'],
+      [
+        '하객 $guests명 예상',
+        publicLow == null ? '-' : '약 ${won(publicLow)}~${won(publicHigh!)} (추정)',
+        '약 ${won(generalEst)} (추정)',
+      ],
+      ['계약 총액(조사)', '-', '중간 ${won(region.totalContract.median)}'],
+    ];
+    _lookupNote = '공공예식장 $place ${venues.length}곳 대관료(수집 데이터) + 참고 단가표 / 일반 예식장 = 한국소비자원 참가격 ${prices.surveyLabel} ${region.label} 중간값';
+    _templateOnly = '금액 비교 (앱이 계산한 표)';
+    final sentence = '공공예식장은 앱이 모은 실제 대관료, 일반 예식장은 한국소비자원 ${prices.surveyLabel} 조사(${region.label}) 중간값이에요.';
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: '$place 공공 vs 일반 예식장 비용',
+      headBadges: const [BlockBadge('조사값·추정 함께', Tone.check)],
+      sentence: sentence,
+      columns: ['항목', '$place 공공예식장', '${region.label} 일반'],
+      rows: rows,
+    );
+    final note = [
+      if (!guestsGiven) '하객 수를 입력하지 않아 $guests명 기준으로 계산했어요.',
+      if (guests < minG) '일반 예식장은 최소 보증인원(중간 $minG명)만큼 식대를 내는 경우가 많아 $billed명으로 계산했어요.',
+      if (unknownFee > 0) '대관료를 모르는 공공예식장 $unknownFee곳은 빼고 셌어요.',
+      '공공 쪽 예상은 대관료 + 식대·꽃장식·음향·진행비(참고 단가표 추정)이고, 일반 쪽은 대관료 + 식대만 더한 값이에요.',
+    ];
+    return ChatMessage(
+      fromUser: false,
+      basis: '$place 공공예식장 ${venues.length}곳 · 한국소비자원 참가격 ${prices.surveyLabel}',
+      text: '$sentence\n'
+          '${[for (final r in rows) '• ${r[0]}: 공공 ${r[1]} / 일반 ${r[2]}'].join('\n')}\n\n'
+          '${note.join(' ')}\n'
+          '실제 금액은 예식장·날짜·하객 수에 따라 달라서 견적으로 확인해 주세요.',
+      sources: [
+        '${prices.source} (${prices.surveyLabel} 조사, 표본 ${region.rentalFee.n}건) ${prices.sourceUrl}',
+        '전국 공공예식장 현황 (공유누리·서울마이웨딩·기관 안내, 대관료)',
+        '참고 단가표 (업체_요소: 공공 표준가)',
+      ],
+      quickReplies: [
+        QuickReply('$place 무료 예식장', text: '$place 무료 공공예식장 추천해줘'),
+        if (!guestsGiven) const QuickReply('하객 수 입력', slot: 'guests', action: 'input'),
+        const QuickReply('스드메까지 총비용', text: '스드메까지 결혼 총비용 얼마 들어?'),
+      ],
     );
   }
 }

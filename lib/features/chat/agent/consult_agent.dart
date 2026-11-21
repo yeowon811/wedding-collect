@@ -12,6 +12,7 @@ import '../../../data/models/user_profile.dart';
 import '../../../data/models/vendor.dart';
 import '../../../data/models/venue.dart';
 import '../../../data/models/wedding_plan.dart';
+import '../../../data/repositories/consumer_prices.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../policy/policy_detail_screen.dart';
 import '../../policy/policy_matcher.dart';
@@ -456,9 +457,13 @@ class ConsultAgent implements ChatAgent {
     _question = text;
     _sidoJustAsked = false;
     step.value = AgentStep.understand;
+    // 결혼 준비와 관계없는 질문은 Gemini·검색을 부르지 않고 막는다 (11-21 사용자 요청)
+    if (ToolPlanner.offTopic(text)) return _offTopicAnswer();
     // 앱 데이터 밖 예식장(사설·호텔·일반 웨딩홀): 공공예식장 목록으로 끼워 맞추지 않고 웹 검색으로 (Gemini 도구 고르기 전에 앱이 판단)
     final outside = ToolPlanner.outOfScopeVenue(text);
     if (outside != null) return _outOfScopeVenueAnswer(text, outside);
+    // 공공예식장 vs 일반 예식장 금액 비교: 앱 데이터 + 한국소비자원 참가격 조사값으로 표 (Gemini 일반 안내로 빠지지 않게)
+    if (ToolPlanner.costCompare(text)) return _venueCostCompareAnswer(text);
     if (_llm != null) {
       // 도구 고르기 1번만 부른다. 실패·시간 초과일 때만 예전 질문 이해(Gemini 1번, 그래도 안 되면 규칙)로 (2026-11-20:
       // 예전에는 질문 이해를 미리 함께 불러 질문마다 Gemini 호출이 1번 더 들었음)
@@ -650,6 +655,10 @@ class ConsultAgent implements ChatAgent {
         return () => _nearPlaceAnswer(p);
       case 'web_lookup':
         return _llm == null || p.query == null ? null : () => _webAnswer(p.query!);
+      case 'off_topic':
+        // 결혼 관련 말이 있으면 Gemini가 막으려 해도 일반 안내로 ("신혼여행지 날씨 어때?", 11-21 실측)
+        if (ToolPlanner.weddingRelated(_question)) return _llm == null ? null : () => _generalAnswer(u);
+        return () async => _offTopicAnswer();
       default:
         return null;
     }
@@ -2410,6 +2419,7 @@ class ConsultAgent implements ChatAgent {
   /// 앱 데이터가 아닌 일반 지식: Gemini가 일반 안내 + (공공예식장 이야기면) 앱 데이터로 본 사실
   Future<ChatMessage> _generalAnswer(Understanding u) async {
     final text = await _llm!.general(_question);
+    if (text == null && _llm.lastOffTopic && !ToolPlanner.weddingRelated(_question)) return _offTopicAnswer();
     if (text == null) {
       // 일반 상식인데 Gemini 답에 근거 없는 숫자가 있거나 응답이 없을 때: 메뉴 대신 이유를 말한다
       _lookupNote = '일반 지식 질문 → Gemini 답이 없거나 근거 없는 숫자가 있어 쓰지 않음';
@@ -3080,6 +3090,23 @@ class ConsultAgent implements ChatAgent {
     QuickReply('예산 나누기', text: '예산 어떻게 나누면 돼?'),
     QuickReply('뭐부터 해야 해?', text: '뭐부터 해야 해?'),
   ];
+
+  /// 결혼 준비와 관계없는 질문: 답·검색 없이 범위만 안내 (Gemini 작성도 부르지 않음)
+  ChatMessage _offTopicAnswer() {
+    _templateOnly = '범위 밖 질문';
+    _lookupNote = '결혼 준비와 관계없는 질문 → 검색·일반 안내 없이 범위만 안내';
+    _hint = const AnswerHint(
+      kind: AnswerKind.other,
+      headline: '결혼 준비 질문만 도와드려요',
+      sentence: '공공예식장·지원 정책·업체·예산·일정에 대해 물어봐 주세요.',
+    );
+    return const ChatMessage(
+      fromUser: false,
+      text: '저는 결혼 준비(공공예식장·지원 정책·업체·예산·일정)를 돕는 상담이라 그 질문에는 답하지 않아요. '
+          '결혼 준비에 대해 물어봐 주세요.',
+      quickReplies: _starterReplies,
+    );
+  }
 
   ChatMessage _help() {
     _templateOnly = '도움말';

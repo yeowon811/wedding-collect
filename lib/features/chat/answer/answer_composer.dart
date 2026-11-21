@@ -117,7 +117,9 @@ class AnswerComposer {
   /// 앞서 받은 Gemini 배치 (이 상담 안에서만, 조건·결과가 같을 때 다시 씀)
   final _cache = <String, Map<String, Object?>>{};
 
-  /// 캐시 열쇠: 답 종류 · 적용 조건 · 결과 id · 앱 제목 (질문 문장은 넣지 않음: 제목·건수는 앱이 채우므로 같은 결과면 같은 배치)
+  /// 캐시 열쇠: 답 종류 · 적용 조건 · 결과 id · 앱 제목. 결과 목록이 있으면 질문 문장은 넣지 않는다(같은 결과면 같은 배치).
+  /// 결과 목록이 없는 답(일반 안내·웹·비교 설명)은 질문 문장까지 넣는다: 넣지 않으면 서로 다른 질문이 같은 열쇠가 되어
+  /// 앞 답이 그대로 다시 나왔다 (11-21: "소비자원 데이터로 비교해 줄 수 있어?"에 앞 질문의 일반 안내가 그대로 나옴)
   static String signature(AnswerFacts f) => jsonEncode([
         f.kind.name,
         f.scope?.toJson(),
@@ -125,6 +127,7 @@ class AnswerComposer {
         f.count,
         AnswerTemplate.appHeadline(f),
         f.aiGeneral,
+        if (f.items.isEmpty) f.question.trim(),
       ]);
 
   /// Gemini 검토가 필요한 답인지 (8: 위험한 답만 검토). 빈 목록이면 앱 검사만으로 내보낸다

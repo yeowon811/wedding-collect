@@ -307,7 +307,7 @@ class _PlanCard extends StatelessWidget {
   }
 }
 
-/// 예산: 총예산(바로 수정) / 계약·결제 금액 / 예정 금액 / 남은 예산
+/// 예산: 총예산 / 계약·결제 금액 / 남은 예산 ('예정' 줄은 11-21 사용자 요청으로 뺌: 남은 예산 = 총예산 − 계약·결제 완료)
 class _BudgetCard extends StatelessWidget {
   const _BudgetCard({required this.state});
 
@@ -317,8 +317,7 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = state.plan;
     final confirmed = state.confirmedTotal;
-    final planned = state.plannedTotal;
-    final left = p.budget - confirmed - planned;
+    final left = p.budget - confirmed;
     double part(int v) => !p.hasBudget || p.budget <= 0 ? 0 : (v / p.budget).clamp(0.0, 1.0);
 
     return _Section(
@@ -345,7 +344,7 @@ class _BudgetCard extends StatelessWidget {
             ),
           ])),
           const SizedBox(height: 12),
-          // 계약·결제(진한 파랑) + 예정(연한 파랑) 막대
+          // 계약·결제 막대
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: SizedBox(
@@ -353,10 +352,6 @@ class _BudgetCard extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, box) => Stack(children: [
                   Container(color: AppColors.fill),
-                  Container(
-                    width: box.maxWidth * (part(confirmed) + part(planned)).clamp(0.0, 1.0),
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                  ),
                   Container(width: box.maxWidth * part(confirmed), color: AppColors.primary),
                 ]),
               ),
@@ -364,8 +359,6 @@ class _BudgetCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _line(AppColors.primary, '계약·결제 완료', confirmed),
-          const SizedBox(height: 6),
-          _line(AppColors.primary.withValues(alpha: 0.35), '예정 (금액만 적어 둔 항목)', planned),
         ],
       ),
     );

@@ -182,6 +182,10 @@ const extraCases = <EvalCase>[
   // 2026-11-21: 앱 데이터 밖 예식장(사설) → 공공예식장 목록·하객 되묻기 없이 범위 안내 + 웹 검색
   EvalCase('S1', '데이터 밖', ['서울시 내 사설 예식장 몇 개 좀 추려줘'],
       [Exp(ask: false, text: '공공예식장 240곳', notText: '74곳')]),
+  EvalCase('S2', '데이터 밖', ['외부 사설 결혼식장에 대해서 검색해줘'], [Exp(ask: false, text: '공공예식장 240곳')]),
+  // 결혼 준비와 관계없는 질문: 앱 낱말 목록에 없는 것은 Gemini(off_topic·OFF_TOPIC)가 막는다
+  EvalCase('O1', '관계없음', ['엑셀 VLOOKUP 함수 쓰는 법 알려줘'], [Exp(ask: false, text: '답하지 않아요')]),
+  EvalCase('O2', '결혼 관련', ['신혼여행지 날씨 어때?'], [Exp(ask: false, notText: '결혼 준비 질문만')]),
 ];
 
 List<EvalCase> fromPredicted(List<PredictedCase> cases, Map<String, List<Exp?>> exps) => [
