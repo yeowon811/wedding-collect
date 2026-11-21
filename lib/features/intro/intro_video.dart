@@ -44,7 +44,9 @@ class _IntroVideoState extends State<IntroVideo> {
       if (!mounted || _done) return;
       c.addListener(() {
         final v = c.value;
-        if (v.hasError || (v.isInitialized && v.duration > Duration.zero && v.position >= v.duration)) _finish();
+        if (v.hasError) _finish();
+        // 끝나면 마지막 장면을 잠깐 두었다가 넘어간다 (11-21: 뚝 끊기는 느낌 → 멈춤 + 겹쳐 바뀌기)
+        if (v.isInitialized && v.duration > Duration.zero && v.position >= v.duration) _finish(hold: true);
       });
       // 영상 길이 + 여유 0.5초 뒤에도 끝 신호가 없으면 넘어간다
       _guard?.cancel();
@@ -56,11 +58,18 @@ class _IntroVideoState extends State<IntroVideo> {
     }
   }
 
-  void _finish() {
+  /// 마지막 장면을 두는 시간 (그다음 앱이 0.6초 동안 겹쳐 바꾼다: app.dart)
+  static const holdLastFrame = Duration(milliseconds: 300);
+
+  void _finish({bool hold = false}) {
     if (_done || !mounted) return;
     _done = true;
     _guard?.cancel();
-    widget.onDone();
+    if (hold) {
+      Timer(holdLastFrame, widget.onDone);
+    } else {
+      widget.onDone();
+    }
   }
 
   @override

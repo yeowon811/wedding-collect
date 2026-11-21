@@ -36,14 +36,21 @@ class _WeddingCollectAppState extends State<WeddingCollectApp> {
       ],
       supportedLocales: const [Locale('ko', 'KR')],
       // 시작 영상 → 로그인 안 했으면 첫 화면(로그인·회원가입·둘러보기), 그 외에는 앱
-      home: _intro
-          ? IntroVideo(onDone: () => setState(() => _intro = false))
-          : ListenableBuilder(
-              listenable: AccountService.instance,
-              builder: (context, _) => AccountService.instance.mode == AccountMode.signedOut
-                  ? const LoginScreen()
-                  : const MainShell(),
-            ),
+      // 영상 → 로그인은 0.6초 동안 겹쳐 바뀐다 (영상은 서서히 사라지고 로그인이 서서히 나타남, 11-21)
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: _intro
+            ? IntroVideo(key: const ValueKey('intro'), onDone: () => setState(() => _intro = false))
+            : ListenableBuilder(
+                key: const ValueKey('app'),
+                listenable: AccountService.instance,
+                builder: (context, _) => AccountService.instance.mode == AccountMode.signedOut
+                    ? const LoginScreen()
+                    : const MainShell(),
+              ),
+      ),
     );
   }
 }
