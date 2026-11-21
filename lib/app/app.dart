@@ -4,10 +4,23 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/theme/app_theme.dart';
 import '../data/account_service.dart';
 import '../features/auth/login_screen.dart';
+import '../features/intro/intro_video.dart';
+import 'demo_links.dart';
 import 'main_shell.dart';
 
-class WeddingCollectApp extends StatelessWidget {
+class WeddingCollectApp extends StatefulWidget {
   const WeddingCollectApp({super.key});
+
+  @override
+  State<WeddingCollectApp> createState() => _WeddingCollectAppState();
+}
+
+class _WeddingCollectAppState extends State<WeddingCollectApp> {
+  // 앱을 켤 때 한 번 시작 영상 → 끝나면 로그인(또는 앱). 시연 링크·테스트에서는 바로
+  late bool _intro = IntroVideo.enabled && !DemoLinks.isDemoLink && !_inTest;
+
+  /// flutter test 안에서는 영상 플러그인이 없어서 건너뛴다
+  static bool get _inTest => WidgetsBinding.instance.runtimeType.toString().contains('Test');
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +35,15 @@ class WeddingCollectApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('ko', 'KR')],
-      // 로그인 안 했으면 첫 화면(로그인·회원가입·둘러보기), 그 외에는 앱
-      home: ListenableBuilder(
-        listenable: AccountService.instance,
-        builder: (context, _) => AccountService.instance.mode == AccountMode.signedOut
-            ? const LoginScreen()
-            : const MainShell(),
-      ),
+      // 시작 영상 → 로그인 안 했으면 첫 화면(로그인·회원가입·둘러보기), 그 외에는 앱
+      home: _intro
+          ? IntroVideo(onDone: () => setState(() => _intro = false))
+          : ListenableBuilder(
+              listenable: AccountService.instance,
+              builder: (context, _) => AccountService.instance.mode == AccountMode.signedOut
+                  ? const LoginScreen()
+                  : const MainShell(),
+            ),
     );
   }
 }

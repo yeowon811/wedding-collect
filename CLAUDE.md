@@ -223,6 +223,8 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 
 - **예식장·업체 탭 합침·상단 제목 (2026-11-21):** 아래 탭 = 홈 · 예식장·업체 · 정책 · 체크리스트 · AI 상담. '예식장·업체' = `features/browse/browse_screen.dart`(제목 '공공예식장/웨딩업체 둘러보기' + 전환 버튼 [공공예식장 | 웨딩업체], `BrowseScreen.segment` 0/1, IndexedStack이라 전환해도 선택 유지, 마지막 쪽 기억). `VenueHomeScreen(embedded:)`·`VendorScreen(embedded:)`는 제목 줄 없이 들어감. 탭 번호는 그대로: `MainShell.goTo(0)` = 공공예식장 쪽, `goTo(2)` = 웨딩업체 쪽(업체 화면 push 없음), 아래 탭 직접 누르면 쪽 유지, `?tab=2` 링크도 웨딩업체 쪽. 화면 제목은 테마에서 가운데·18(전 22), 체크리스트 제목 '예식준비 체크리스트', 섹션 '예산 현황'·'예산 관리 목록 · 계약 n/N'(예산 현황 바로 아래)
 
+- **앱 시작 영상 (2026-11-21):** 앱을 켜면 `features/intro/intro_video.dart`(`video_player` 패키지)로 사용자 제공 영상 `assets/video/we_connect_intro.mp4`(원본 Downloads/we_connect_closer.mp4, 3초·1080×1920·소리 없음·26KB)을 먼저 재생 → 끝나면 로그인(로그인·둘러보기 상태면 앱). 화면 누르기·[건너뛰기]로 바로 넘어감, 못 불러오면 최대 6초 뒤 넘어감, 웹 자동 재생 위해 음소거. 시연 링크(?demo 등)·flutter test에서는 건너뜀(`app.dart`). 그다음 앱에 들어가면 룩북 광고는 그대로
+
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`
