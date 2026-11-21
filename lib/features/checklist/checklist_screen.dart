@@ -234,7 +234,7 @@ class _PlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            p.entered.length < 4 ? '눌러서 입력해 주세요. 업체 비교와 AI 상담에도 쓰여요.' : '업체 비교와 AI 상담에도 쓰여요.',
+            p.entered.length < 4 ? '눌러서 채워 주세요. 업체를 비교하거나 AI에게 물어볼 때 더 정확해져요.' : '업체를 비교하거나 AI에게 물어볼 때 더 정확해져요.',
             style: TextStyle(fontSize: 13, color: AppColors.textBody),
           ),
         ],
@@ -334,7 +334,7 @@ class _BudgetCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!p.hasBudget)
-            Text('위 결혼 정보에서 총예산을 입력하면 남은 예산을 계산해 드려요',
+            Text('총예산을 적어 두시면 얼마나 남았는지 바로 알려 드릴게요.',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textSecondary))
           else
           Text.rich(TextSpan(children: [
@@ -869,7 +869,7 @@ Future<void> showItemEditor(BuildContext context, AppState state, {PlanItem? ite
                   ),
                   FormSection(
                     title: '금액',
-                    hint: '계약했거나 낼 예정인 금액이에요. 예산 계산에 들어가요.',
+                    hint: '계약했거나 낼 금액을 적어 두면 남은 예산을 알아서 계산해 드려요.',
                     child: TextField(
                       controller: amount,
                       keyboardType: TextInputType.number,
@@ -979,7 +979,7 @@ class _TimelineCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
             !state.plan.hasDate
-                ? '예식일을 먼저 입력해야 할 일을 추가할 수 있어요. 위 결혼 정보에서 예식일을 입력하면 할 일마다 언제까지 해야 하는지 계산해 드려요.'
+                ? '예식일을 먼저 알려 주시면 할 일을 추가할 수 있어요. 할 일마다 언제까지 하면 되는지도 계산해 드릴게요.'
                 : '아직 할 일이 없어요. [할 일 추가]로 직접 넣어 주세요.',
             style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
           ),
@@ -1100,7 +1100,7 @@ class _TimelineCard extends StatelessWidget {
                   ),
                   FormSection(
                     title: '언제까지',
-                    hint: plan.hasDate ? '누르면 캘린더가 열려요. 예식일 전 날짜를 골라 주세요.' : '예식일을 먼저 입력해 주세요 (위 결혼 정보).',
+                    hint: plan.hasDate ? '캘린더에서 이 일을 끝낼 날짜를 골라 주세요.' : '예식일을 먼저 알려 주시면 날짜를 고를 수 있어요.',
                     child: SizedBox(
                       width: double.infinity,
                       height: 52,

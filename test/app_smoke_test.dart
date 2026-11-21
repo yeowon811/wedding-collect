@@ -231,7 +231,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 맨 위쪽으로 돌아가 다시 보임
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
-    expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
+    expect(find.textContaining('예식일을 먼저 알려 주시면'), findsOneWidget);
     // 예식일 전에는 [할 일 추가]가 꺼져 있고, 예식일을 넣으면 켜진다 (11-21)
     OutlinedButton addTask() => tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '할 일 추가'));
     expect(addTask().onPressed, isNull);

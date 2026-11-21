@@ -92,7 +92,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               const SizedBox(height: 28),
               FormSection(
                 title: '거주 지역',
-                hint: '시·군·구는 몰라도 돼요. 고르면 그 지역 정책까지 정확히 찾아요.',
+                hint: '시·군·구까지 알려 주시면 우리 동네 지원 정책까지 꼼꼼히 찾아 드릴게요. 모르면 비워 두셔도 괜찮아요.',
                 child: RegionFields(
                   sido: p.sido,
                   sigungu: p.sigungu,
@@ -117,7 +117,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               ),
               FormSection(
                 title: '예식일',
-                hint: '예식 전이면 예비부부, 지났으면 신혼부부로 정책을 골라요.',
+                hint: '예식일을 알려 주시면 지금 받을 수 있는 정책을 딱 맞춰 찾아 드려요. 아직 미정이면 대략적인 날짜도 좋아요.',
                 child: Row(children: [
                   Expanded(
                     child: OutlinedButton.icon(
@@ -173,7 +173,7 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
               ),
               FormSection(
                 title: '주택 보유',
-                hint: '주거·대출 지원 대상인지 판단할 때 써요.',
+                hint: '신혼집 마련 지원을 받을 수 있는지 알아볼 때 필요해요.',
                 child: ChoiceRow<int>(
                   options: const [(1, '무주택'), (0, '집 있음'), (-1, '잘 모름')],
                   value: p.homeless == null ? -1 : (p.homeless! ? 1 : 0),

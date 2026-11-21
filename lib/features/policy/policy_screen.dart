@@ -210,12 +210,12 @@ class _PolicyScreenState extends State<PolicyScreen> {
                 children: [
                   Text('내 상황', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text('AI 상담·체크리스트의 내 정보와 같이 바뀌어요.',
+                  Text('여기서 바꾸면 AI 상담과 체크리스트에도 똑같이 반영돼요.',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                   const SizedBox(height: 16),
                   FormSection(
                     title: '거주 지역',
-                    hint: '시·군·구까지 고르면 그 지역 정책만 정확히 골라 드려요.',
+                    hint: '시·군·구까지 알려 주시면 우리 동네 지원 정책까지 꼼꼼히 찾아 드릴게요. 모르면 비워 두셔도 괜찮아요.',
                     child: RegionFields(
                       sido: draft.sido,
                       sigungu: draft.sigungu,
@@ -259,7 +259,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   ),
                   FormSection(
                     title: '초혼 여부',
-                    hint: '결혼 장려금 일부는 초혼 부부나 부부 중 1명 이상 초혼만 받을 수 있어요.',
+                    hint: '일부 결혼 장려금은 두 분 중 한 분 이상이 첫 결혼이어야 받을 수 있어요.',
                     child: ChoiceRow<FirstMarriage>(
                       options: [for (final f in FirstMarriage.values) (f, f.label)],
                       value: draft.firstMarriage,
@@ -268,7 +268,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   ),
                   FormSection(
                     title: '집이 있나요?',
-                    hint: '주거·대출 지원은 대부분 무주택 조건이 있어요.',
+                    hint: '전세·구입 대출 같은 주거 지원은 대부분 집이 없어야 받을 수 있어요.',
                     child: ChoiceRow<bool>(
                       options: const [(true, '무주택'), (false, '집 있음')],
                       value: draft.homeless,
@@ -277,7 +277,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   ),
                   FormSection(
                     title: '부부 합산 연소득 (선택)',
-                    hint: '원문에 소득 상한이 숫자로 적힌 정책과 비교해요. 기기에만 저장돼요.',
+                    hint: '소득 기준이 있는 정책을 걸러 드려요. 입력한 소득은 이 휴대폰에만 저장되니 안심하세요.',
                     child: NumberConfirmField(
                       value: draft.income,
                       unit: '만원',
@@ -307,14 +307,14 @@ class _PolicyScreenState extends State<PolicyScreen> {
 
   /// 예식일로 정한 결혼 단계를 설명 ("예식 전이라 예비부부로 봐요")
   static String _stageHint(UserProfile u) {
-    if (u.weddingDate == null) return '예식 전이면 예비부부, 지났으면 신혼부부(혼인 N년차)로 정책을 골라요.';
+    if (u.weddingDate == null) return '예식일을 알려 주시면 지금 받을 수 있는 정책을 딱 맞춰 찾아 드려요. 아직 미정이면 대략적인 날짜도 좋아요.';
     if (u.stageInput == MarriageStage.married && !u.weddingPassed) {
-      return '혼인신고를 했다고 알려 주셔서 신혼부부로 봐요.';
+      return '혼인신고를 하셨으니 신혼부부 정책으로 찾아 드릴게요.';
     }
-    if (!u.weddingPassed) return '예식 전이라 예비부부로 봐요. 예식일이 지나면 신혼부부로 바뀌어요.';
+    if (!u.weddingPassed) return '지금은 예비부부 정책을 먼저 보여 드려요. 예식이 끝나면 신혼부부 정책으로 자동으로 바뀌어요.';
     final m = u.monthsSinceWedding ?? 0;
-    return '예식 후 ${m >= 12 ? '${m ~/ 12}년 ${m % 12}개월' : '$m개월'} → 신혼부부(혼인 ${u.marriedYears}년차)로 봐요. '
-        '혼인신고일 기준인 정책은 기관에서 확인해 주세요.';
+    return '결혼 ${m >= 12 ? '${m ~/ 12}년 ${m % 12}개월' : '$m개월'} 차, 신혼부부 정책으로 찾아 드릴게요. '
+        '혼인신고일을 기준으로 하는 정책은 기관에 한 번 더 확인해 주세요.';
   }
 
   /// 결과 묶음 제목: 색 점 + 이름 + 건수 + 한 줄 설명
