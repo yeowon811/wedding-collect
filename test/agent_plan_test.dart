@@ -105,7 +105,9 @@ void main() {
   test('D02 내년 봄 토요일: 그 기간 토요일 전부 확인', () async {
     final m = await ConsultAgent().reply('내년 봄 토요일에 되는 예식장 있어?');
     expect(m.text, contains('봄(3~5월) 토요일'));
-    expect(m.cards.first.badge, contains('일 가능'));
+    // '10/10일 가능'은 10월 10일처럼 읽혀서 쓰지 않는다 → '13일 모두 가능' / '13일 중 9일 가능'
+    expect(m.cards.first.badge, isNot(matches(RegExp(r'\d+/\d+'))));
+    expect(m.cards.first.badge, matches(RegExp(r'^\d+일 (중 \d+일|모두) 가능$')));
   });
 
   test('E04 소득: 원문 소득 상한과 비교', () async {

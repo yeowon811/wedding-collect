@@ -219,8 +219,8 @@ extension _Present on ConsultAgent {
                 scope: scope,
                 booking: bookings[id],
                 multiSido: multiSido,
-                // 기간 질문의 '3/5일 가능' 같은 배지는 앱이 센 값 그대로
-                override: RegExp(r'^\d+/\d+일 가능$').hasMatch(c.badge ?? '')
+                // 기간 질문의 '10일 중 3일 가능'·'10일 모두 가능' 배지는 앱이 센 값 그대로
+                override: RegExp(r'^\d+일 (중 \d+일|모두) 가능$').hasMatch(c.badge ?? '')
                     ? BlockBadge(c.badge!, Tone.good)
                     : RegExp(r'^[\d.]+km$').hasMatch(c.badge ?? '')
                         ? BlockBadge(c.badge!, Tone.info)

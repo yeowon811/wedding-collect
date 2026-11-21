@@ -1937,7 +1937,9 @@ class ConsultAgent implements ChatAgent {
           : (ranked.isEmpty ? '${_placeOr(sido)} 그 기간 가능한 곳 없음' : '${_placeOr(sido)} 가능한 곳 ${ranked.length}곳'),
       sentence: '${label.replaceAll(RegExp(r'\(.*?\)'), '').trim()} 날짜를 확인했어요.',
     );
-    final cards = [for (final v in ranked) _venueCard(v, badge: '${counts[v]}/${dates.length}일 가능')];
+    // '10/10일 가능'은 10월 10일처럼 읽혀서 날짜로 오해하지 않는 말로 (2026-11-21 피드백)
+    String daysBadge(int n) => n == dates.length ? '${dates.length}일 모두 가능' : '${dates.length}일 중 $n일 가능';
+    final cards = [for (final v in ranked) _venueCard(v, badge: daysBadge(counts[v]!))];
     final more = _startMore(cards, '${_placeOr(sido)} 가능한 곳', tab: 0);
     return ChatMessage(
       fromUser: false,
