@@ -64,7 +64,7 @@ class CompareScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: Text('${list.first.category.label} 비교')),
+      appBar: AppBar(title: Text('${list.first.category.vendorLabel} 비교')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

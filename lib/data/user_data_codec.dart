@@ -217,7 +217,8 @@ class UserDataCodec {
       for (final m in (d['items'] as List? ?? const []).cast<Map>())
         PlanItem(
           id: m['id'] as String,
-          name: m['name'] as String,
+          // 예전 기본 이름은 지금 이름으로 (사용자가 직접 바꾼 이름은 그대로)
+          name: VendorCategory.renamed[m['name'] as String] ?? m['name'] as String,
           category: cat(m['category']),
           status:
               ItemStatus.values

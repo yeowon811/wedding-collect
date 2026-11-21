@@ -90,6 +90,7 @@ class _BookingCalendarState extends State<BookingCalendar> {
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
+            color: AppColors.calendarBg, // 달력 바탕 (11-22 사용자 지정 색)
             border: Border.all(color: AppColors.divider),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -182,7 +183,7 @@ class _BookingCalendarState extends State<BookingCalendar> {
         child: Container(
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: selected ? AppColors.ink : bg,
+            color: selected ? AppColors.calendarSelected : bg,
             borderRadius: BorderRadius.circular(8),
             border: wedding && !selected ? Border.all(color: AppColors.primary, width: 1.5) : null,
           ),

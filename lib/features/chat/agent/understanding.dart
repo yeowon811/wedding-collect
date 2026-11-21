@@ -136,16 +136,17 @@ abstract class Understander {
 
 class RuleUnderstander implements Understander {
   static const _itemWords = <VendorCategory, List<String>>{
-    VendorCategory.parentMakeup: ['혼주 메이크업', '혼주메이크업', '혼주'],
+    // '혼주 한복'이 '혼주'(헤어·메이크업)로 잡히지 않게 한복을 먼저 본다 (11-21 이름 정리)
+    VendorCategory.hanbok: ['혼주 한복', '한복'],
+    VendorCategory.parentMakeup: ['혼주 헤어', '혼주 메이크업', '혼주메이크업', '혼주'],
     VendorCategory.dress: ['드레스'],
     VendorCategory.meal: ['식대', '식사', '뷔페', '케이터링', '피로연'],
     VendorCategory.studio: ['웨딩촬영', '스튜디오', '촬영'],
-    VendorCategory.snap: ['스냅'],
+    VendorCategory.snap: ['스냅', '본식 스냅'],
     VendorCategory.invitation: ['청첩장'],
-    VendorCategory.props: ['부케', '케이크', '꽃'],
+    VendorCategory.props: ['부케', '웨딩 케이크', '케이크', '꽃'],
     VendorCategory.video: ['영상'],
-    VendorCategory.suit: ['정장', '턱시도', '수트'],
-    VendorCategory.hanbok: ['한복'],
+    VendorCategory.suit: ['예복', '정장', '턱시도', '수트'],
     VendorCategory.makeup: ['메이크업', '화장'],
   };
 

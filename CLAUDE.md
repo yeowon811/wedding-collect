@@ -225,6 +225,8 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 
 - **앱 시작 영상 (2026-11-21):** 앱을 켜면 `features/intro/intro_video.dart`(`video_player` 패키지)로 사용자 제공 영상 `assets/video/we_connect_intro.mp4`(원본 Downloads/we_connect_closer.mp4, 3초·1080×1920·소리 없음·26KB)을 먼저 재생 → 끝나면 로그인(로그인·둘러보기 상태면 앱). 화면 누르기·[건너뛰기]로 바로 넘어감, 못 불러오면 최대 6초 뒤 넘어감, 웹 자동 재생 위해 음소거. 시연 링크(?demo 등)·flutter test에서는 건너뜀(`app.dart`). 그다음 앱에 들어가면 룩북 광고는 그대로
 
+- **준비 항목 이름 정리 (2026-11-22):** 스냅사진→본식 스냅, 부케·케이크→부케·웨딩 케이크, 신랑 정장→신랑 예복, 어머니 한복→혼주 한복(상세에 '양가 부모님 의상'), 혼주 메이크업→혼주 헤어·메이크업. 식대는 예산에서는 '식대', 업체를 고르는 화면(칩·카드·비교·상세 제목)은 `VendorCategory.vendorLabel` '하객 식사'. 예전 계정의 기본 이름은 불러올 때 `VendorCategory.renamed`로 새 이름. 질문 이해는 '혼주 한복'을 '혼주'(헤어·메이크업)보다 먼저 봄. 단가표 이름은 `convert_options.py`의 DISPLAY_NAMES. 체크리스트 줄 '등록된 업체 없음'(예식장은 '등록된 예식장 없음'), 제목 '예식 준비 체크리스트'
+
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`

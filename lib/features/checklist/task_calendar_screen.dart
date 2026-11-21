@@ -63,10 +63,17 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
                   child: Text('예식일을 입력하지 않아 할 일 날짜를 계산할 수 없어요. 체크리스트에서 예식일을 먼저 입력해 주세요.',
                       style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.warning)),
                 ),
-              _monthHeader(),
-              _Legend(),
-              const SizedBox(height: 8),
-              _grid(events),
+              // 달력 바탕 연핑크 (11-22 사용자 지정 색)
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                decoration: BoxDecoration(color: AppColors.calendarBg, borderRadius: BorderRadius.circular(16)),
+                child: Column(children: [
+                  _monthHeader(),
+                  _Legend(),
+                  const SizedBox(height: 8),
+                  _grid(events),
+                ]),
+              ),
               const SizedBox(height: 20),
               Row(children: [
                 Expanded(
@@ -173,7 +180,7 @@ class _TaskCalendarScreenState extends State<TaskCalendarScreen> {
       child: Container(
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: selected ? AppColors.ink : (wedding ? const Color(0xFFFFEEF0) : null),
+          color: selected ? AppColors.calendarSelected : (wedding ? const Color(0xFFFFE3EA) : null),
           borderRadius: BorderRadius.circular(10),
           border: d == today && !selected ? Border.all(color: AppColors.primary) : null,
         ),

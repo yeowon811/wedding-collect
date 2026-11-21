@@ -75,7 +75,7 @@ class DemoVendorCard extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 8),
-          Text('${v.category.label} · ${v.sido}',
+          Text('${v.category.vendorLabel} · ${v.sido}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),

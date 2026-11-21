@@ -142,7 +142,7 @@ class _VendorScreenState extends State<VendorScreen> {
               padding: const EdgeInsets.only(right: 6),
               child: ChoiceChip(
                 avatar: Icon(c.icon, size: 16),
-                label: Text(c.label),
+                label: Text(c.vendorLabel),
                 selected: _category == c,
                 showCheckmark: false,
                 onSelected: (_) => _set(() => _category = _category == c ? null : c),
@@ -182,7 +182,7 @@ class _VendorScreenState extends State<VendorScreen> {
           padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
           child: Row(
             children: [
-              Text('$_sido ${_category?.label ?? '전체'} $total곳',
+              Text('$_sido ${_category?.vendorLabel ?? '전체'} $total곳',
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
               DropdownButton<String>(
@@ -250,7 +250,7 @@ class _VendorScreenState extends State<VendorScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    '${state.compare.first.category.label} ${state.compare.length}곳 담음 (최대 3곳)',
+                    '${state.compare.first.category.vendorLabel} ${state.compare.length}곳 담음 (최대 3곳)',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),

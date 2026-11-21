@@ -222,7 +222,7 @@ void main() {
     await tab('체크리스트');
     final list = find.byType(Scrollable).last;
     // 순서 (11-21): 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록 → 내 상담 일정
-    expect(find.text('예식준비 체크리스트'), findsOneWidget);
+    expect(find.text('예식 준비 체크리스트'), findsOneWidget);
     expect(find.text('예식일 기준 할 일'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('예산 현황'), 200, scrollable: list);
     expect(tester.getTopLeft(find.text('예산 현황')).dy,
@@ -451,7 +451,7 @@ void main() {
       expect(dress.text, isNot(contains('추천 예산')));
 
       expect((await agent.reply('대전 공공예식장 알려줘')).text, contains('없어요'));
-      expect((await agent.reply('혼주 메이크업 추천')).text, contains('혼주 메이크업'));
+      expect((await agent.reply('혼주 메이크업 추천')).text, contains('혼주 헤어·메이크업'));
     });
     AppState.instance.resetProfile();
   });

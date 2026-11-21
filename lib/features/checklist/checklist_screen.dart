@@ -16,7 +16,7 @@ import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/wedding_plan.dart';
 
-/// 예식준비 체크리스트 (11-21 이름·순서 정리, 사용자 요청): 결혼 정보 → 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록(항목별 담은 곳·계약·금액) → 상담 일정
+/// 예식 준비 체크리스트 (11-21 이름·순서 정리, 사용자 요청): 결혼 정보 → 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록(항목별 담은 곳·계약·금액) → 상담 일정
 class ChecklistScreen extends StatelessWidget {
   const ChecklistScreen({super.key});
 
@@ -31,7 +31,7 @@ class ChecklistScreen extends StatelessWidget {
       appBar: AppBar(
         leading: const BrandMark(),
         leadingWidth: 56,
-        title: const Text('예식준비 체크리스트'),
+        title: const Text('예식 준비 체크리스트'),
         actions: const [AccountButton()],
       ),
       body: FutureBuilder(
@@ -424,7 +424,7 @@ class _ItemStatusCard extends StatelessWidget {
     } else if (item.vendorName != null || item.amount != null) {
       sub = [if (item.vendorName != null) item.vendorName!, if (item.amount != null) formatManwon(item.amount!)].join(' · ');
     } else {
-      sub = '아직 담은 곳 없음';
+      sub = item.id == AppState.venueItemId ? '등록된 예식장 없음' : '등록된 업체 없음';
     }
     final empty = places.isEmpty && item.vendorName == null && item.amount == null;
     return InkWell(
@@ -725,7 +725,15 @@ void showItemDetail(BuildContext context, AppState state, PlanItem item) {
             child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 0, 20, 20), children: [
               Row(children: [
                 Expanded(
-                  child: Text(item.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(item.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+                    // 낯선 이름에 한 줄 설명 (혼주 한복 = 양가 부모님 의상)
+                    if (item.category?.description case final d?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(d, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ),
+                  ]),
                 ),
                 StageBar(status: item.status),
               ]),

@@ -41,7 +41,25 @@ class AppTheme {
       splashFactory: InkSparkle.splashFactory,
     );
 
+    // 날짜 고르기 창 (showDatePicker): 바탕·고른 날짜 색을 달력과 같게 (11-22)
+    WidgetStateProperty<Color?> picked(Color? on, Color? off) =>
+        WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? on : off);
+    final datePicker = DatePickerThemeData(
+      backgroundColor: AppColors.calendarBg,
+      surfaceTintColor: Colors.transparent,
+      headerBackgroundColor: AppColors.calendarBg,
+      headerForegroundColor: AppColors.textPrimary,
+      dividerColor: AppColors.border,
+      dayBackgroundColor: picked(AppColors.calendarSelected, null),
+      dayForegroundColor: picked(Colors.white, AppColors.textPrimary),
+      todayBackgroundColor: picked(AppColors.calendarSelected, null),
+      todayForegroundColor: picked(Colors.white, AppColors.calendarSelected),
+      todayBorder: const BorderSide(color: AppColors.calendarSelected),
+      yearBackgroundColor: picked(AppColors.calendarSelected, null),
+      yearForegroundColor: picked(Colors.white, AppColors.textPrimary),
+    );
     return base.copyWith(
+      datePickerTheme: datePicker,
       textTheme: base.textTheme.apply(
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,

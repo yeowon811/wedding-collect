@@ -26,7 +26,7 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pump();
     expect(saved, isNull);
-    expect(find.text('10~2000명 사이로 입력해 주세요'), findsOneWidget);
+    expect(find.text('10~2000명 사이로 입력해 주세요.'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '120');
     await tester.pump();
@@ -35,6 +35,6 @@ void main() {
     await tester.pump();
     expect(saved, 120);
     expect(find.text('저장됨'), findsOneWidget);
-    expect(find.text('하객 120명으로 저장했어요'), findsOneWidget);
+    expect(find.text('하객 120명으로 저장했어요.'), findsOneWidget);
   });
 }

@@ -149,7 +149,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
   Widget _profileCard() {
     final u = _me;
     final summary = _blank
-        ? '아직 입력하지 않았어요'
+        ? '아직 입력하지 않았어요.'
         : [
             u.regionLabel ?? '지역 미입력',
             if (u.age != null) '만 ${u.age}세',

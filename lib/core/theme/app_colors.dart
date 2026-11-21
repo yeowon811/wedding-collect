@@ -35,4 +35,8 @@ class AppColors {
   static const warning = Color(0xFFC2410C);
   static const warningSoft = Color(0xFFFFF1E8);
   static const unknown = Color(0xFF8B95A1);
+
+  // 달력 (11-22 사용자 지정 색): 바탕 연핑크, 고른 날짜 진한 로즈. 할 일 캘린더·예약 현황 달력·날짜 고르기 창에 같이 쓴다
+  static const calendarBg = Color(0xFFFCF4F7);
+  static const calendarSelected = Color(0xFFA34E63);
 }

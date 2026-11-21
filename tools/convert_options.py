@@ -16,6 +16,15 @@ from xlsx_reader import read_sheets  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# 앱에 보이는 이름 (2026-11-21 이름 정리: 엑셀 이름 → 앱 이름, 앱의 VendorCategory 이름과 맞춤)
+DISPLAY_NAMES = {
+    '스냅사진 (본식스냅)': '본식 스냅',
+    '부케·케이크·화기': '부케·웨딩 케이크·화기',
+    '신랑 정장 (예복)': '신랑 예복',
+    '어머니 한복 (양가 2벌)': '혼주 한복 (양가 2벌)',
+    '혼주 메이크업 (양가 4인)': '혼주 헤어·메이크업 (양가 4인)',
+}
+
 # 엑셀 항목 → 앱 id, 준비 항목(VendorCategory) 연결
 IDS = {
     '드레스': ('dress', 'DRESS'),
@@ -91,7 +100,7 @@ def main(path: str) -> None:
             'id': oid,
             'category': category,
             'group': col(r, '구분 카테고리').strip(),
-            'name': name,
+            'name': DISPLAY_NAMES.get(name, name),
             'defaultOn': col(r, '시뮬레이션 채택').strip().upper() == 'Y',
             'kind': col(r, '공공예식장 특화여부').strip(),
             'publicPrice': manwon(col(r, '실속·공공 표준가(원)')),

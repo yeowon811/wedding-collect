@@ -5,13 +5,13 @@ enum VendorCategory {
   dress('드레스', Icons.checkroom, 12),
   meal('식대', Icons.restaurant, 35),
   studio('웨딩촬영', Icons.photo_camera_outlined, 10),
-  snap('스냅사진', Icons.camera_alt_outlined, 5),
+  snap('본식 스냅', Icons.camera_alt_outlined, 5),
   invitation('청첩장', Icons.mail_outline, 2),
-  props('부케·케이크', Icons.local_florist_outlined, 5),
+  props('부케·웨딩 케이크', Icons.local_florist_outlined, 5),
   video('본식 영상', Icons.videocam_outlined, 5),
-  suit('신랑 정장', Icons.dry_cleaning_outlined, 6),
-  hanbok('어머니 한복', Icons.woman_outlined, 6),
-  parentMakeup('혼주 메이크업', Icons.face_retouching_natural, 3),
+  suit('신랑 예복', Icons.dry_cleaning_outlined, 6),
+  hanbok('혼주 한복', Icons.woman_outlined, 6),
+  parentMakeup('혼주 헤어·메이크업', Icons.face_retouching_natural, 3),
   makeup('메이크업', Icons.brush_outlined, 6),
   // 실제 연계업체 분류
   directing('스드메·디렉팅', Icons.auto_awesome_outlined, 0),
@@ -25,6 +25,26 @@ enum VendorCategory {
 
   /// 총예산 중 추천 배분 비율(%). 11개 항목 합 95%, 나머지 5%는 대관·기타.
   final int budgetShare;
+
+  /// 업체를 고르는 화면의 이름 (11-21 이름 정리: 예산에서는 '식대', 업체를 고를 때는 '하객 식사')
+  String get vendorLabel => this == meal ? '하객 식사' : label;
+
+  /// 이름만으로 뜻이 낯설 수 있는 항목의 한 줄 설명 (상세 화면에 표시)
+  String? get description => switch (this) {
+        hanbok => '양가 부모님 의상',
+        parentMakeup => '양가 부모님 헤어·메이크업',
+        suit => '신랑이 예식 날 입는 옷',
+        _ => null,
+      };
+
+  /// 예전 이름 → 지금 이름 (11-21 이름 정리 전에 저장한 계정의 준비 항목 이름을 바꿀 때)
+  static const renamed = {
+    '스냅사진': '본식 스냅',
+    '부케·케이크': '부케·웨딩 케이크',
+    '신랑 정장': '신랑 예복',
+    '어머니 한복': '혼주 한복',
+    '혼주 메이크업': '혼주 헤어·메이크업',
+  };
 
   static const planItems = [
     dress,

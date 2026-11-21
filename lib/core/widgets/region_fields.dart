@@ -36,7 +36,7 @@ class RegionFields extends StatelessWidget {
           width: box.maxWidth,
           enabled: towns.isNotEmpty,
           initialSelection: sigungu,
-          hintText: sido == null ? '시·도를 먼저 골라 주세요' : '시·군·구 (예: ${towns.first}, 선택)',
+          hintText: sido == null ? '시·도를 먼저 골라 주세요.' : '시·군·구 (예: ${towns.first}, 선택)',
           enableFilter: true,
           requestFocusOnTap: true,
           menuHeight: 260,

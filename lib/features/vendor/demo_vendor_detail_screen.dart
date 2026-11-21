@@ -27,7 +27,7 @@ class DemoVendorDetailScreen extends StatelessWidget {
     final v = vendor;
 
     return Scaffold(
-      appBar: AppBar(title: Text(v.category.label), actions: [FavoriteButton(ref: 'vendor:${v.id}')]),
+      appBar: AppBar(title: Text(v.category.vendorLabel), actions: [FavoriteButton(ref: 'vendor:${v.id}')]),
       // 주요 행동: 상담 신청(주) + 계약 완료 표시(보조), 화면 아래 고정
       bottomNavigationBar: ListenableBuilder(
         listenable: state,

@@ -334,9 +334,9 @@ class _NumberConfirmFieldState extends State<NumberConfirmField> {
 
   void _confirm() {
     final v = _typed;
-    if (v == null) return setState(() => _error = '숫자를 입력해 주세요');
+    if (v == null) return setState(() => _error = '숫자를 입력해 주세요.');
     if (v < widget.min || v > widget.max) {
-      return setState(() => _error = '${widget.min}~${widget.max}${widget.unit} 사이로 입력해 주세요');
+      return setState(() => _error = '${widget.min}~${widget.max}${widget.unit} 사이로 입력해 주세요.');
     }
     setState(() => _error = null);
     FocusScope.of(context).unfocus();
@@ -378,9 +378,9 @@ class _NumberConfirmFieldState extends State<NumberConfirmField> {
           padding: const EdgeInsets.only(top: 6, left: 4),
           child: Text(
             saved
-                ? '${widget.preview!(typed)}으로 저장했어요'
+                ? '${widget.preview!(typed)}으로 저장했어요.'
                 : widget.onDraft != null
-                    ? '${widget.preview!(typed)} · 아래 버튼을 누르면 함께 저장돼요'
+                    ? '${widget.preview!(typed)} · 아래 버튼을 누르면 함께 저장돼요.'
                     : '${widget.preview!(typed)} · 확인을 눌러 저장',
             style: TextStyle(fontSize: 13, color: saved ? AppColors.success : AppColors.textSecondary),
           ),
