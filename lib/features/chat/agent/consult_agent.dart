@@ -184,6 +184,8 @@ class ConsultAgent implements ChatAgent {
   final List<({String q, String tool, Map<String, Object?> args})> _planLog = []; // 이전 도구 조건 (후속 질문용)
   ({List<DateTime> dates, String label})? _period; // 기간 질문의 날짜들 ("내년 3월")
   List<String> _unsupported = const [];
+  String? _scopeNote; // 앱 데이터 범위 밖 안내 (제목 아래 한 줄)
+  List<QuickReply> _scopeReplies = const []; // 범위 밖 답의 '공공예식장 보기' 칩
 
   /// 더 보기: 마지막 추천의 전체 결과(카드)와 지금까지 보여준 개수
   List<ChatCard> _moreCards = const [];
@@ -411,6 +413,8 @@ class ConsultAgent implements ChatAgent {
   }
 
   void _resetTurn() {
+    _scopeNote = null;
+    _scopeReplies = const [];
     _hint = null;
     _hintBudget = null;
     _followUpTurn = false;
@@ -452,6 +456,9 @@ class ConsultAgent implements ChatAgent {
     _question = text;
     _sidoJustAsked = false;
     step.value = AgentStep.understand;
+    // 앱 데이터 밖 예식장(사설·호텔·일반 웨딩홀): 공공예식장 목록으로 끼워 맞추지 않고 웹 검색으로 (Gemini 도구 고르기 전에 앱이 판단)
+    final outside = ToolPlanner.outOfScopeVenue(text);
+    if (outside != null) return _outOfScopeVenueAnswer(text, outside);
     if (_llm != null) {
       // 도구 고르기 1번만 부른다. 실패·시간 초과일 때만 예전 질문 이해(Gemini 1번, 그래도 안 되면 규칙)로 (2026-11-20:
       // 예전에는 질문 이해를 미리 함께 불러 질문마다 Gemini 호출이 1번 더 들었음)

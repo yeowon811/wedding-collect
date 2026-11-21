@@ -578,8 +578,9 @@ class _FoldState extends State<_Fold> {
     final small = TextStyle(fontSize: 12.5, height: 1.45, color: AppColors.textBody);
     final label = TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // 좁은 화면: 접힌 줄 글이 줄어들고(…) 오른쪽 공유·복사 버튼은 카드 안에 남는다 (11-21 피드백: 버튼이 밖으로 넘침)
       Row(children: [
-        InkWell(
+        Flexible(child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: () {
             setState(() => _open = !_open);
@@ -598,13 +599,17 @@ class _FoldState extends State<_Fold> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('출처 보기 · 어떻게 찾았나요',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Flexible(
+                child: Text('출처 보기 · 어떻게 찾았나요',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              ),
               Icon(_open ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textSecondary),
             ]),
           ),
-        ),
-        const Spacer(),
+        )),
+        const SizedBox(width: 4),
         ?widget.trailing,
       ]),
       if (_open)

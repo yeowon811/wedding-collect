@@ -459,6 +459,23 @@ class GeminiClient {
         ),
       );
 
+  // 앱 데이터 밖 예식장 목록(사설·호텔·일반 웨딩홀) 찾기 (2026-11-21): 위 사실 조사는 짧은 한두 문장용이라 목록을 못 만든다
+  GenerativeModel? _searchListCache;
+  GenerativeModel get _searchList => _searchListCache ??= FirebaseAI.googleAI().generativeModel(
+        model: modelName,
+        systemInstruction: Content.system('''
+너는 결혼 준비 앱의 "웹 예식장 찾기" 단계다. 앱에는 공공예식장 데이터만 있어서, 그 밖의 예식장(사설 웨딩홀·호텔 등)을
+Google 검색으로 찾는다. 검색 결과에 실제로 나온 예식장만 3~5곳, 한 줄에 하나씩 "• 이름 (지역 · 한 줄 특징)" 형식으로 쓴다.
+가격·할인·식대·대관료·예약 가능 여부는 자주 바뀌므로 쓰지 않는다. 검색에 나오지 않은 곳은 지어내지 않는다.
+목록 앞뒤에 다른 말은 쓰지 않는다. 하나도 못 찾으면 "찾지 못했어요"라고만 쓴다.'''),
+        tools: [Tool.googleSearch()],
+        generationConfig: GenerationConfig(
+          temperature: 0,
+          maxOutputTokens: 600,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
+        ),
+      );
+
   GenerativeModel? _mapsCache;
   GenerativeModel get _maps => _mapsCache ??= FirebaseAI.googleAI().generativeModel(
         model: modelName,
@@ -475,9 +492,10 @@ LAT,LNG|정확한 장소 이름
       );
 
   /// Google 검색 보충 조사. 출처(웹 주소)가 하나도 없으면 null (R12: 출처 없는 웹 값은 쓰지 않음)
-  Future<WebResearch?> research(String question, {Duration timeout = const Duration(seconds: 20)}) async {
+  Future<WebResearch?> research(String question,
+      {Duration timeout = const Duration(seconds: 20), bool venueList = false}) async {
     try {
-      final res = await _call(_search, maskPersonalInfo(question), timeout, kind: 'search');
+      final res = await _call(venueList ? _searchList : _search, maskPersonalInfo(question), timeout, kind: 'search');
       final text = res.text?.trim();
       final meta = res.candidates.firstOrNull?.groundingMetadata;
       final links = [

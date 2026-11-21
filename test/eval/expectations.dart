@@ -179,6 +179,9 @@ const extraCases = <EvalCase>[
     Exp(ask: true, form: true),
     Exp(ask: false, form: false, kind: 'policyList', minCards: 1, profileHas: r'서울.*29'),
   ]),
+  // 2026-11-21: 앱 데이터 밖 예식장(사설) → 공공예식장 목록·하객 되묻기 없이 범위 안내 + 웹 검색
+  EvalCase('S1', '데이터 밖', ['서울시 내 사설 예식장 몇 개 좀 추려줘'],
+      [Exp(ask: false, text: '공공예식장 240곳', notText: '74곳')]),
 ];
 
 List<EvalCase> fromPredicted(List<PredictedCase> cases, Map<String, List<Exp?>> exps) => [

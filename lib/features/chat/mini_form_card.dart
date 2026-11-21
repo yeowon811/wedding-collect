@@ -148,11 +148,15 @@ class _MiniFormCardState extends State<MiniFormCard> {
               choice('잘 모름', _homeless == null, () => setState(() => _homeless = null)),
             ]),
           ),
-        Row(children: [
-          TextButton(onPressed: () => widget.onSubmit(_reply(skipAll: true)), child: const Text('잘 모르겠어요')),
-          const Spacer(),
-          FilledButton(onPressed: () => widget.onSubmit(_reply()), child: const Text('조건 적용하고 결과 보기')),
-        ]),
+        // 좁은 휴대폰에서 두 버튼을 한 줄에 두면 카드 밖으로 넘친다 (11-21 피드백) → 주 버튼은 카드 폭, 보조는 그 아래 가운데
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(onPressed: () => widget.onSubmit(_reply()), child: const Text('조건 적용하고 결과 보기')),
+        ),
+        Center(
+          child: TextButton(onPressed: () => widget.onSubmit(_reply(skipAll: true)), child: const Text('잘 모르겠어요')),
+        ),
       ]),
     );
   }

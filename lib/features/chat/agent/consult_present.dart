@@ -42,6 +42,11 @@ extension _Present on ConsultAgent {
         ];
       }
     }
+    final scope = _scopeNote;
+    if (scope != null) {
+      final at = blocks.indexWhere((b) => b.type != BlockType.headline);
+      blocks = [...blocks]..insert(at < 0 ? blocks.length : at, AnswerBlock(BlockType.notice, text: scope));
+    }
     final note = _appliedNote;
     if (note != null) {
       final at = blocks.indexWhere((b) => b.type == BlockType.next || b.type == BlockType.fold);
@@ -50,6 +55,7 @@ extension _Present on ConsultAgent {
     final replies = m.isQuestion
         ? m.quickReplies
         : [
+            ..._scopeReplies,
             ...AnswerAi.repliesFor(blocks, f),
             for (final r in m.quickReplies)
               if (r.action == 'undo_profile' || r.action == 'save_profile') _shortReply(r),
@@ -375,8 +381,32 @@ extension _Present on ConsultAgent {
 
   /// 앱 데이터에 없는 사실 (공고 기간 등): Google 검색 그라운딩. 출처가 없으면 쓰지 않는다 (R12).
   /// 예식장의 빈 값(정원·요금)은 웹으로 채우지 않는다 (R2) — 그런 질문은 도구 고르기에서 venue_info로 간다
-  Future<ChatMessage> _webAnswer(String query) async {
-    final r = await _llm!.research(query);
+  /// 사설·호텔·일반 웨딩홀처럼 앱 데이터(공공예식장)에 없는 예식장 질문: 웹 검색(출처 있는 것만) + 범위 안내 + 공공예식장 보기 칩.
+  /// Gemini가 없거나 검색 결과가 없으면 지어내지 않고 '앱에는 공공예식장만 있다'고 안내
+  Future<ChatMessage> _outOfScopeVenueAnswer(String text, String word) async {
+    final sido = [for (final s in kSidoList) if (text.contains(s)) s].firstOrNull ?? _known.sido;
+    final place = sido == null ? '' : '$sido ';
+    _scopeNote = '앱에는 공공예식장 240곳 데이터만 있어요. $word 예식장은 웹 검색 결과로 보여 드리고, 가격·예약은 각 업체에 직접 확인해 주세요.';
+    _scopeReplies = [QuickReply('${place}공공예식장 보기', text: '${place}공공예식장 추천해줘')];
+    _lookupNote = '"$word" 예식장은 앱 데이터(공공예식장) 밖이라 공공예식장 검색을 쓰지 않음';
+    if (_llm != null) {
+      return _webAnswer('$place$word 웨딩홀 추천 (공공예식장 제외)',
+          venueList: true, headline: '$place$word 예식장 · 웹 검색', notFound: '$place$word 예식장을 웹에서 찾지 못했어요');
+    }
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: '$word 예식장은 앱 데이터에 없어요',
+      sentence: '공공예식장이라면 조건에 맞게 찾아 드릴 수 있어요.',
+    );
+    return ChatMessage(
+      fromUser: false,
+      text: '앱에는 공공예식장 240곳 데이터만 있어서 $word 예식장 목록은 드릴 수 없어요. 공공예식장이라면 조건에 맞게 찾아 드릴 수 있어요.',
+      quickReplies: ConsultAgent._starterReplies,
+    );
+  }
+
+  Future<ChatMessage> _webAnswer(String query, {bool venueList = false, String? headline, String? notFound}) async {
+    final r = await _llm!.research(query, venueList: venueList);
     // 앱 정책 데이터에 같은 이름이 있으면 카드로 함께 (신청 링크는 앱 데이터)
     final q = normName(query);
     final policies = [
@@ -397,12 +427,16 @@ extension _Present on ConsultAgent {
       _lookupNote = 'Google 검색으로 "$query"를 찾았지만 출처 있는 답이 없어 쓰지 않음';
       _hint = AnswerHint(
         kind: AnswerKind.other,
-        headline: '웹에서 확인하지 못했어요',
-        sentence: cards.isEmpty ? '기관 공고에서 직접 확인해 주세요.' : '아래 정책의 신청 페이지에서 확인해 주세요.',
+        headline: notFound ?? '웹에서 확인하지 못했어요',
+        sentence: venueList
+            ? '지도 앱에서 지역 이름과 "웨딩홀"로 찾아 보세요.'
+            : (cards.isEmpty ? '기관 공고에서 직접 확인해 주세요.' : '아래 정책의 신청 페이지에서 확인해 주세요.'),
       );
       return ChatMessage(
         fromUser: false,
-        text: '"$query"는 웹에서 출처가 있는 답을 찾지 못했어요. 기관 공고에서 직접 확인해 주세요.',
+        text: venueList
+            ? '웹 검색에서 출처가 있는 예식장 목록을 찾지 못했어요. 지도 앱에서 지역 이름과 "웨딩홀"로 찾아 보세요.'
+            : '"$query"는 웹에서 출처가 있는 답을 찾지 못했어요. 기관 공고에서 직접 확인해 주세요.',
         cards: cards,
         quickReplies: ConsultAgent._starterReplies,
       );
@@ -412,7 +446,7 @@ extension _Present on ConsultAgent {
     _hint = AnswerHint(
       kind: AnswerKind.other,
       // 첫 문장이 길면 무엇을 찾았는지(검색어)를 제목으로 (평가 X19: '웹에서 찾은 정보'만으로는 무슨 답인지 모름)
-      headline: first.length <= 24 ? first : (query.length <= 24 ? query : '${query.substring(0, 23)}…'),
+      headline: headline ?? (first.length <= 24 ? first : (query.length <= 24 ? query : '${query.substring(0, 23)}…')),
       headBadges: const [BlockBadge('웹 정보 · 확인 필요', Tone.check)],
       web: [
         WebItem(text: r.text, url: r.links.first.uri, source: r.links.first.title),
