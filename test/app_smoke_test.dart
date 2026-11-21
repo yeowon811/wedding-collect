@@ -51,7 +51,7 @@ void main() {
     BrowseScreen.segment.value = 0;
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
-    expect(find.text('공공예식장/웨딩업체 둘러보기'), findsOneWidget);
+    expect(find.text('예식장·업체 찾기'), findsOneWidget);
     expect(find.textContaining('전국 240곳'), findsNothing); // 제목 아래 개수 줄은 없앰
 
     for (final tab in ['홈', '정책', '체크리스트', 'AI 상담', '예식장·업체']) {
@@ -221,12 +221,15 @@ void main() {
     // 체크리스트에 상담 일정·계약 반영
     await tab('체크리스트');
     final list = find.byType(Scrollable).last;
-    // 순서 (11-21 이름 정리): 예산 현황 → 예산 관리 목록 → 내 상담 일정 → 예식일 기준 할 일
+    // 순서 (11-21): 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록 → 내 상담 일정
     expect(find.text('예식준비 체크리스트'), findsOneWidget);
-    expect(find.text('예산 현황'), findsOneWidget);
+    expect(find.text('예식일 기준 할 일'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('예산 현황'), 200, scrollable: list);
+    expect(tester.getTopLeft(find.text('예산 현황')).dy,
+        greaterThan(tester.getTopLeft(find.text('예식일 기준 할 일')).dy)); // 할 일이 예산 현황보다 위
     await tester.scrollUntilVisible(find.textContaining('예산 관리 목록 · 계약 1/11'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
-    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), 200, scrollable: list); // 상담 일정보다 아래
+    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 맨 위쪽으로 돌아가 다시 보임
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
     expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
     final app = AppState.instance;

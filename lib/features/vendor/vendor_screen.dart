@@ -15,7 +15,7 @@ import 'demo_vendor_detail_screen.dart';
 import 'real_vendor_detail_screen.dart';
 import 'widgets/vendor_cards.dart';
 
-/// 업체 찾기: 지역 → 항목 → 한 목록. 실제 연계업체(공식전담 먼저)와 시연용 업체(가격·후기·상담)를 함께 보여준다.
+/// 업체 찾기: 지역 → 항목 → 한 목록. [시연] 업체 6곳 → 실제 연계업체(공식전담 먼저) → 나머지 [시연] 업체 순으로 함께 보여준다.
 class VendorScreen extends StatefulWidget {
   const VendorScreen({super.key, this.embedded = false});
 
@@ -169,6 +169,11 @@ class _VendorScreenState extends State<VendorScreen> {
         .toList()
       ..sort((a, b) => rank(b) - rank(a));
     final total = demo.length + real.length;
+    // 순서 (11-21 사용자 요청): [시연] 업체 6곳을 맨 위에 → 실제 연계업체 → 나머지 [시연] 업체.
+    // 실제 업체는 가격·상담 정보가 없어 둘러보기 어렵고, 시연 업체로 가격 비교·상담 흐름을 먼저 보여 준다
+    const demoFirst = 6;
+    final demoTop = demo.take(demoFirst).toList();
+    final demoRest = demo.skip(demoFirst).toList();
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
@@ -197,7 +202,7 @@ class _VendorScreenState extends State<VendorScreen> {
           child: Text(
             real.isEmpty
                 ? '시연용 가상 업체예요 (가격·평점 임의 생성)'
-                : '실제 연계 업체 ${real.length}곳 먼저 · [시연] 업체는 가격·평점을 임의로 만든 가상 업체예요',
+                : '[시연] 업체 ${demoTop.length}곳 먼저, 그다음 실제 연계 업체 ${real.length}곳 · [시연] 업체는 가격·평점을 임의로 만든 가상 업체예요',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ),
@@ -209,6 +214,7 @@ class _VendorScreenState extends State<VendorScreen> {
             actions: [EmptyAction('전체 항목 보기', () => _set(() => _category = null))],
           ),
         TileGrid(children: [
+          for (final v in demoTop) _demoCard(v),
           for (final v in real)
             RealVendorTile(
               vendor: v,
@@ -216,17 +222,18 @@ class _VendorScreenState extends State<VendorScreen> {
                 MaterialPageRoute(builder: (_) => RealVendorDetailScreen(vendor: v)),
               ),
             ),
-          for (final v in demo)
-            DemoVendorCard(
-              vendor: v,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => DemoVendorDetailScreen(vendor: v)),
-              ),
-            ),
+          for (final v in demoRest) _demoCard(v),
         ]),
       ],
     );
   }
+
+  Widget _demoCard(DemoVendor v) => DemoVendorCard(
+        vendor: v,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => DemoVendorDetailScreen(vendor: v)),
+        ),
+      );
 
   Widget _compareBar() {
     final state = AppState.instance;

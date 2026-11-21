@@ -231,7 +231,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
               middle: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  '공공예식장/웨딩업체 둘러보기',
+                  '예식장·업체 찾기',
                   maxLines: 1,
                   style: TextStyle(
                     fontSize: 18,

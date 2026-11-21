@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../app/demo_links.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/brand_mark.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/info_badge.dart';
 import '../../data/app_state.dart';
@@ -245,6 +246,8 @@ class _ChatScreenState extends State<ChatScreen> {
           // 대화 영역은 아주 연한 회색 위에 흰 말풍선 (시안 A)
           backgroundColor: setup ? null : const Color(0xFFF9FAFB),
           appBar: AppBar(
+            leading: const BrandMark(),
+            leadingWidth: 56,
             title: const Text('AI 상담'),
             // 헤더 오른쪽: 새 상담 · 내 계정 (내 정보는 아래 조건 줄의 [수정]으로, 2026-11-20 Red Team P0)
             actions: [

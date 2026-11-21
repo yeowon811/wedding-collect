@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/brand_mark.dart';
 import '../../data/repositories/repositories.dart';
 import '../auth/login_screen.dart';
 import '../favorites/favorites_screen.dart';
 import '../vendor/vendor_screen.dart';
 import '../venue/venue_home_screen.dart';
 
-/// 공공예식장/웨딩업체 둘러보기 (11-21 사용자 요청: 예식장·업체 탭 합침).
+/// 예식장·업체 찾기 (11-21 사용자 요청: 예식장·업체 탭 합침).
 /// 제목 아래 전환 버튼 [공공예식장 | 웨딩업체]로 한 쪽 목록만 보여 준다. 두 화면은 그대로 살려 두어(IndexedStack)
 /// 전환해도 검색어·지역·항목 선택이 남는다. 다른 화면에서 업체를 열면(MainShell.goTo(2)) 웨딩업체 쪽이 열린다.
 class BrowseScreen extends StatelessWidget {
@@ -23,16 +24,17 @@ class BrowseScreen extends StatelessWidget {
         bottom: false,
         child: Column(children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
+            padding: const EdgeInsets.fromLTRB(0, 4, 4, 0),
             child: SizedBox(
               height: 48,
               child: NavigationToolbar(
                 centerMiddle: true,
                 middleSpacing: 8,
+                leading: const SizedBox(width: 56, child: BrandMark()), // 다른 탭 AppBar의 leadingWidth와 같게
                 middle: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '공공예식장/웨딩업체 둘러보기',
+                    '예식장·업체 찾기',
                     maxLines: 1,
                     style: TextStyle(
                       fontSize: 18,

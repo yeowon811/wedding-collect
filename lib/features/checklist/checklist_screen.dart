@@ -9,13 +9,14 @@ import 'package:flutter/services.dart';
 import 'task_calendar_screen.dart';
 import '../auth/login_screen.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/brand_mark.dart';
 import '../../core/utils/format.dart';
 import '../../core/widgets/inputs.dart';
 import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/wedding_plan.dart';
 
-/// 결혼 준비 관리 (11-21 이름 정리, 사용자 요청): 결혼 정보 → 예산 현황 → 예산 관리 목록(항목별 담은 곳·계약·금액) → 상담 일정 → 예식일 기준 할 일
+/// 예식준비 체크리스트 (11-21 이름·순서 정리, 사용자 요청): 결혼 정보 → 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록(항목별 담은 곳·계약·금액) → 상담 일정
 class ChecklistScreen extends StatelessWidget {
   const ChecklistScreen({super.key});
 
@@ -27,7 +28,12 @@ class ChecklistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppState.instance;
     return Scaffold(
-      appBar: AppBar(title: const Text('예식준비 체크리스트'), actions: const [AccountButton()]),
+      appBar: AppBar(
+        leading: const BrandMark(),
+        leadingWidth: 56,
+        title: const Text('예식준비 체크리스트'),
+        actions: const [AccountButton()],
+      ),
       body: FutureBuilder(
         future: _preload,
         builder: (context, _) => ListenableBuilder(
@@ -36,11 +42,12 @@ class ChecklistScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 24),
           children: [
             _PlanCard(state: state),
+            // 예식일 기준 할 일을 예산 현황 위로 (11-21 사용자 요청)
+            _TimelineCard(state: state),
             _BudgetCard(state: state),
-            // 예산 관리 목록은 예산 현황 바로 아래 (홈 '예산 관리'로 들어왔을 때 바로 보이게)
+            // 예산 관리 목록은 예산 현황 바로 아래
             _ItemStatusCard(state: state),
             if (state.consultations.isNotEmpty) _ConsultationCard(state: state),
-            _TimelineCard(state: state),
           ],
         ),
       ),

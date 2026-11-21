@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/login_screen.dart';
 import '../../app/main_shell.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/brand_mark.dart';
 import '../../core/widgets/empty_state.dart';
 import '../favorites/favorites_screen.dart';
 import '../../core/widgets/grid.dart';
@@ -69,6 +70,8 @@ class _PolicyScreenState extends State<PolicyScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('맞춤 지원 정책'),
+        leading: const BrandMark(),
+        leadingWidth: 56,
         actions: const [FavoritesAction(), AccountButton()],
       ),
       body: ListenableBuilder(
