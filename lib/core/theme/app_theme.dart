@@ -54,10 +54,11 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
-        centerTitle: false,
+        // 화면 제목은 가운데, 조금 작게 (11-21 사용자 요청: 22 → 18)
+        centerTitle: true,
         titleTextStyle: TextStyle(
           fontFamily: fontFamily,
-          fontSize: 22,
+          fontSize: 18,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.4,
           color: AppColors.textPrimary,

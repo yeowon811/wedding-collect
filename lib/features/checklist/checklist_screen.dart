@@ -27,7 +27,7 @@ class ChecklistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppState.instance;
     return Scaffold(
-      appBar: AppBar(title: const Text('결혼 준비 관리'), actions: const [AccountButton()]),
+      appBar: AppBar(title: const Text('예식준비 체크리스트'), actions: const [AccountButton()]),
       body: FutureBuilder(
         future: _preload,
         builder: (context, _) => ListenableBuilder(

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wedding_collect/features/venue/widgets/venue_location_map.dart';
 import 'package:wedding_collect/app/app.dart';
 import 'package:wedding_collect/app/main_shell.dart';
+import 'package:wedding_collect/features/browse/browse_screen.dart';
 import 'package:wedding_collect/features/home/home_screen.dart';
 import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/models/vendor.dart';
@@ -47,25 +48,37 @@ void main() {
     addTearDown(tester.view.reset);
 
     MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
+    BrowseScreen.segment.value = 0;
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
-    expect(find.text('공공예식장'), findsWidgets);
+    expect(find.text('공공예식장/웨딩업체 둘러보기'), findsOneWidget);
     expect(find.textContaining('전국 240곳'), findsNothing); // 제목 아래 개수 줄은 없앰
 
-    for (final tab in ['홈', '정책', '체크리스트', 'AI 상담', '예식장']) {
+    for (final tab in ['홈', '정책', '체크리스트', 'AI 상담', '예식장·업체']) {
       await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text(tab)));
       await tester.pumpAndSettle();
     }
-    // 홈: 바로가기 '웨딩업체' → 업체 화면(아래 탭에는 없음), 뒤로 가면 홈
+    // 홈: 바로가기 '웨딩업체' → '예식장·업체' 탭의 웨딩업체 쪽 (11-21 합침)
     await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('홈')));
     await tester.pumpAndSettle();
     expect(find.text('맞춤 지원 찾아보기'), findsOneWidget);
     expect(find.text('대한민국 정부'), findsNothing);
-    await tester.tap(find.text('웨딩업체'));
+    await tester.tap(find.text('웨딩업체').first); // 홈 바로가기 칸
     await tester.pumpAndSettle();
-    expect(find.text('업체 찾기'), findsOneWidget);
-    await back(tester);
-    expect(find.text('맞춤 지원 찾아보기'), findsOneWidget);
+    expect(MainShell.tab.value, 0);
+    expect(BrowseScreen.segment.value, 1);
+    expect(find.widgetWithText(ChoiceChip, '드레스'), findsOneWidget); // 업체 항목 칩이 보임
+    // 아래 탭으로 다른 곳에 갔다 와도 마지막에 본 쪽(웨딩업체) 그대로
+    await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('정책')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('예식장·업체')));
+    await tester.pumpAndSettle();
+    expect(BrowseScreen.segment.value, 1);
+    // 전환 버튼으로 공공예식장 쪽
+    await tester.tap(find.descendant(of: find.byType(BrowseScreen), matching: find.text('공공예식장')));
+    await tester.pumpAndSettle();
+    expect(BrowseScreen.segment.value, 0);
+    expect(find.byType(VenueCard), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -75,6 +88,7 @@ void main() {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     MainShell.tab.value = 0; // 앞 테스트에서 바꾼 탭 초기화
+    BrowseScreen.segment.value = 0;
     await tester.pumpWidget(const WeddingCollectApp());
     await tester.pumpAndSettle();
 
@@ -131,7 +145,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('서울 · 강남구 외 1'), findsNothing);
 
-    // 업체: 드레스 2곳 비교 (업체는 아래 탭이 아니라 화면으로 열린다)
+    // 업체: 드레스 2곳 비교 ('예식장·업체' 탭의 웨딩업체 쪽)
     MainShell.goTo(MainShell.vendor);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, '드레스'));
@@ -204,12 +218,11 @@ void main() {
     expect(find.byType(RealVendorTile), findsWidgets);
     expect(find.text('공식전담(서울시)'), findsWidgets);
 
-    // 체크리스트에 상담 일정·계약 반영 (업체 화면을 닫고)
-    await back(tester);
+    // 체크리스트에 상담 일정·계약 반영
     await tab('체크리스트');
     final list = find.byType(Scrollable).last;
     // 순서 (11-21 이름 정리): 예산 현황 → 예산 관리 목록 → 내 상담 일정 → 예식일 기준 할 일
-    expect(find.text('결혼 준비 관리'), findsOneWidget);
+    expect(find.text('예식준비 체크리스트'), findsOneWidget);
     expect(find.text('예산 현황'), findsOneWidget);
     await tester.scrollUntilVisible(find.textContaining('예산 관리 목록 · 계약 1/11'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);

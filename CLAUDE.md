@@ -221,6 +221,8 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 
 - **AI 상담 범위·금액 비교 (2026-11-21):** ① 결혼과 관계없는 질문(주식·날씨·코딩 등)은 `ToolPlanner.offTopic`(앱 낱말, 결혼 관련 말이 있으면 안 막음) → Gemini 도구 `off_topic` → 일반 안내·검색 지시문의 OFF_TOPIC 순으로 막고 '결혼 준비 질문만 도와드려요'. ② 사설·호텔·외부 예식장은 `outOfScopeVenue`(검색·정보·어때 포함) → 범위 안내 + 웹 검색 목록(Gemini 다시 쓰기 없음). ③ 공공 vs 일반 예식장 금액 비교(`ToolPlanner.costCompare`: 소비자원·참가격, 또는 공공 + 비교·일반·사설 + 금액) → `_venueCostCompareAnswer` 표: 공공 = 수집 대관료(무료 n곳·유료 중간) + 참고 단가표 추정, 일반 = **한국소비자원 참가격 예식장 가격정보 2026년 9월 조사** 지역별 중간값(`assets/data/consumer_wedding_prices.json`, `tools/make_consumer_prices.py`, `lib/data/repositories/consumer_prices.dart`, 서울은 강남구만 '서울(강남)'). 최소 보증인원 중간값보다 하객이 적으면 그 인원으로 식대 계산. 소개서 출처 표에 '한국소비자원 참가격 결혼서비스 가격정보' 기재. ④ 답 캐시(`AnswerComposer.signature`)는 결과 목록이 없는 답이면 질문 문장까지 넣음(다른 질문에 앞 답이 그대로 나오던 버그). ⑤ 체크리스트 예산 카드의 '예정' 줄 삭제: 남은 예산 = 총예산 − 계약·결제 완료
 
+- **예식장·업체 탭 합침·상단 제목 (2026-11-21):** 아래 탭 = 홈 · 예식장·업체 · 정책 · 체크리스트 · AI 상담. '예식장·업체' = `features/browse/browse_screen.dart`(제목 '공공예식장/웨딩업체 둘러보기' + 전환 버튼 [공공예식장 | 웨딩업체], `BrowseScreen.segment` 0/1, IndexedStack이라 전환해도 선택 유지, 마지막 쪽 기억). `VenueHomeScreen(embedded:)`·`VendorScreen(embedded:)`는 제목 줄 없이 들어감. 탭 번호는 그대로: `MainShell.goTo(0)` = 공공예식장 쪽, `goTo(2)` = 웨딩업체 쪽(업체 화면 push 없음), 아래 탭 직접 누르면 쪽 유지, `?tab=2` 링크도 웨딩업체 쪽. 화면 제목은 테마에서 가운데·18(전 22), 체크리스트 제목 '예식준비 체크리스트', 섹션 '예산 현황'·'예산 관리 목록 · 계약 n/N'(예산 현황 바로 아래)
+
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`

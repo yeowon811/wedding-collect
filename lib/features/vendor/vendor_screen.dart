@@ -17,7 +17,10 @@ import 'widgets/vendor_cards.dart';
 
 /// 업체 찾기: 지역 → 항목 → 한 목록. 실제 연계업체(공식전담 먼저)와 시연용 업체(가격·후기·상담)를 함께 보여준다.
 class VendorScreen extends StatefulWidget {
-  const VendorScreen({super.key});
+  const VendorScreen({super.key, this.embedded = false});
+
+  /// 예식장·업체 둘러보기 화면 안에 들어갈 때: 제목 줄(AppBar)은 그 화면이 그린다 (11-21 합침)
+  final bool embedded;
 
   /// 체크리스트 등에서 "이 항목 업체 찾기"로 열 때 고를 항목
   static final categoryRequest = ValueNotifier<VendorCategory?>(null);
@@ -70,10 +73,12 @@ class _VendorScreenState extends State<VendorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('업체 찾기'),
-        actions: const [FavoritesAction(), AccountButton()],
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: const Text('업체 찾기'),
+              actions: const [FavoritesAction(), AccountButton()],
+            ),
       body: FutureBuilder(
         future: _future,
         builder: (context, snap) {

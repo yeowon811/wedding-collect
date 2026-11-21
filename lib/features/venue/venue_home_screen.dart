@@ -17,9 +17,12 @@ import 'widgets/venue_card.dart';
 
 /// 공공예식장 찾기: 검색 + AI 추천 배너 + 시도 → 시군구(서울이면 강남구·강동구 …) + 목록
 class VenueHomeScreen extends StatefulWidget {
-  const VenueHomeScreen({super.key, required this.repository});
+  const VenueHomeScreen({super.key, required this.repository, this.embedded = false});
 
   final VenueRepository repository;
+
+  /// 예식장·업체 둘러보기 화면 안에 들어갈 때: 제목 줄은 그 화면이 그린다 (11-21 합침)
+  final bool embedded;
 
   /// 홈 '무료 예식장 BEST'로 열 때: 무료만 보기로 바꾼다 (true를 넣으면 적용하고 false로 되돌림)
   static final freeOnlyRequest = ValueNotifier<bool>(false);
@@ -139,6 +142,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
       },
       child: Scaffold(
       body: SafeArea(
+        top: !widget.embedded,
         child: FutureBuilder<List<Venue>>(
           future: _future,
           builder: (context, snap) {
@@ -155,7 +159,7 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
             final openBest = _showBest ? _openBest(region) : const <(Venue, int)>[];
             return CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(child: _header(all)),
+                if (!widget.embedded) SliverToBoxAdapter(child: _header(all)),
                 SliverToBoxAdapter(child: _searchBar()),
                 SliverToBoxAdapter(child: _aiBanner()),
                 SliverToBoxAdapter(child: _sidoChips(all)),
@@ -214,26 +218,31 @@ class _VenueHomeScreenState extends State<VenueHomeScreen> {
 
   Widget _header(List<Venue> all) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
+          // 제목 가운데 (다른 탭 AppBar와 같은 배치: 오른쪽 버튼과 겹치면 그만큼만 왼쪽으로)
+          SizedBox(
+            height: 48,
+            child: NavigationToolbar(
+              centerMiddle: true,
+              middleSpacing: 8,
+              middle: FittedBox(
+                fit: BoxFit.scaleDown,
                 child: Text(
-                  '공공예식장',
+                  '공공예식장/웨딩업체 둘러보기',
+                  maxLines: 1,
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.4,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ),
-              const FavoritesAction(),
-              const AccountButton(),
-            ],
+              trailing: const Row(mainAxisSize: MainAxisSize.min, children: [FavoritesAction(), AccountButton()]),
+            ),
           ),
         ],
       ),
