@@ -105,7 +105,7 @@ class VenueCostEstimate {
       if (!guestsGiven) '하객 수를 입력하지 않아 $defaultGuests명으로 계산했어요',
       if (budget != null && budget! > 0)
         '내 총예산 ${fmt(budget!)}만원의 약 ${(low * 100 / budget!).round()}~${(high * 100 / budget!).round()}% '
-            '(드레스·촬영 등 다른 준비 항목은 빠진 값)',
+            '(드레스·촬영 등 다른 항목은 빠진 값)',
     ];
   }
 }

@@ -38,7 +38,7 @@ class RealVendorDetailScreen extends StatelessWidget {
                       app.toggleChecklist(ref);
                       if (!on) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('체크리스트 준비 항목에 담았어요'),
+                          content: Text('체크리스트 예산 관리 목록에 담았어요'),
                           duration: Duration(seconds: 2),
                         ));
                       }

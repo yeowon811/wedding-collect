@@ -208,9 +208,12 @@ void main() {
     await back(tester);
     await tab('체크리스트');
     final list = find.byType(Scrollable).last;
-    await tester.scrollUntilVisible(find.textContaining('1/11 완료'), 200, scrollable: list);
+    // 순서 (11-21 이름 정리): 예산 현황 → 예산 관리 목록 → 내 상담 일정 → 예식일 기준 할 일
+    expect(find.text('결혼 준비 관리'), findsOneWidget);
+    expect(find.text('예산 현황'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('예산 관리 목록 · 계약 1/11'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
-    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 준비 항목보다 위
+    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), 200, scrollable: list); // 상담 일정보다 아래
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
     expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
     final app = AppState.instance;

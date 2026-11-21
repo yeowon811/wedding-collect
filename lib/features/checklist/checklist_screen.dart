@@ -15,7 +15,7 @@ import '../../core/utils/region.dart';
 import '../../data/app_state.dart';
 import '../../data/models/wedding_plan.dart';
 
-/// 준비 체크리스트: 결혼 정보 → 예산 → 항목별 진행 → 상담 일정 → 예식일 기준 할 일
+/// 결혼 준비 관리 (11-21 이름 정리, 사용자 요청): 결혼 정보 → 예산 현황 → 예산 관리 목록(항목별 담은 곳·계약·금액) → 상담 일정 → 예식일 기준 할 일
 class ChecklistScreen extends StatelessWidget {
   const ChecklistScreen({super.key});
 
@@ -27,7 +27,7 @@ class ChecklistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppState.instance;
     return Scaffold(
-      appBar: AppBar(title: const Text('준비 체크리스트'), actions: const [AccountButton()]),
+      appBar: AppBar(title: const Text('결혼 준비 관리'), actions: const [AccountButton()]),
       body: FutureBuilder(
         future: _preload,
         builder: (context, _) => ListenableBuilder(
@@ -37,9 +37,10 @@ class ChecklistScreen extends StatelessWidget {
           children: [
             _PlanCard(state: state),
             _BudgetCard(state: state),
-            _TimelineCard(state: state),
+            // 예산 관리 목록은 예산 현황 바로 아래 (홈 '예산 관리'로 들어왔을 때 바로 보이게)
             _ItemStatusCard(state: state),
             if (state.consultations.isNotEmpty) _ConsultationCard(state: state),
+            _TimelineCard(state: state),
           ],
         ),
       ),
@@ -321,7 +322,7 @@ class _BudgetCard extends StatelessWidget {
     double part(int v) => !p.hasBudget || p.budget <= 0 ? 0 : (v / p.budget).clamp(0.0, 1.0);
 
     return _Section(
-      title: '예산',
+      title: '예산 현황',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -384,7 +385,7 @@ class _ItemStatusCard extends StatelessWidget {
     final items = state.items;
     final done = items.where((i) => i.status.isDone).length;
     return _Section(
-      title: '준비 항목 · $done/${items.length} 완료',
+      title: '예산 관리 목록 · 계약 $done/${items.length}',
       trailing: TextButton.icon(
         onPressed: () => showItemEditor(context, state),
         icon: const Icon(Icons.add, size: 18),

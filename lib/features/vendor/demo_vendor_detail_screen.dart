@@ -49,7 +49,7 @@ class DemoVendorDetailScreen extends StatelessWidget {
                       app.toggleChecklist(ref);
                       if (!on) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('체크리스트 준비 항목에 담았어요'),
+                          content: Text('체크리스트 예산 관리 목록에 담았어요'),
                           duration: Duration(seconds: 2),
                         ));
                       }
@@ -138,7 +138,7 @@ class DemoVendorDetailScreen extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       budget == null
-                          ? '체크리스트 준비 항목에 ${v.category.label} 금액을 정하면 예산 안인지 알려드려요'
+                          ? '체크리스트 예산 관리 목록에 ${v.category.label} 금액을 정하면 예산 안인지 알려드려요'
                           : estimate <= budget
                               ? '내 ${v.category.label} 예산 $budget만원 안이에요'
                               : '내 ${v.category.label} 예산 $budget만원보다 ${estimate - budget}만원 많아요',

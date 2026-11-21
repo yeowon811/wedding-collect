@@ -72,7 +72,7 @@ void main() {
       app.updateItem(i, clearAmount: true);
     }
     final empty = await ConsultAgent().reply('예산 어떻게 나누면 돼?');
-    expect(empty.text, contains('아직 준비 항목에 금액을 정하지 않았어요'));
+    expect(empty.text, contains('아직 예산 관리 목록에 금액을 정하지 않았어요'));
     expect(empty.quickReplies.map((q) => q.action), contains('open_checklist'));
 
     app.updateItem(dress, amount: 200);

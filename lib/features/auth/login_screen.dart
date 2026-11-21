@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '공공예식장·지원 정책·업체를 찾고, 준비 항목과 예산을 기록해요.',
+                    '공공예식장·지원 정책·업체를 찾고, 예산과 준비 일정을 기록해요.',
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.5,

@@ -766,7 +766,7 @@ class ConsultAgent implements ChatAgent {
     switch (r.action) {
       case 'open_checklist':
         MainShell.goTo(3);
-        return ChatMessage(fromUser: false, text: '체크리스트 탭을 열었어요. 준비 항목을 눌러 금액을 적어 주세요.');
+        return ChatMessage(fromUser: false, text: '체크리스트 탭을 열었어요. 예산 관리 목록의 항목을 눌러 금액을 적어 주세요.');
       case 'skip_ask':
         return _skipCurrent();
       case 'form':
@@ -2783,8 +2783,8 @@ class ConsultAgent implements ChatAgent {
         item: item, sido: sido, budget: budget, guests: guests, cheapest: cheapest);
     final order = cheapest ? '가격이 낮은 순' : '평점순';
     _lookupNote = budget == null
-        ? '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 금액이 없어 $order'
-        : '$sido ${item.label} 시연용 업체 $count곳 → 준비 항목 예산 $budget만원 안 $inBudget곳 먼저, $order';
+        ? '$sido ${item.label} 시연용 업체 $count곳 → 예산 관리 목록 금액이 없어 $order'
+        : '$sido ${item.label} 시연용 업체 $count곳 → 예산 관리 목록 금액 $budget만원 안 $inBudget곳 먼저, $order';
     if (cheapest) _flowNote = '이전 질문을 이어서 더 싼 곳부터 다시 고름';
     _hintBudget = budget;
     _hint = AnswerHint(
@@ -2836,7 +2836,7 @@ class ConsultAgent implements ChatAgent {
       basis: '$sido · ${budget == null ? '${item.label} 예산 미정' : '${item.label} 예산 $budget만원'} · 하객 $guests명',
       text: '$head\n\n'
           '${picks.map((v) => '• ${v.name.replaceFirst('[시연] ', '')} — ${line(v)}').join('\n')}\n\n'
-          '${budget == null ? '체크리스트 준비 항목에서 ${item.label} 금액을 정하면 그 예산 안의 업체를 먼저 골라 드려요.\n' : ''}'
+          '${budget == null ? '체크리스트 예산 관리 목록에서 ${item.label} 금액을 정하면 그 예산 안의 업체를 먼저 골라 드려요.\n' : ''}'
           '(가격·평점은 시연용 가상 데이터예요)',
       cards: [for (final v in picks) demoCard(v)],
       sources: const ['시연용 가상 업체 데이터'],
@@ -2941,7 +2941,7 @@ class ConsultAgent implements ChatAgent {
     final confirmed = _app.confirmedTotal;
     final planned = _app.plannedTotal;
     final left = total - confirmed - planned;
-    _lookupNote = '체크리스트 준비 항목 ${_app.items.length}개 중 금액을 정한 ${withAmount.length}개 합산';
+    _lookupNote = '체크리스트 예산 관리 목록 ${_app.items.length}개 중 금액을 정한 ${withAmount.length}개 합산';
     const actions = [
       QuickReply('체크리스트에서 금액 정하기', action: 'open_checklist'),
       QuickReply('무료 공공예식장', text: '공공예식장 추천해줘'),
@@ -2950,8 +2950,8 @@ class ConsultAgent implements ChatAgent {
       return ChatMessage(
         fromUser: false,
         basis: '총예산 ${formatManwon(total)}',
-        text: '아직 준비 항목에 금액을 정하지 않았어요.\n'
-            '체크리스트의 준비 항목마다 금액을 적어 두면, 여기서 항목별 금액·합계·남은 예산을 정리해 드리고 '
+        text: '아직 예산 관리 목록에 금액을 정하지 않았어요.\n'
+            '체크리스트의 예산 관리 목록에 항목마다 금액을 적어 두면, 여기서 항목별 금액·합계·남은 예산을 정리해 드리고 '
             '업체를 추천할 때도 그 금액 안의 업체를 먼저 골라 드려요.',
         sources: const ['내 체크리스트'],
         quickReplies: actions,
@@ -2971,8 +2971,8 @@ class ConsultAgent implements ChatAgent {
     );
     return ChatMessage(
       fromUser: false,
-      basis: '총예산 ${formatManwon(total)} · 준비 항목에 정한 금액',
-      text: '준비 항목에 정해 둔 금액이에요.\n'
+      basis: '총예산 ${formatManwon(total)} · 예산 관리 목록에 정한 금액',
+      text: '예산 관리 목록에 정해 둔 금액이에요.\n'
           '${withAmount.map(line).join('\n')}\n\n'
           '• 계약·결제 완료 ${formatManwon(confirmed)} · 계약 전 ${formatManwon(planned)}\n'
           '• 총예산 ${formatManwon(total)}에서 ${left >= 0 ? '남은 예산 ${formatManwon(left)}' : '${formatManwon(-left)} 초과'}'
@@ -3033,7 +3033,7 @@ class ConsultAgent implements ChatAgent {
     final used = _app.confirmedTotal + _app.plannedTotal;
     final budgetLine = budget == null || used == 0
         ? null
-        : '💰 예산: 준비 항목에 정한 금액 ${formatManwon(used)} · '
+        : '예산: 예산 관리 목록에 정한 금액 ${formatManwon(used)} · '
             '${budget - used >= 0 ? '남은 예산 ${formatManwon(budget - used)}' : '${formatManwon(used - budget)} 초과'}';
     final tasks = ConsultTools.nextTasks(count: 2);
     _lookupNote = '예식장 검색 · 정책 판정 · 내 예산 현황 · 할 일 도구의 결과를 모아 정리';

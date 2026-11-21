@@ -69,7 +69,7 @@ class CompareScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            '하객 $guests명 · ${budget == null ? '예산 미정 (체크리스트 준비 항목에 금액을 정하면 예산 안인지 비교해요)' : '내 예산 $budget만원 기준'} · 시연용 데이터',
+            '하객 $guests명 · ${budget == null ? '예산 미정 (체크리스트 예산 관리 목록에 금액을 정하면 예산 안인지 비교해요)' : '내 예산 $budget만원 기준'} · 시연용 데이터',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),
