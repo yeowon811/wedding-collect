@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 릴리스 APK에서 Firebase·Gemini·사진·지도를 쓰려면 필요 (디버그 빌드에만 자동으로 들어감) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="wedding_collect"
+        android:label="We Connect"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -40,6 +42,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- 예약 페이지·네이버 지도(https), 전화 문의(tel) 열기: Android 11+ 앱 공개 범위 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
         </intent>
     </queries>
 </manifest>

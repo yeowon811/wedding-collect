@@ -506,7 +506,7 @@ class ConsultAgent implements ChatAgent {
     }
     if (RegExp(r'^(그중|그럼|거기서|그거|아니|말고)').hasMatch(text.trim())) _followUpTurn = true;
     if (p.tool == 'search_venues' && p.args['refine_previous'] == true && prevVenue?.tool == 'search_venues') {
-      p = ToolPlanner.refine(p, prevVenue!.args);
+      p = ToolPlanner.refine(p, prevVenue!.args, question: text);
       _followUpTurn = true;
     }
     return _runPlan(p, text,
@@ -525,6 +525,7 @@ class ConsultAgent implements ChatAgent {
       targetSido: p.targetSido, nationwide: p.nationwide, byAmount: p.byAmount, items: p.items,
       itemBudget: p.itemBudget, cheapest: p.cheapest, expr: p.expr, untilDate: p.untilDate,
       weddingDate: p.weddingDate, monthsLeft: monthsLeft, refIndex: p.refIndex, unsupported: p.unsupported,
+      place: p.place, placeCandidates: p.placeCandidates, query: p.query,
       args: p.args,
     );
     _plan = p;
@@ -1416,7 +1417,7 @@ class ConsultAgent implements ChatAgent {
   /// 둘 다 없는 곳은 "정보 없음"으로 나누고, 현황은 수집 시점 기준이라 사이트에서 다시 확인하라고 안내한다.
   Future<ChatMessage> _venueDateAnswer(DateTime date, Understanding u) async {
     final sido = _searchSidoLabel;
-    final guests = _known.guests;
+    final guests = _plan?.args['no_guests'] == true ? null : _known.guests; // 하객 칩 ✕로 지웠으면 쓰지 않음
     final label = dateLabel(date);
     final pool = await _venuePool(u);
     final all = pool.list;
@@ -2334,7 +2335,7 @@ class ConsultAgent implements ChatAgent {
 
   /// 예식장 비교: 같은 항목을 나란히 (앱 데이터 원문). 어디가 나은지는 정하지 않고 차이를 보여 준다
   Future<ChatMessage> _compareAnswer(List<Venue> vs, Understanding u) async {
-    final guests = _known.guests;
+    final guests = _plan?.args['no_guests'] == true ? null : _known.guests; // 하객 칩 ✕로 지웠으면 쓰지 않음
     _lookupNote = '질문에 나온 이름으로 예식장 ${vs.length}곳 찾음 → 정원·대관료·예약·주차·피로연·예식 가능일 비교';
     String short(Venue v) {
       final n = v.name.split('(').first.trim();
@@ -2686,7 +2687,7 @@ class ConsultAgent implements ChatAgent {
 
   Future<ChatMessage> _venueAnswer(Understanding u) async {
     final sido = _searchSidoLabel;
-    final guests = _known.guests;
+    final guests = _plan?.args['no_guests'] == true ? null : _known.guests; // 하객 칩 ✕로 지웠으면 쓰지 않음
     final pool = await _venuePool(u);
     final list = pool.list;
     final sidoHasAny = (Repos.venue.cached ?? const <Venue>[]).any((v) => sido.split('·').any((sd) => sidoMatches(v.sido, sd)));

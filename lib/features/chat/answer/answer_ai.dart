@@ -308,6 +308,10 @@ class AnswerAi {
       out.insert(at < 0 ? out.length : at,
           AnswerBlock(BlockType.cards, cards: [for (final i in AnswerTemplate.cardItems(f).take(f.cardLimit ?? 3)) i.toCard()]));
     }
+    if (f.hint != null && f.hint!.ranking.isNotEmpty && out.firstOf(BlockType.ranking) == null) {
+      final at = out.indexWhere((b) => b.type == BlockType.cards || b.type == BlockType.next);
+      out.insert(at < 0 ? out.length : at, AnswerBlock(BlockType.ranking, items: f.hint!.ranking.take(3).toList()));
+    }
     // 제목이 없거나 첫 블록이 아니면 앱 제목을 맨 앞에 (F1)
     if (out.isNotEmpty && out.first.type != BlockType.headline && out.first.type != BlockType.ask) {
       final i = out.indexWhere((x) => x.type == BlockType.headline);

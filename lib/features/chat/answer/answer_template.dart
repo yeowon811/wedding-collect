@@ -70,7 +70,9 @@ class AnswerTemplate {
   static bool appPicksCards(AnswerFacts f) => const {
         AnswerKind.venueList,
         AnswerKind.venueDate,
+        AnswerKind.venueDetail,
         AnswerKind.policyList,
+        AnswerKind.policyDetail,
         AnswerKind.vendorList,
       }.contains(f.kind);
 

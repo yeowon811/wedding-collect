@@ -27,7 +27,7 @@ extension _Present on ConsultAgent {
       final est = vs.isEmpty
           ? null
           : VenueCostEstimate.of(await Repos.vendor.options(),
-              guests: f.scope?.guests ?? _known.guests,
+              guests: f.scope?.guests ?? (_plan?.args['no_guests'] == true ? null : _known.guests),
               budget: _known.budget,
               allFree: vs.every((v) => v.isFree),
               anyFree: vs.any((v) => v.isFree));
@@ -353,7 +353,10 @@ extension _Present on ConsultAgent {
     final more = _startMore(cards, '$place 근처 공공예식장', tab: 0);
     _hint = AnswerHint(
       kind: AnswerKind.venueList,
-      headline: '$place에서 가장 가까운 곳은 ${short(near.first.$1.name)}',
+      // 제목은 24자 안 (F1): 길면 장소 + 개수로, 가장 가까운 곳은 순위에서 (평가 X07)
+      headline: '$place에서 가장 가까운 곳은 ${short(near.first.$1.name)}'.length <= 24
+          ? '$place에서 가장 가까운 곳은 ${short(near.first.$1.name)}'
+          : '$place 근처 공공예식장 ${near.length}곳',
       sentence: '직선 거리라 걷는 길은 더 길 수 있어요.',
       ranking: [for (final (v, d) in near.take(3)) '${short(v.name)} · ${km(d)}km'],
       web: [WebItem(text: '$place 위치 (${loc.name})', url: loc.uri, source: 'Google 지도')],
@@ -407,7 +410,8 @@ extension _Present on ConsultAgent {
     _lookupNote = 'Google 검색 그라운딩: 검색어 ${r.queries.take(2).join(', ')} → 출처 ${r.links.length}개';
     _hint = AnswerHint(
       kind: AnswerKind.other,
-      headline: first.length <= 24 ? first : '웹에서 찾은 정보',
+      // 첫 문장이 길면 무엇을 찾았는지(검색어)를 제목으로 (평가 X19: '웹에서 찾은 정보'만으로는 무슨 답인지 모름)
+      headline: first.length <= 24 ? first : (query.length <= 24 ? query : '${query.substring(0, 23)}…'),
       headBadges: const [BlockBadge('웹 정보 · 확인 필요', Tone.check)],
       web: [
         WebItem(text: r.text, url: r.links.first.uri, source: r.links.first.title),

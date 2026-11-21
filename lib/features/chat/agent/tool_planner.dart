@@ -404,9 +404,14 @@ class ToolPlanner {
   static final _itemByName = {for (final c in VendorCategory.values) c.name: c};
 
   /// 후속 질문(refine_previous): 앞 예식장 조건 + 새 조건 (새 것이 우선, remove는 뺌). 앱이 합쳐서 Gemini가 조건을 빠뜨려도 안 깨진다
-  static AgentPlan refine(AgentPlan p, Map<String, Object?> prev) {
+  static AgentPlan refine(AgentPlan p, Map<String, Object?> prev, {String question = ''}) {
     final now = {...p.args}..remove('refine_previous');
-    final remove = _strs(now.remove('remove'));
+    // 지역 조건은 질문이 직접 바꾸라고 할 때만 지운다 ("그중에 주차 넓은 곳"에 Gemini가 구 조건을 지워 내 구로 돌아가던 문제, 2026-11-21 평가 B4)
+    final wideAsk = question.isEmpty || RegExp(r'전체|모든|다른\s*(구|지역|동네)|상관\s*없|어디든|넓혀').hasMatch(question);
+    final remove = [
+      for (final r in _strs(now.remove('remove')))
+        if (wideAsk || !const {'sido', 'sigungu', 'exclude_sigungu'}.contains(r)) r,
+    ];
     final merged = {...prev}..remove('unsupported');
     // 날짜는 하루 ↔ 기간이 서로 바뀌면 앞 것을 지운다
     if (now.containsKey('date')) merged.removeWhere((k, _) => const ['date_from', 'date_to', 'weekdays'].contains(k));
