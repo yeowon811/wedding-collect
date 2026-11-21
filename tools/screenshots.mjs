@@ -36,6 +36,13 @@ ws.addEventListener('message', (e) => {
 const send = (method, params = {}) => new Promise((r) => { pending.set(++id, r); ws.send(JSON.stringify({ id, method, params })); });
 
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+// UA=android: 안드로이드 폰처럼 (Flutter는 UA로 플랫폼을 정해 버튼 최소 크기 등이 달라진다, 11-21)
+if (process.env.UA === 'android') {
+  await send('Emulation.setUserAgentOverride', {
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+  });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+}
 for (const spec of paths) {
   const [p, click] = spec.split('|');
   await send('Page.navigate', { url: (process.env.BASE_URL ?? 'http://localhost:8095/') + p });

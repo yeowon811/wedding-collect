@@ -258,6 +258,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   // 계정 버튼 기준 8px 간격 (11-21, 하트·종과 같은 규칙): 칸 32 = 아이콘 24 + 오른쪽 8
                   padding: const EdgeInsets.only(right: 8),
                   constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 48),
+                  // 휴대폰(안드로이드·iOS)은 테마가 버튼을 최소 48px로 넓힌다(padded tap target) → 이 줄로 끔.
+                  // 끄지 않으면 폰에서만 간격이 다시 넓어진다 (11-21 폰 확인)
+                  style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.standard),
                   icon: const Icon(Icons.ios_share_rounded),
                   onPressed: _share,
                 ),
@@ -267,6 +270,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   // 계정 버튼 기준 8px 간격 (11-21, 하트·종과 같은 규칙): 칸 32 = 아이콘 24 + 오른쪽 8
                   padding: const EdgeInsets.only(right: 8),
                   constraints: const BoxConstraints(minWidth: 32, maxWidth: 32, minHeight: 48),
+                  // 휴대폰(안드로이드·iOS)은 테마가 버튼을 최소 48px로 넓힌다(padded tap target) → 이 줄로 끔.
+                  // 끄지 않으면 폰에서만 간격이 다시 넓어진다 (11-21 폰 확인)
+                  style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.standard),
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: _newChat,
                 ),

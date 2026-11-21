@@ -280,6 +280,9 @@ class AccountButton extends StatelessWidget {
       // 왼쪽의 하트·종은 각각 오른쪽 8px를 두어 아이콘 사이가 8px (11-21 사용자 요청: 계정 기준 간격)
       padding: const EdgeInsets.only(right: 12),
       constraints: const BoxConstraints(minWidth: 36, maxWidth: 36, minHeight: 48),
+      // 휴대폰(안드로이드·iOS)은 테마가 버튼을 최소 48px로 넓힌다(padded tap target) → 이 줄로 끔.
+      // 끄지 않으면 폰에서만 간격이 다시 넓어진다 (11-21 폰 확인)
+      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.standard),
       icon: const Icon(Icons.account_circle_outlined),
       onPressed: () => showModalBottomSheet<void>(
         context: context,
