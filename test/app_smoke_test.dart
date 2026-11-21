@@ -232,9 +232,13 @@ void main() {
     await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 맨 위쪽으로 돌아가 다시 보임
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
     expect(find.textContaining('예식일을 입력하면'), findsOneWidget);
+    // 예식일 전에는 [할 일 추가]가 꺼져 있고, 예식일을 넣으면 켜진다 (11-21)
+    OutlinedButton addTask() => tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '할 일 추가'));
+    expect(addTask().onPressed, isNull);
     final app = AppState.instance;
     app.updatePlan(app.plan.copyWith(weddingDate: DateTime.now().add(const Duration(days: 200))));
     await tester.pumpAndSettle();
+    expect(addTask().onPressed, isNotNull);
     app.loadRecommendedTasks(); // (화면의 불러오기 버튼은 없앰) 시연용으로 할 일을 채운다
     await tester.pumpAndSettle();
 

@@ -165,6 +165,9 @@ class _Header extends StatelessWidget {
         ),
         IconButton(
           tooltip: '알림',
+          // 하트와 같은 간격으로 붙인다 (11-21): 버튼 폭 36, 오른쪽 여백 없이
+          padding: const EdgeInsets.only(left: 6),
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 48),
           onPressed: onBell,
           icon: Badge(
             isLabelVisible: has,

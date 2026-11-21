@@ -103,6 +103,9 @@ class FavoritesAction extends StatelessWidget {
       listenable: state,
       builder: (context, _) => IconButton(
         tooltip: '찜 목록',
+        // 오른쪽 계정 버튼에 조금 붙여 둔다 (11-21 사용자 요청): 버튼 폭 48 → 36, 오른쪽 여백 없이
+        padding: const EdgeInsets.only(left: 6),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 48),
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesScreen())),
         icon: Badge(
           isLabelVisible: state.favorites.isNotEmpty,

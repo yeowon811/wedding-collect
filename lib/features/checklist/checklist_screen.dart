@@ -979,13 +979,19 @@ class _TimelineCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
             !state.plan.hasDate
-                ? '예식일을 입력하면 할 일마다 언제까지 해야 하는지 계산해 드려요.'
+                ? '예식일을 먼저 입력해야 할 일을 추가할 수 있어요. 위 결혼 정보에서 예식일을 입력하면 할 일마다 언제까지 해야 하는지 계산해 드려요.'
                 : '아직 할 일이 없어요. [할 일 추가]로 직접 넣어 주세요.',
             style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('할 일 추가'))),
+            // 할 일은 '예식일 D-며칠'로 저장하므로 예식일이 있어야 추가할 수 있다 (11-21 사용자 요청)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: state.plan.hasDate ? () => _addTask(context) : null,
+                child: const Text('할 일 추가'),
+              ),
+            ),
             if (tasks.isNotEmpty) ...[
               const SizedBox(width: 8),
               Expanded(
