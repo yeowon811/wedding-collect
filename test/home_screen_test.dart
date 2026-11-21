@@ -52,7 +52,7 @@ void main() {
 
     await tester.tap(find.text('결혼지원 정책'));
     expect(MainShell.tab.value, 1);
-    await tester.tap(find.text('공공예식장'));
+    await tester.tap(find.text('공공예식장').last); // 첫 배너의 '공공예식장' 표시와 구분 (바로가기 칸)
     expect(MainShell.tab.value, 0);
 
     await tester.scrollUntilVisible(find.text('추천 서비스'), 200, scrollable: find.byType(Scrollable).first);
@@ -72,8 +72,14 @@ void main() {
   testWidgets('배너: 무료 공공예식장 수는 데이터에서 센 값', (tester) async {
     await pumpHome(tester);
     final free = (await Repos.venue.loadAll()).where((v) => v.isFree).length;
+    // 첫 장 = 무료 공공예식장, 둘째 = 정책, 셋째 = 브랜드
+    expect(find.text('대관료 무료 공공예식장 $free곳'), findsOneWidget);
     await tester.drag(find.byType(PageView), const Offset(-400, 0));
     await tester.pumpAndSettle();
-    expect(find.text('대관료 무료 공공예식장 $free곳'), findsOneWidget);
+    expect(find.textContaining('정책'), findsWidgets);
+    await tester.drag(find.byType(PageView), const Offset(-400, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('We Connect'), findsWidgets);
+    expect(find.textContaining('청년의 결혼, 정책과 일상을 잇는'), findsOneWidget);
   });
 }

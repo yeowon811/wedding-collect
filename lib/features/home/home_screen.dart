@@ -222,8 +222,8 @@ class _BannerState extends State<_Banner> {
     final mine = known && widget.policies.isNotEmpty
         ? PolicyMatcher.match(widget.policies, PolicyProfile.fromUser(me)).length
         : null;
+    // 순서 (11-21 사용자 요청): 무료 공공예식장 → 결혼 지원 정책 → 브랜드
     final slides = <Widget>[
-      const _BrandSlide(),
       _PhotoSlide(
         photo: 'assets/images/lookbook/2_forest-02.jpg',
         kicker: '공공예식장',
@@ -241,6 +241,7 @@ class _BannerState extends State<_Banner> {
         sub: mine != null ? '내 정보 기준 · 조건 확인이 필요한 것 포함' : '사는 곳·나이를 알려 주면 맞는 것만 골라요',
         onTap: () => MainShell.goTo(1),
       ),
+      const _BrandSlide(),
     ];
     return Column(children: [
       Padding(
