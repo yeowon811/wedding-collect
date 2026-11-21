@@ -221,7 +221,8 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
-- 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → `firebase deploy --only hosting --project wedding-collect`
+- 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`
+  - web_postbuild (2026-11-21): 아이콘 글꼴(MaterialIcons, 쓰는 아이콘만 남긴 글꼴이라 새 아이콘을 쓰면 내용이 바뀜)에 내용 해시 이름을 붙이고 FontManifest.json이 그 이름을 가리키게 함. 안 하면 글꼴이 하루 캐시돼 전에 접속한 사람 휴대폰에서 새 아이콘이 빈칸으로 보임. 웹 아이콘(favicon·Icon-*.png)은 index.html·manifest.json의 `?v=N`을 올려서 갱신
 - 웹 제목·설명: `web/index.html`, `web/manifest.json` (결혼 준비 도우미)
 - 캐시: 앱 코드·데이터·첫 화면은 no-cache(배포 후 새로고침하면 바로 반영), 글꼴·그림만 하루 저장 (`firebase.json` headers)
 - 주의: 배포본에 App Check 디버그 토큰이 들어감 (무료 요금제라 비용 위험은 없고 최악은 무료 사용량 소진). 웹은 reCAPTCHA 제공자로 바꾸는 것이 안전. 공모전 후 콘솔에서 토큰 삭제
