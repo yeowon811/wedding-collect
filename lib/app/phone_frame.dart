@@ -20,6 +20,9 @@ class PhoneFrame extends StatelessWidget {
 
   static bool enabled = kIsWeb;
 
+  /// 큰 화면에서 키워 그리는 최대 배율
+  static const double maxScale = 1.4;
+
   /// 틀 바깥 바탕 (로즈 테마의 아주 연한 분홍)
   static const Color frameBackdrop = Color(0xFFF7EBF0);
 
@@ -28,29 +31,41 @@ class PhoneFrame extends StatelessWidget {
     final mq = MediaQuery.of(context);
     if (!enabled || mq.size.width < minWideWidth) return child;
     const margin = 24.0;
-    final height = math.min(phone.height, mq.size.height - margin * 2).clamp(480.0, phone.height);
+    // 화면 높이에 맞춰 휴대폰을 키워 그린다 (11-22: 390×844 그대로는 큰 모니터에서 너무 작음).
+    // 안쪽 배치는 휴대폰 폭 390 그대로, 보이는 크기만 scale배 (최대 1.4배, 글자·버튼이 같이 커짐)
+    final availH = mq.size.height - margin * 2;
+    final scale = (availH / 700).clamp(1.0, maxScale);
+    final height = math.min(phone.height, availH / scale).clamp(480.0, phone.height);
     final size = Size(phone.width, height);
     return ColoredBox(
       color: frameBackdrop,
       child: Center(
         child: Container(
-          width: size.width,
-          height: size.height,
+          width: size.width * scale,
+          height: size.height * scale,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(28 * scale),
             boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 32, offset: Offset(0, 12))],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: MediaQuery(
-              // 안쪽 화면은 휴대폰 크기라고 알려 준다 (넓은 화면용 배치가 켜지지 않게)
-              data: mq.copyWith(
-                size: size,
-                padding: EdgeInsets.zero,
-                viewPadding: EdgeInsets.zero,
-                viewInsets: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(28 * scale),
+            child: FittedBox(
+              fit: BoxFit.fill,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: MediaQuery(
+                  // 안쪽 화면은 휴대폰 크기라고 알려 준다 (넓은 화면용 배치가 켜지지 않게)
+                  data: mq.copyWith(
+                    size: size,
+                    devicePixelRatio: mq.devicePixelRatio * scale, // 키워 그려도 사진이 흐려지지 않게
+                    padding: EdgeInsets.zero,
+                    viewPadding: EdgeInsets.zero,
+                    viewInsets: EdgeInsets.zero,
+                  ),
+                  child: child,
+                ),
               ),
-              child: child,
             ),
           ),
         ),
