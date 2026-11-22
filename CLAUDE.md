@@ -232,6 +232,8 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 - **소비자원 데이터 밖 질문 규칙 (2026-11-22 사용자 요청):** 조사 범위 밖이면 다른 값으로 채우지 않고 '정보가 없어 답변드리기 어려워요' + 앱에 있는 자료 안내(`_consumerGap`·`_noConsumerData`, consult_present.dart). 밖 = 2026이 아닌 연도·작년/내년/추이/올랐 등 다른 시기, 서울 밖 시·군·구 단위(→ '○○ 기준으로 보기' 버튼), 조사에 없는 항목(축가·주례·도우미·원판·플라워 샤워·축주·포토테이블·한복), 조사에 없는 지역(`ConsumerPrices.regionKey`가 null, 전국 값으로 대신하지 않음). 공표 안 된 통계값은 0이 아니라 null. '공공' 없이 '일반/사설 예식장 평균 식대' 같은 질문도 `costCompare`로 받아 조사 값으로만 답함
   - 안전장치 3개 (11-22): ① 금액 비교 답 바로 뒤의 짧은 후속("그럼 2024년은?", "부산은?", "축가는?")은 `ToolPlanner.costFollowUp`으로 같은 비교 경로(앞 시도 이어받음, 추천·정책 등 다른 요청 말은 제외) ② Gemini 일반 안내에 질문에 없던 금액·비율(5만원·3천만원·1억·30%)이 있으면 버림(`GeminiClient.ungroundedAmount`) + 프롬프트에 금액 금지 줄 ③ 가격 질문(`ToolPlanner.priceQuestion`)이 general_answer로 가면 Gemini 대신 `_noPriceData`('정보가 없어 답변드리기 어려워요' + 앱에 있는 가격 자료 안내). 실측 7턴 Gemini 10번 약 13원, 모두 기대대로
 
+- **컴퓨터 웹 = 휴대폰 틀 (2026-11-22):** 웹을 폭 700 이상에서 열면 `lib/app/phone_frame.dart` `PhoneFrame`이 앱을 가운데 390×(최대 844) 휴대폰 크기로 그림(바깥 연분홍, 대화상자·시트도 틀 안, MediaQuery 크기를 휴대폰으로). 웹은 테마 `platform: android`(버튼 48px 등 폰 규칙), `PhoneScrollBehavior`(마우스로 끌어 넘기기·스크롤 막대 숨김). 앱(APK)·테스트는 그대로. 캡처 `VIEW_W=1440 VIEW_H=900 node tools/screenshots.mjs …`
+
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`

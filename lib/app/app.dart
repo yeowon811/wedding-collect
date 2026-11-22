@@ -7,6 +7,7 @@ import '../features/auth/login_screen.dart';
 import '../features/intro/intro_video.dart';
 import 'demo_links.dart';
 import 'main_shell.dart';
+import 'phone_frame.dart';
 
 class WeddingCollectApp extends StatefulWidget {
   const WeddingCollectApp({super.key});
@@ -35,6 +36,9 @@ class _WeddingCollectAppState extends State<WeddingCollectApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('ko', 'KR')],
+      // 웹: 컴퓨터에서 열면 휴대폰 틀 안에 (대화상자·시트도 틀 안), 마우스로 끌어 넘기기 (11-22)
+      scrollBehavior: PhoneFrame.enabled ? const PhoneScrollBehavior() : null,
+      builder: (context, child) => PhoneFrame(child: child ?? const SizedBox.shrink()),
       // 시작 영상 → 로그인 안 했으면 첫 화면(로그인·회원가입·둘러보기), 그 외에는 앱
       // 영상 → 로그인은 0.6초 동안 겹쳐 바뀐다 (영상은 서서히 사라지고 로그인이 서서히 나타남, 11-21)
       home: AnimatedSwitcher(

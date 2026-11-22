@@ -35,7 +35,9 @@ ws.addEventListener('message', (e) => {
 });
 const send = (method, params = {}) => new Promise((r) => { pending.set(++id, r); ws.send(JSON.stringify({ id, method, params })); });
 
-await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+// VIEW_W·VIEW_H: 컴퓨터 화면 크기로 찍기 (예: 1440 900, 휴대폰 틀 확인용, 11-22)
+const viewW = Number(process.env.VIEW_W ?? 390), viewH = Number(process.env.VIEW_H ?? 844);
+await send('Emulation.setDeviceMetricsOverride', { width: viewW, height: viewH, deviceScaleFactor: viewW > 700 ? 1 : 2, mobile: viewW <= 700 });
 // UA=android: 안드로이드 폰처럼 (Flutter는 UA로 플랫폼을 정해 버튼 최소 크기 등이 달라진다, 11-21)
 if (process.env.UA === 'android') {
   await send('Emulation.setUserAgentOverride', {

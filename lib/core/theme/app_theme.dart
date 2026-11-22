@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
@@ -39,6 +40,8 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
       splashFactory: InkSparkle.splashFactory,
+      // 웹은 컴퓨터에서 열어도 안드로이드 폰 규칙(버튼 최소 48px·기본 간격)으로 그려 시연 화면과 같게 (11-22)
+      platform: kIsWeb ? TargetPlatform.android : null,
     );
 
     // 날짜 고르기 창 (showDatePicker): 바탕·고른 날짜 색을 달력과 같게 (11-22)
