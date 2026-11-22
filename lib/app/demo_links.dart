@@ -9,6 +9,7 @@ import '../features/favorites/favorites_screen.dart';
 import '../features/policy/policy_detail_screen.dart';
 import '../features/policy/policy_matcher.dart';
 import '../features/vendor/demo_vendor_detail_screen.dart';
+import '../features/vendor/real_vendor_detail_screen.dart';
 import '../features/venue/venue_detail_screen.dart';
 
 /// 웹 주소로 시연 화면을 바로 여는 링크 (화면 캡처·시연 영상용, 앱 동작에는 영향 없음)
@@ -102,6 +103,9 @@ class DemoLinks {
     } else if (_q['vendor'] case final id?) {
       final v = (await Repos.vendor.demoVendors()).where((v) => v.id == id).firstOrNull;
       if (v != null) page = DemoVendorDetailScreen(vendor: v);
+      // 실제 연계업체 (V013 등)
+      final r = v != null ? null : (await Repos.vendor.realVendors()).where((v) => v.id == id).firstOrNull;
+      if (r != null) page = RealVendorDetailScreen(vendor: r);
     } else if (_q['policy'] case final n?) {
       final all = await Repos.policy.loadAll();
       final matches = PolicyMatcher.match(all, PolicyProfile.fromUser(AppState.instance.profile));

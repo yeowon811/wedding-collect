@@ -435,7 +435,7 @@ FactItem realVendorFact(RealVendor v) => FactItem(
       name: v.name,
       values: [v.categoryText, v.sigungu.isEmpty ? v.sido : v.sigungu, '가격 문의'],
       badge: BlockBadge(v.isOfficial ? '공식' : '실제 업체', v.isOfficial ? Tone.good : Tone.info),
-      contact: v.phone.isEmpty ? null : '☎ ${v.phone}',
+      contact: v.phone.isEmpty ? null : '☎ ${v.phoneLabel}',
       empty: const ['가격'],
       fields: {'항목': v.categoryText, '지역': v.sido, '가격': '문의'},
     );

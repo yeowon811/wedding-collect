@@ -20,6 +20,13 @@ class RealVendorDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = vendor;
     final phone = v.phone.replaceAll(RegExp(r'[^0-9]'), '');
+    // 가상 번호(해커톤 규정, 11-22)는 전화를 걸지 않고 안내만
+    void call() => v.phoneVirtual
+        ? ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('시연용 가상 번호라 전화가 연결되지 않아요. 홈페이지에서 문의해 주세요.'),
+            duration: Duration(seconds: 3),
+          ))
+        : launchUrl(Uri.parse('tel:$phone'));
     return Scaffold(
       appBar: AppBar(title: const Text('업체 정보'), actions: [FavoriteButton(ref: 'real:${v.id}')]),
       bottomNavigationBar: BottomActionBar(children: [
@@ -54,7 +61,7 @@ class RealVendorDetailScreen extends StatelessWidget {
               if (v.url.isNotEmpty && phone.isNotEmpty)
                 ActionPair(
                   secondary: OutlinedButton(
-                    onPressed: () => launchUrl(Uri.parse('tel:$phone')),
+                    onPressed: call,
                     child: const Text('전화 문의'),
                   ),
                   primary: FilledButton(
@@ -67,7 +74,7 @@ class RealVendorDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   child: phone.isNotEmpty
                       ? FilledButton(
-                          onPressed: () => launchUrl(Uri.parse('tel:$phone')), child: const Text('전화 문의'))
+                          onPressed: call, child: const Text('전화 문의'))
                       : FilledButton(
                           onPressed: () => launchUrl(Uri.parse(v.url), mode: LaunchMode.externalApplication),
                           child: const Text('홈페이지 열기')),
@@ -88,7 +95,7 @@ class RealVendorDetailScreen extends StatelessWidget {
           Text(v.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),
           _row(Icons.location_on_outlined, v.address),
-          _row(Icons.call_outlined, v.phone),
+          _row(Icons.call_outlined, v.phoneLabel),
           _row(Icons.design_services_outlined, v.services),
           _row(Icons.payments_outlined, '가격: 공개 정보 없음 · 업체에 직접 문의'),
           const SizedBox(height: 16),

@@ -82,6 +82,18 @@ def num(v):
         return None
 
 
+def virtual_phone(phone, vid):
+    """해커톤 규정 '실제 개인정보는 넣지 말고 가상·샘플 데이터로 화면을 구성' (2026-11-22).
+    실제 업체의 휴대폰 번호(010 등, 개인 번호일 수 있음)는 가상 번호로 바꾼다.
+    가운데 자리를 0000으로 해 실제 번호와 겹치지 않게 하고, 끝 4자리는 업체 ID 숫자.
+    유선 대표번호(02-, 1588- 등)는 사업장 번호라 그대로 둔다. 바꿨으면 (번호, True)"""
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if digits.startswith(("010", "011", "016", "017", "018", "019")):
+        n = "".join(ch for ch in vid if ch.isdigit())[-4:].rjust(4, "0")
+        return f"010-0000-{n}", True
+    return phone, False
+
+
 def build_real(sheets):
     rows = sheets["연계업체 마스터"]
     idx = {h: i for i, h in enumerate(rows[0])}
@@ -90,6 +102,7 @@ def build_real(sheets):
         g = lambda k: r[idx[k]].strip() if idx[k] < len(r) else ""  # noqa: E731
         region = g("소재지(지역)")
         sido_full, _, sigungu = region.partition(" ")
+        phone, virtual = virtual_phone(g("연락처"), g("업체ID"))
         out.append({
             "id": g("업체ID"),
             "name": g("업체명"),
@@ -101,7 +114,8 @@ def build_real(sheets):
             "address": g("주소"),
             "lat": num(g("위도")),
             "lng": num(g("경도")),
-            "phone": g("연락처"),
+            "phone": phone,
+            **({"phoneVirtual": True} if virtual else {}),
             "url": g("링크/홈페이지"),
             "services": g("주요제공서비스"),
         })

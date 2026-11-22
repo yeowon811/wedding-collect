@@ -107,6 +107,7 @@ class RealVendor {
     required this.url,
     required this.services,
     this.image,
+    this.phoneVirtual = false,
   });
 
   final String id;
@@ -119,8 +120,14 @@ class RealVendor {
   final String sigungu;
   final String address;
   final String phone;
+
+  /// 가상 번호인지 (해커톤 규정: 실제 개인 휴대폰 대신 가상 번호, 11-22). 전화가 연결되지 않음
+  final bool phoneVirtual;
   final String url;
   final String services;
+
+  /// 화면에 보일 연락처 (가상 번호면 표시를 붙임)
+  String get phoneLabel => phoneVirtual ? '$phone (가상 번호)' : phone;
 
   bool get isOfficial => official.startsWith('공식');
 
@@ -137,6 +144,7 @@ class RealVendor {
         url: url,
         services: services,
         image: image,
+        phoneVirtual: phoneVirtual,
       );
 
   factory RealVendor.fromJson(Map<String, dynamic> j) => RealVendor(
@@ -151,6 +159,7 @@ class RealVendor {
     phone: j['phone'] as String,
     url: j['url'] as String,
     services: j['services'] as String,
+    phoneVirtual: j['phoneVirtual'] == true,
   );
 }
 
