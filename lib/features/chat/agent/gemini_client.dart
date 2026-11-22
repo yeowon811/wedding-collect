@@ -655,6 +655,7 @@ LAT,LNG|정확한 장소 이름
 너는 결혼 준비 앱의 상담사다. 아래 질문은 앱 데이터(예식장·정책·업체 목록)로 답할 질문이 아니라 일반 지식·방법·제도·고민에 대한 질문이다.
 - 일반적으로 알려진 내용을 4~7줄로, "• " 목록 위주로 답한다. 존댓말(해요체), 인사말 없이.
 - 특정 업체명·예식장명·정책명, 구체적인 금액·날짜·비율·법 조항 번호는 쓰지 않는다 (앱 데이터가 아니라 틀릴 수 있음).
+- 가격·비용·식대·대관료·평균 시세 같은 금액과 비율은 한 자리 숫자라도 절대 쓰지 않는다 (예: 5만원, 3천만원, 30% 모두 금지). 금액이 필요한 질문이면 "업체 견적이나 기관 안내로 확인"이라고만 쓴다.
 - 제도·법·계약처럼 바뀔 수 있는 내용은 마지막 줄에 "정확한 내용은 공식 안내(기관·계약서)에서 확인해 주세요."를 붙인다.
 - 고민·감정 질문이면 먼저 짧게 공감하고, 할 수 있는 일을 제안한다. 이때는 공식 안내 문장을 붙이지 않는다.
 - 이 앱이 할 수 있는 일을 지어내지 않는다. 앱은 대신 연락·예약·신청을 해 주지 않고, 전화번호를 받지 않는다.
@@ -667,6 +668,14 @@ LAT,LNG|정확한 장소 이름
   /// 앱 데이터가 아닌 일반 지식 질문 → Gemini 일반 안내 (숫자가 섞이면 버림). 실패하면 null
   /// 바로 앞 일반 안내·웹 조사에서 Gemini가 '결혼 준비와 관계없는 질문'(OFF_TOPIC)이라고 답했는지
   bool lastOffTopic = false;
+
+  /// 금액·비율 표현(5만원·3천만원·1억·30%·6만 5천 원 …) 중 질문에 없던 숫자가 있으면 true
+  static bool ungroundedAmount(String text, String question) {
+    final money = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:천|만|억)?\s*(?:\d+\s*천\s*)?(?:원|%|퍼센트|프로)');
+    final big = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:천|만|억)');
+    final asked = RegExp(r'\d+(?:[.,]\d+)?').allMatches(question).map((m) => m[0]).toSet();
+    return [...money.allMatches(text), ...big.allMatches(text)].any((m) => !asked.contains(m[1]));
+  }
 
   Future<String?> general(String question) async {
     lastOffTopic = false;
@@ -682,6 +691,8 @@ LAT,LNG|정확한 장소 이름
       // 근거 없는 숫자를 만들지 않도록: 두 자리 이상 숫자는 질문에 나온 숫자만 허용 ("하객 150명이면…")
       final asked = RegExp(r'\d+').allMatches(question).map((m) => m[0]).toSet();
       if (RegExp(r'\d{2,}').allMatches(text).any((m) => !asked.contains(m[0]))) return null;
+      // 금액·비율은 자릿수와 관계없이 질문에 없던 것이면 버린다 ("5만원", "3천만원", "7%", 11-22)
+      if (ungroundedAmount(text, question)) return null;
       return text.replaceAll('**', '');
     } catch (e) {
       debugPrint('Gemini 일반 지식 답변 실패: $e');

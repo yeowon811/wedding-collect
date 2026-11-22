@@ -82,17 +82,17 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
-              Text(widget.editing ? '내 정보 수정' : '상담 전에 알려주세요',
+              Text(widget.editing ? '내 정보 수정' : '맞춤 상담을 위한 정보 입력',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
               const SizedBox(height: 6),
               Text(
-                '입력한 정보로 먼저 추천해 드려요. 모르는 항목은 비워 두세요.',
+                '입력하신 정보를 바탕으로 맞춤 정보를 추천해 드려요. 모르는 항목은 비워 두셔도 괜찮아요.',
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
               ),
               const SizedBox(height: 28),
               FormSection(
                 title: '거주 지역',
-                hint: '시·군·구까지 알려 주시면 우리 동네 지원 정책까지 꼼꼼히 찾아 드릴게요. 모르면 비워 두셔도 괜찮아요.',
+                hint: '시·군·구까지 선택하면 거주 지역의 결혼지원 정책을 확인할 수 있어요.',
                 child: RegionFields(
                   sido: p.sido,
                   sigungu: p.sigungu,
@@ -198,11 +198,11 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _save,
-              child: Text(widget.editing ? '저장하고 다시 추천받기' : '이 정보로 상담 시작'),
+              child: Text(widget.editing ? '저장하고 다시 추천받기' : '맞춤 상담 시작하기'),
             ),
           ),
           if (widget.onSkip != null)
-            TextButton(onPressed: widget.onSkip, child: const Text('건너뛰고 바로 질문하기')),
+            TextButton(onPressed: widget.onSkip, child: const Text('정보 입력 없이 상담하기')),
         ]),
       ],
     );

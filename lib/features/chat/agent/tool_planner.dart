@@ -474,11 +474,42 @@ class ToolPlanner {
   /// "공공예식장 대관료 말고 실제로 총 얼마 들어?"처럼 비교 말이 없는 비용 질문은 기존 비용 도구로
   static bool costCompare(String q) {
     if (RegExp(r'소비자원|참가격').hasMatch(q) && RegExp(r'비교|가격|비용|금액|얼마|데이터|자료|시세|평균').hasMatch(q)) return true;
+    // '공공' 없이 일반·사설 예식장의 평균·시세를 묻는 질문도 소비자원 조사 범위 안에서만 답한다 (11-22: 데이터 밖 값은 지어내지 않기)
+    if (!RegExp(r'공공').hasMatch(q) &&
+        RegExp(r'일반|사설|민간|시중').hasMatch(q) &&
+        RegExp(r'예식장|웨딩홀|결혼식장').hasMatch(q) &&
+        RegExp(r'평균|시세|중간|보통|얼마').hasMatch(q) &&
+        RegExp(r'대관료|식대|비용|가격|금액').hasMatch(q)) {
+      return !offTopic(q);
+    }
     final public = RegExp(r'공공\s*(예식장|웨딩홀|결혼식장|식장)?').hasMatch(q);
     final against = RegExp(r'비교|차이|보다|일반|사설|민간|시중|외부').hasMatch(q);
     final money = RegExp(r'금액|비용|가격|얼마|싸|저렴|비싸|대관료|식대|돈').hasMatch(q);
     return public && against && (money || RegExp(r'비교').hasMatch(q)) && !offTopic(q);
   }
+
+  /// 금액 비교 답 바로 다음의 짧은 후속 질문 ("그럼 2024년은?", "부산은?", "해운대구는?", "꽃장식은?").
+  /// 이런 질문은 Gemini로 보내지 않고 같은 금액 비교 경로(소비자원 데이터 범위 확인)로 보낸다 (11-22)
+  static bool costFollowUp(String q) {
+    final t = q.trim();
+    if (t.length > 30 || offTopic(t)) return false;
+    // 다른 일을 시키는 말이면 후속 비교가 아니다 ("그럼 서울 공공예식장 추천해줘")
+    if (RegExp(r'추천|알려|찾아|보여|정책|지원금|체크|일정|상담|예약|신청|목록|리스트').hasMatch(t)) return false;
+    final lead = RegExp(r'^(그럼|그러면|그건|그거|그리고|아까|그때|근데)').hasMatch(t);
+    final ask = RegExp(r'(은|는|이면|라면|에서는|기준)\s*\??$|\?$').hasMatch(t);
+    final topic = RegExp(r'(19|20)\d{2}|작년|지난해|재작년|내년|후년|예전|추이|변화|올랐|오를|인상|'
+            r'꽃장식|촬영|축가|주례|도우미|원판|플라워|축주|포토|한복|폐백|부케|케이크|사회자|헤어|'
+            r'식대|대관료|보증인원|강남|서초|송파')
+        .hasMatch(t);
+    final region = kSidoList.any(t.contains) || findSigungu(t) != null;
+    return (lead || ask) && (topic || region);
+  }
+
+  /// 예식장·웨딩 항목의 가격을 묻는 질문 (Gemini 일반 안내로 보내지 않는다, 11-22)
+  static bool priceQuestion(String q) =>
+      RegExp(r'예식장|웨딩홀|결혼식장|식대|대관료|스드메|드레스|메이크업|촬영|스냅|청첩장|한복|예복|부케|케이크|본식|꽃장식|폐백|사회자|축가|주례')
+          .hasMatch(q) &&
+      RegExp(r'얼마|평균|시세|가격|비용|금액|몇\s*만\s*원').hasMatch(q);
 
   /// 결혼 준비 관련 말이 있는 질문 (Gemini가 off_topic을 골라도 막지 않는다)
   static bool weddingRelated(String q) => _weddingWord.hasMatch(q);

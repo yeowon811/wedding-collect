@@ -475,12 +475,77 @@ extension _Present on ConsultAgent {
   /// 공공예식장(앱 데이터) vs 일반 예식장(한국소비자원 참가격 조사) 금액 비교 표.
   /// 숫자는 모두 앱이 데이터에서 계산한다: 공공 = 수집한 대관료 + 참고 단가표 추정, 일반 = 소비자원 지역별 중간값.
   /// Gemini는 부르지 않는다 (조사값·추정값 숫자를 바꿔 쓰면 안 되므로)
-  Future<ChatMessage> _venueCostCompareAnswer(String text) async {
+  /// 소비자원 조사(2026년 9월, 시·도·권역 단위, 대관료·식대·보증인원·꽃장식 등) 밖을 묻는지
+  ({String what, QuickReply? alt})? _consumerGap(String text, String? askedSido) {
+    final year = RegExp(r'((?:19|20)\d{2})\s*년').firstMatch(text);
+    if (year != null && year[1] != '2026') return (what: '${year[1]}년 가격', alt: null);
+    if (RegExp(r'작년|지난해|재작년|내년|후년|전망|추이|변화|올랐|오를|인상|예전').hasMatch(text)) {
+      return (what: '다른 시기의 가격이나 가격 변화', alt: null);
+    }
+    final t = findSigungu(text, sido: askedSido ?? _known.sido);
+    if (t != null && t.$1 != '서울') {
+      return (
+        what: '${t.$2} 단위 가격',
+        alt: QuickReply('${t.$1} 기준으로 보기', text: '${t.$1} 공공예식장과 일반 예식장 금액 비교해줘'),
+      );
+    }
+    final item = RegExp(r'축가|축하\s*공연|주례|도우미|원판|플라워\s*샤워|축주|포토\s*테이블|한복').firstMatch(text);
+    if (item != null) return (what: '${item[0]} 비용', alt: null);
+    return null;
+  }
+
+  /// 가격 질문인데 앱 데이터 도구로 답할 수 없을 때 (Gemini 일반 안내 대신, 11-22)
+  ChatMessage _noPriceData() {
+    _templateOnly = '가격 정보 없음';
+    _lookupNote = '가격 질문이 앱 데이터 도구에 맞지 않아 일반 안내(Gemini)로 답하지 않음';
+    const have = '앱에서 볼 수 있는 가격은 공공예식장 대관료, 한국소비자원 일반 예식장 조사(2026년 9월), '
+        '참고 단가표로 계산한 추정 비용, [시연] 업체 가격이에요.';
+    _hint = const AnswerHint(
+      kind: AnswerKind.other,
+      headline: '정보가 없어 답변드리기 어려워요',
+      sentence: '물어보신 가격 정보는 앱 데이터에 없어요. $have',
+    );
+    return const ChatMessage(
+      fromUser: false,
+      text: '물어보신 가격 정보는 앱 데이터에 없어서 답변드리기 어려워요. $have 정확한 금액은 업체나 기관에 직접 확인해 주세요.',
+      quickReplies: [
+        QuickReply('공공·일반 금액 비교', text: '공공예식장과 일반 예식장 금액 비교해줘'),
+        QuickReply('결혼 비용 총액', text: '공공예식장 대관료 말고 실제로 총 얼마 들어?'),
+      ],
+    );
+  }
+
+  /// 데이터 밖 질문: 다른 값으로 채우지 않고 무엇이 있는지만 안내
+  ChatMessage _noConsumerData(String what, ConsumerPrices prices, {QuickReply? alt}) {
+    _lastCostCompare = true;
+    _templateOnly = '소비자원 조사 범위 밖';
+    _lookupNote = '"$what"는 한국소비자원 ${prices.surveyLabel} 조사에 없어 답하지 않음 (다른 값으로 대신하지 않음)';
+    final have = '앱에는 한국소비자원 ${prices.surveyLabel} 조사의 시·도(권역)별 대관료·식대·최소 보증인원·꽃장식 등 추가금 값만 있어요.';
+    _hint = AnswerHint(
+      kind: AnswerKind.other,
+      headline: '정보가 없어 답변드리기 어려워요',
+      sentence: '$what 정보는 없어요. $have',
+    );
+    return ChatMessage(
+      fromUser: false,
+      text: '$what 정보는 앱 데이터에 없어서 답변드리기 어려워요. $have 정확한 금액은 예식장에 직접 견적을 받아 확인해 주세요.',
+      sources: ['${prices.source} (${prices.surveyLabel} 조사)'],
+      quickReplies: [?alt, const QuickReply('공공·일반 금액 비교', text: '공공예식장과 일반 예식장 금액 비교해줘')],
+    );
+  }
+
+  Future<ChatMessage> _venueCostCompareAnswer(String text, {String? followSido}) async {
+    _lastCostCompare = true;
     final asked = [for (final s in kSidoList) if (text.contains(s)) s].firstOrNull;
-    final sido = asked ?? _known.sido;
+    final sido = asked ?? followSido ?? _known.sido;
+    _lastCostSido = sido;
     final town = asked == null || asked == _known.sido ? _known.sigungu : findSigungu(text, sido: asked)?.$2;
     final prices = await ConsumerPrices.load();
+    // 소비자원 조사 범위 밖(다른 시기·시군구 단위·조사에 없는 항목·지역)은 다른 값으로 채우지 않고 '정보 없음' (11-22 규칙)
+    final gap = _consumerGap(text, asked ?? followSido);
+    if (gap != null) return _noConsumerData(gap.what, prices, alt: gap.alt);
     final region = prices.region(sido, sigungu: town);
+    if (region == null) return _noConsumerData('${sido ?? '그'} 지역 일반 예식장 가격', prices);
     final venues = [for (final v in await Repos.venue.loadAll()) if (sido == null || sidoMatches(v.sido, sido)) v];
     final free = venues.where((v) => v.rentalFee == 0).length;
     final paid = [for (final v in venues) if ((v.rentalFee ?? 0) > 0) v.rentalFee! / 10000]..sort();
@@ -494,7 +559,10 @@ extension _Present on ConsultAgent {
     final place = sido == null ? '전국' : sido;
     final minG = region.minGuests.median.round();
     final billed = guests < minG ? minG : guests; // 일반 예식장은 최소 보증인원만큼 식대를 낸다
-    final generalEst = region.rentalFee.median + region.mealPerGuest.median * billed;
+    // 일반 예식장 추가금 (참가격 선택품목 권역 중간값): 꽃장식은 공공 쪽 추정에도 들어가므로 같이 더해 비교한다
+    final flower = prices.addOn(region, '생화꽃장식');
+    final photo = prices.addOn(region, '본식 촬영 비용');
+    final generalEst = region.rentalFee.median + region.mealPerGuest.median * billed + (flower?.median ?? 0);
     final publicMeal = est == null ? null : est.parts.firstWhere((p) => p.id == 'meal');
     final publicLow = est?.low;
     final publicHigh = est == null ? null : est.low + (paidMedian ?? 0);
@@ -507,6 +575,12 @@ extension _Present on ConsultAgent {
         publicLow == null ? '-' : '약 ${won(publicLow)}~${won(publicHigh!)} (추정)',
         '약 ${won(generalEst)} (추정)',
       ],
+      if (flower != null)
+        [
+          '자주 붙는 추가금',
+          '꽃장식·음향·진행비 (위 예상에 포함)',
+          '꽃장식 중간 ${won(flower.median)}${photo == null ? '' : ' · 본식 촬영 ${won(photo.median)}'}',
+        ],
       ['계약 총액(조사)', '-', '중간 ${won(region.totalContract.median)}'],
     ];
     _lookupNote = '공공예식장 $place ${venues.length}곳 대관료(수집 데이터) + 참고 단가표 / 일반 예식장 = 한국소비자원 참가격 ${prices.surveyLabel} ${region.label} 중간값';
@@ -524,7 +598,11 @@ extension _Present on ConsultAgent {
       if (!guestsGiven) '하객 수를 입력하지 않아 $guests명 기준으로 계산했어요.',
       if (guests < minG) '일반 예식장은 최소 보증인원(중간 $minG명)만큼 식대를 내는 경우가 많아 $billed명으로 계산했어요.',
       if (unknownFee > 0) '대관료를 모르는 공공예식장 $unknownFee곳은 빼고 셌어요.',
-      '공공 쪽 예상은 대관료 + 식대·꽃장식·음향·진행비(참고 단가표 추정)이고, 일반 쪽은 대관료 + 식대만 더한 값이에요.',
+      '공공 쪽 예상은 대관료 + 식대·꽃장식·음향·진행비(참고 단가표 추정)이고, '
+          '일반 쪽은 대관료 + 식대${flower == null ? '' : ' + 꽃장식'}을 더한 값이에요.',
+      if ((region.basicDecorationAvg ?? 0) > 0)
+        '일반 예식장은 기본 장식비를 따로 받는 곳도 있어요 (${region.label} 평균 ${won(region.basicDecorationAvg!)}, 받지 않는 곳이 더 많음).',
+      if (region.definition != null) '${region.label}은 ${region.definition} 기준이에요.',
     ];
     return ChatMessage(
       fromUser: false,

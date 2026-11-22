@@ -234,7 +234,7 @@ class _PlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            p.entered.length < 4 ? '눌러서 채워 주세요. 업체를 비교하거나 AI에게 물어볼 때 더 정확해져요.' : '업체를 비교하거나 AI에게 물어볼 때 더 정확해져요.',
+            '예식 정보를 입력하면 더욱 정확한 업체 비교와 AI 상담이 가능해요.',
             style: TextStyle(fontSize: 13, color: AppColors.textBody),
           ),
         ],
@@ -334,7 +334,7 @@ class _BudgetCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!p.hasBudget)
-            Text('총예산을 적어 두시면 얼마나 남았는지 바로 알려 드릴게요.',
+            Text('총예산을 입력하면 남은 예산을 한눈에 확인할 수 있어요.',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textSecondary))
           else
           Text.rich(TextSpan(children: [
@@ -983,11 +983,11 @@ class _TimelineCard extends StatelessWidget {
 
     if (tasks.isEmpty || !state.plan.hasDate) {
       return _Section(
-        title: '예식일 기준 할 일',
+        title: '예식 준비 일정',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
             !state.plan.hasDate
-                ? '예식일을 먼저 알려 주시면 할 일을 추가할 수 있어요. 할 일마다 언제까지 하면 되는지도 계산해 드릴게요.'
+                ? '예식일을 입력하면 준비 일정을 추가하고, 항목별 마감일도 확인할 수 있어요.'
                 : '아직 할 일이 없어요. [할 일 추가]로 직접 넣어 주세요.',
             style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary),
           ),
@@ -997,7 +997,7 @@ class _TimelineCard extends StatelessWidget {
             Expanded(
               child: OutlinedButton(
                 onPressed: state.plan.hasDate ? () => _addTask(context) : null,
-                child: const Text('할 일 추가'),
+                child: const Text('준비 일정 추가'),
               ),
             ),
             if (tasks.isNotEmpty) ...[
@@ -1015,7 +1015,7 @@ class _TimelineCard extends StatelessWidget {
     }
 
     return _Section(
-      title: '예식일 기준 할 일',
+      title: '예식 준비 일정',
       trailing: Text('완료 $done/${tasks.length}', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // 카드를 누르면 캘린더
@@ -1062,7 +1062,7 @@ class _TimelineCard extends StatelessWidget {
           ),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('할 일 추가'))),
+          Expanded(child: OutlinedButton(onPressed: () => _addTask(context), child: const Text('준비 일정 추가'))),
           const SizedBox(width: 8),
           Expanded(
             child: FilledButton.icon(
@@ -1095,7 +1095,7 @@ class _TimelineCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('할 일 추가',
+                  Text('준비 일정 추가',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                   const SizedBox(height: 20),
                   FormSection(

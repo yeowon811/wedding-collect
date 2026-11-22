@@ -227,6 +227,11 @@ AI 상담·화면 작업은 **`docs/ai-design/redteam_priority_rules.md`(Red Tea
 
 - **준비 항목 이름 정리 (2026-11-22):** 스냅사진→본식 스냅, 부케·케이크→부케·웨딩 케이크, 신랑 정장→신랑 예복, 어머니 한복→혼주 한복(상세에 '양가 부모님 의상'), 혼주 메이크업→혼주 헤어·메이크업. 식대는 예산에서는 '식대', 업체를 고르는 화면(칩·카드·비교·상세 제목)은 `VendorCategory.vendorLabel` '하객 식사'. 예전 계정의 기본 이름은 불러올 때 `VendorCategory.renamed`로 새 이름. 질문 이해는 '혼주 한복'을 '혼주'(헤어·메이크업)보다 먼저 봄. 단가표 이름은 `convert_options.py`의 DISPLAY_NAMES. 체크리스트 줄 '등록된 업체 없음'(예식장은 '등록된 예식장 없음'), 제목 '예식 준비 체크리스트'
 
+- **사설 예식장 벤치마크 가공 (2026-11-22):** 사용자 제공 `private_wedding_venue_benchmark_2026.xlsx`(카카오톡 받은 파일, 지역 17개)를 `python -I tools/process_venue_benchmark.py <xlsx>`로 가공 → `docs/data-validation/private_venue_benchmark_clean_2026-11-22.csv`(특이사항 칸을 기본장식비·추가금·포함 지역 열로 나눔) + 검증 보고서 `..._check_2026-11-22.md`. 숫자 238개 모두 참가격 공식 값과 같음. 조사 시점 = 참가격 최신 공표 2026년 9월, 수집일 2026-11-22. **'68.3% 최소보증인원 하향 불가' 문구는 공식 확인 안 돼 앱에 안 씀.** 참가격 선택품목(추가금) 8개 항목을 공식 페이지에서 읽어 `tools/raw/consumer_addons_2026-09.tsv` → `make_consumer_prices.py`가 JSON에 addOns·basicDecoration·addOnGroup·definition 추가. 앱: 서울(강남) = 강남3구(강남·서초·송파, `ConsumerPrices.gangnam3`), 금액 비교 표에 '자주 붙는 추가금' 줄(꽃장식·본식 촬영 중간값), 일반 예상 = 대관료 + 식대 + 꽃장식, 기본 장식비 안내
+
+- **소비자원 데이터 밖 질문 규칙 (2026-11-22 사용자 요청):** 조사 범위 밖이면 다른 값으로 채우지 않고 '정보가 없어 답변드리기 어려워요' + 앱에 있는 자료 안내(`_consumerGap`·`_noConsumerData`, consult_present.dart). 밖 = 2026이 아닌 연도·작년/내년/추이/올랐 등 다른 시기, 서울 밖 시·군·구 단위(→ '○○ 기준으로 보기' 버튼), 조사에 없는 항목(축가·주례·도우미·원판·플라워 샤워·축주·포토테이블·한복), 조사에 없는 지역(`ConsumerPrices.regionKey`가 null, 전국 값으로 대신하지 않음). 공표 안 된 통계값은 0이 아니라 null. '공공' 없이 '일반/사설 예식장 평균 식대' 같은 질문도 `costCompare`로 받아 조사 값으로만 답함
+  - 안전장치 3개 (11-22): ① 금액 비교 답 바로 뒤의 짧은 후속("그럼 2024년은?", "부산은?", "축가는?")은 `ToolPlanner.costFollowUp`으로 같은 비교 경로(앞 시도 이어받음, 추천·정책 등 다른 요청 말은 제외) ② Gemini 일반 안내에 질문에 없던 금액·비율(5만원·3천만원·1억·30%)이 있으면 버림(`GeminiClient.ungroundedAmount`) + 프롬프트에 금액 금지 줄 ③ 가격 질문(`ToolPlanner.priceQuestion`)이 general_answer로 가면 Gemini 대신 `_noPriceData`('정보가 없어 답변드리기 어려워요' + 앱에 있는 가격 자료 안내). 실측 7턴 Gemini 10번 약 13원, 모두 기대대로
+
 ## 배포 (2026-11-17)
 - **웹: https://wedding-collect.web.app** (Firebase Hosting, `firebase.json`의 hosting: build/web, SPA rewrite)
 - 다시 올리기: `flutter build web --release --dart-define-from-file=secrets.json` → **`python -I tools/web_postbuild.py`** → `firebase deploy --only hosting --project wedding-collect`

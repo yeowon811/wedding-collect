@@ -93,7 +93,11 @@ class StepperField extends StatelessWidget {
     this.initial,
     this.step = 1,
     this.label,
+    this.placeholder = '나이 입력',
   });
+
+  /// 값이 없을 때 가운데 안내 글자 (11-22: '눌러서 입력' → '나이 입력')
+  final String placeholder;
 
   final int? value;
   final ValueChanged<int> onChanged;
@@ -157,7 +161,7 @@ class StepperField extends StatelessWidget {
             height: 48,
             child: Center(
               child: v == null
-                  ? Text('눌러서 입력', style: TextStyle(fontSize: 16, color: AppColors.textHint))
+                  ? Text(placeholder, style: TextStyle(fontSize: 16, color: AppColors.textHint))
                   : Text.rich(TextSpan(children: [
                       if (prefix.isNotEmpty)
                         TextSpan(text: prefix, style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),

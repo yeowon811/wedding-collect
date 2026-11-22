@@ -91,6 +91,45 @@ TOTAL = {  # 총 계약금액 (만원, 결혼식장 계약 기준)
 }
 
 
+# 기본 장식비 (필수품목, 만원): 지역 → (평균, 상위10%). 중간값은 모든 지역 0원
+BASIC_DECO = {
+    "전국": (78, 200), "수도권": (137, 500), "비수도권": (17, 0), "서울(강남)": (236, 880), "서울(강남외)": (132, 500),
+    "부산": (0, 0), "대구": (42, 200), "인천": (23, 0), "전남광주": (1, 0), "대전": (62, 200), "울산": (15, 0),
+    "경기도": (49, 90), "강원도": (17, 0), "충청도": (12, 0), "전북": (19, 0), "경상도": (1, 0), "제주도": (45, 190),
+}
+
+# 선택품목(추가금)은 참가격이 권역 7개로만 공표 → 지역마다 어느 권역 값을 쓰는지
+ADDON_GROUP = {
+    "전국": "전국", "수도권": "수도권", "비수도권": "비수도권",
+    "서울(강남)": "서울", "서울(강남외)": "서울", "경기도": "경인", "인천": "경인",
+    "부산": "4대 광역시·통합특별시", "대구": "4대 광역시·통합특별시", "대전": "4대 광역시·통합특별시",
+    "울산": "4대 광역시·통합특별시", "전남광주": "4대 광역시·통합특별시",
+    "강원도": "이외 지역", "충청도": "이외 지역", "전북": "이외 지역", "경상도": "이외 지역", "제주도": "이외 지역",
+}
+
+# 참가격 지역 정의 (2026-11-22 사용자 제공 벤치마크 파일 기준): 서울(강남) = 강남3구
+REGION_NOTE = {
+    "서울(강남)": "강남3구(강남·서초·송파)",
+    "서울(강남외)": "서울 강남3구 외",
+}
+
+COLLECTED = "2026-11-22"
+
+
+def load_addons():
+    """tools/raw/consumer_addons_2026-09.tsv: 참가격 예식장 선택품목 가격(만원), 앱 내 브라우저로 읽어 옮김"""
+    path = Path(__file__).resolve().parent / "raw" / "consumer_addons_2026-09.tsv"
+    lines = path.read_text(encoding="utf-8").strip().splitlines()[1:]
+    out = {}
+    for line in lines:
+        item, group, p10, p25, med, p75, p90, avg, n = line.split("	")
+        num = lambda v: None if v == "" else int(v)  # noqa: E731  ('-'는 표본이 적어 공표 안 됨 → 빈칸)
+        out.setdefault(group, {})[item] = {
+            "p25": num(p25), "median": num(med), "p75": num(p75), "p90": num(p90), "avg": num(avg), "n": int(n),
+        }
+    return out
+
+
 def row(t):
     p10, p25, med, p75, p90, avg, n = t
     return {"p10": p10, "p25": p25, "median": med, "p75": p75, "p90": p90, "avg": avg, "n": n}
@@ -103,6 +142,9 @@ def main():
             "mealPerGuest": row(MEAL[r]),
             "minGuests": row(MIN_GUESTS[r]),
             "totalContract": row(TOTAL[r]),
+            "basicDecoration": {"avg": BASIC_DECO[r][0], "p90": BASIC_DECO[r][1]},
+            "addOnGroup": ADDON_GROUP[r],
+            **({"definition": REGION_NOTE[r]} if r in REGION_NOTE else {}),
         }
         for r in RENTAL
     }
@@ -110,9 +152,11 @@ def main():
         "source": "한국소비자원 참가격 결혼서비스 예식장 가격정보",
         "sourceUrl": URL,
         "survey": SURVEY,
+        "collectedAt": COLLECTED,
         "unit": "만원 (식대는 1인당 만원, 최소보증인원은 명)",
         "note": "일반(민간) 결혼식장 계약 가격 조사. 공공예식장 값이 아님",
         "regions": regions,
+        "addOns": load_addons(),
     }
     path = Path(__file__).resolve().parent.parent / "assets" / "data" / "consumer_wedding_prices.json"
     path.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")

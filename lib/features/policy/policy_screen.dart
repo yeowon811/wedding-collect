@@ -215,7 +215,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
                   const SizedBox(height: 16),
                   FormSection(
                     title: '거주 지역',
-                    hint: '시·군·구까지 알려 주시면 우리 동네 지원 정책까지 꼼꼼히 찾아 드릴게요. 모르면 비워 두셔도 괜찮아요.',
+                    hint: '시·군·구까지 선택하면 거주 지역의 결혼지원 정책을 확인할 수 있어요.',
                     child: RegionFields(
                       sido: draft.sido,
                       sigungu: draft.sigungu,

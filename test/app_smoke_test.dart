@@ -223,17 +223,17 @@ void main() {
     final list = find.byType(Scrollable).last;
     // 순서 (11-21): 예식일 기준 할 일 → 예산 현황 → 예산 관리 목록 → 내 상담 일정
     expect(find.text('예식 준비 체크리스트'), findsOneWidget);
-    expect(find.text('예식일 기준 할 일'), findsOneWidget);
+    expect(find.text('예식 준비 일정'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('예산 현황'), 200, scrollable: list);
     expect(tester.getTopLeft(find.text('예산 현황')).dy,
-        greaterThan(tester.getTopLeft(find.text('예식일 기준 할 일')).dy)); // 할 일이 예산 현황보다 위
+        greaterThan(tester.getTopLeft(find.text('예식 준비 일정')).dy)); // 할 일이 예산 현황보다 위
     await tester.scrollUntilVisible(find.textContaining('예산 관리 목록 · 계약 1/11'), 200, scrollable: list);
     await tester.scrollUntilVisible(find.text('내 상담 일정'), 200, scrollable: list);
-    await tester.scrollUntilVisible(find.text('예식일 기준 할 일'), -200, scrollable: list); // 맨 위쪽으로 돌아가 다시 보임
+    await tester.scrollUntilVisible(find.text('예식 준비 일정'), -200, scrollable: list); // 맨 위쪽으로 돌아가 다시 보임
     // 처음에는 할 일이 비어 있다 → 예식일 입력 + 할 일 채우기
-    expect(find.textContaining('예식일을 먼저 알려 주시면'), findsOneWidget);
+    expect(find.textContaining('예식일을 입력하면 준비 일정을 추가하고'), findsOneWidget);
     // 예식일 전에는 [할 일 추가]가 꺼져 있고, 예식일을 넣으면 켜진다 (11-21)
-    OutlinedButton addTask() => tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '할 일 추가'));
+    OutlinedButton addTask() => tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, '준비 일정 추가'));
     expect(addTask().onPressed, isNull);
     final app = AppState.instance;
     app.updatePlan(app.plan.copyWith(weddingDate: DateTime.now().add(const Duration(days: 200))));

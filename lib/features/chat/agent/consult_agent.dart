@@ -186,6 +186,8 @@ class ConsultAgent implements ChatAgent {
   ({List<DateTime> dates, String label})? _period; // 기간 질문의 날짜들 ("내년 3월")
   List<String> _unsupported = const [];
   String? _scopeNote; // 앱 데이터 범위 밖 안내 (제목 아래 한 줄)
+  bool _lastCostCompare = false; // 이번 답이 공공 vs 일반 금액 비교(또는 그 '정보 없음')인지
+  String? _lastCostSido; // 그 비교의 시도 (후속 질문에 지역이 없으면 이어받음)
   List<QuickReply> _scopeReplies = const []; // 범위 밖 답의 '공공예식장 보기' 칩
 
   /// 더 보기: 마지막 추천의 전체 결과(카드)와 지금까지 보여준 개수
@@ -433,6 +435,9 @@ class ConsultAgent implements ChatAgent {
       await Repos.booking.loadAll();
     } catch (_) {}
     final text = question.trim();
+    // 바로 앞 답이 공공 vs 일반 금액 비교였는지 (짧은 후속 질문을 같은 경로로 보내기 위해, 11-22)
+    final prevCost = _lastCostCompare;
+    _lastCostCompare = false;
     if (_asking != null && _pending != null) {
       if (_isDontKnow(text)) return _skipCurrent();
       step.value = AgentStep.understand;
@@ -464,6 +469,8 @@ class ConsultAgent implements ChatAgent {
     if (outside != null) return _outOfScopeVenueAnswer(text, outside);
     // 공공예식장 vs 일반 예식장 금액 비교: 앱 데이터 + 한국소비자원 참가격 조사값으로 표 (Gemini 일반 안내로 빠지지 않게)
     if (ToolPlanner.costCompare(text)) return _venueCostCompareAnswer(text);
+    // 금액 비교 뒤 짧은 후속("그럼 2024년은?", "부산은?")도 같은 경로: 소비자원 데이터 밖이면 '정보 없음'
+    if (prevCost && ToolPlanner.costFollowUp(text)) return _venueCostCompareAnswer(text, followSido: _lastCostSido);
     if (_llm != null) {
       // 도구 고르기 1번만 부른다. 실패·시간 초과일 때만 예전 질문 이해(Gemini 1번, 그래도 안 되면 규칙)로 (2026-11-20:
       // 예전에는 질문 이해를 미리 함께 불러 질문마다 Gemini 호출이 1번 더 들었음)
@@ -650,6 +657,8 @@ class ConsultAgent implements ChatAgent {
         if (p.expr != null && evalExpr(p.expr!) != null) return () async => _calcAnswer(p.expr!);
         return _llm == null ? null : () => _generalAnswer(u);
       case 'general_answer':
+        // 가격을 묻는 질문은 일반 상식으로 답하지 않는다 (금액을 지어낼 수 있음, 11-22)
+        if (ToolPlanner.priceQuestion(_question)) return () async => _noPriceData();
         return _llm == null ? null : () => _generalAnswer(u);
       case 'near_place':
         return () => _nearPlaceAnswer(p);
@@ -2418,6 +2427,7 @@ class ConsultAgent implements ChatAgent {
 
   /// 앱 데이터가 아닌 일반 지식: Gemini가 일반 안내 + (공공예식장 이야기면) 앱 데이터로 본 사실
   Future<ChatMessage> _generalAnswer(Understanding u) async {
+    if (ToolPlanner.priceQuestion(_question)) return _noPriceData();
     final text = await _llm!.general(_question);
     if (text == null && _llm.lastOffTopic && !ToolPlanner.weddingRelated(_question)) return _offTopicAnswer();
     if (text == null) {

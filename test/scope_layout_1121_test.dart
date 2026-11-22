@@ -4,6 +4,7 @@ import 'package:wedding_collect/data/app_state.dart';
 import 'package:wedding_collect/data/repositories/consumer_prices.dart';
 import 'package:wedding_collect/data/models/user_profile.dart';
 import 'package:wedding_collect/features/chat/agent/consult_agent.dart';
+import 'package:wedding_collect/features/chat/agent/gemini_client.dart';
 import 'package:wedding_collect/features/chat/agent/tool_planner.dart';
 import 'package:wedding_collect/features/chat/answer/answer_blocks.dart';
 import 'package:wedding_collect/features/chat/answer/answer_view.dart';
@@ -92,7 +93,7 @@ void main() {
     });
 
     group('Gemini 없이', () {
-      setUp(() => AppState.instance.saveProfile(const UserProfile(sido: '서울', sigungu: '송파구', guests: 150)));
+      setUp(() => AppState.instance.saveProfile(const UserProfile(sido: '서울', sigungu: '마포구', guests: 150)));
       tearDown(() => AppState.instance.resetProfile());
 
       test('서울: 공공 실제 대관료와 소비자원 서울(강남 외) 중간값을 표로', () async {
@@ -103,8 +104,69 @@ void main() {
         expect(rental[1], startsWith('무료 '));
         expect(rental[2], '중간 580만원'); // 참가격 2026년 9월 서울(강남외) 대관비용 중간값
         expect(table.rows.firstWhere((r) => r[0] == '1인당 식대')[2], '중간 7.6만원');
+        // 추가금 줄: 서울 권역 생화 꽃장식 중간 500만원 · 본식 촬영 85만원 (참가격 선택품목)
+        expect(table.rows.firstWhere((r) => r[0] == '자주 붙는 추가금')[2], '꽃장식 중간 500만원 · 본식 촬영 85만원');
         expect(m.sources.first, contains('2026년 9월'));
         expect(m.text, isNot(contains('일반 안내')));
+      });
+
+      test('조사 밖(다른 연도·시군구 단위·없는 항목)은 값 대신 정보 없음 안내 (11-22 규칙)', () async {
+        for (final (q, what) in [
+          ('2024년 일반 예식장이랑 공공예식장 비용 비교해줘', '2024년 가격'),
+          ('소비자원 데이터로 작년이랑 비교하면 얼마나 올랐어?', '다른 시기'),
+          ('부산 해운대구 공공예식장과 일반 예식장 금액 비교', '해운대구 단위'),
+          ('공공예식장이랑 일반 예식장 축가 비용 비교해줘', '축가 비용'),
+        ]) {
+          final m = await ConsultAgent().reply(q);
+          expect(m.blocks.firstWhere((b) => b.type == BlockType.headline).title, '정보가 없어 답변드리기 어려워요', reason: q);
+          expect(m.text, contains(what), reason: q);
+          expect(m.blocks.any((b) => b.type == BlockType.table), isFalse, reason: q);
+        }
+      });
+
+      test('일반 예식장 평균 식대처럼 공공 없이 물어도 조사 값으로 답한다', () async {
+        final m = await ConsultAgent().reply('서울 일반 예식장 평균 식대 얼마야?');
+        expect(m.blocks.any((b) => b.type == BlockType.table), isTrue);
+      });
+
+      test('금액 비교 뒤 짧은 후속 질문도 조사 범위를 확인한다 (11-22)', () async {
+        final agent = ConsultAgent();
+        await agent.reply('서울 공공예식장과 일반 예식장 금액 비교해줘');
+        var m = await agent.reply('그럼 2024년은?');
+        expect(m.blocks.firstWhere((b) => b.type == BlockType.headline).title, '정보가 없어 답변드리기 어려워요');
+        expect(m.text, contains('2024년'));
+        m = await agent.reply('그럼 부산은?');
+        final table = m.blocks.firstWhere((b) => b.type == BlockType.table);
+        expect(table.columns[1], contains('부산'));
+        m = await agent.reply('축가는?');
+        expect(m.text, contains('축가 비용'));
+      });
+
+      test('금액 비교가 아닌 답 뒤의 짧은 질문은 후속으로 보지 않는다', () {
+        expect(ToolPlanner.costFollowUp('그럼 2024년은?'), isTrue);
+        expect(ToolPlanner.costFollowUp('부산은?'), isTrue);
+        expect(ToolPlanner.costFollowUp('해운대구는?'), isTrue);
+        expect(ToolPlanner.costFollowUp('고마워'), isFalse);
+        expect(ToolPlanner.costFollowUp('그럼 청년 정책도 알려줘'), isFalse);
+        expect(ToolPlanner.costFollowUp('그럼 서울 공공예식장 추천해줘'), isFalse);
+      });
+
+      test('가격 질문 판별 (일반 안내로 보내지 않음)', () {
+        expect(ToolPlanner.priceQuestion('스드메 평균 얼마야?'), isTrue);
+        expect(ToolPlanner.priceQuestion('본식 영상 가격 보통 어때?'), isTrue);
+        expect(ToolPlanner.priceQuestion('상견례 때 무슨 말 하지?'), isFalse);
+        expect(ToolPlanner.priceQuestion('예식장 고를 때 뭐 봐야 해?'), isFalse);
+      });
+
+      test('일반 안내에 질문에 없던 금액·비율이 있으면 버린다', () {
+        expect(GeminiClient.ungroundedAmount('보통 5만원 정도예요', '축의금 얼마 내?'), isTrue);
+        expect(GeminiClient.ungroundedAmount('3천만원이 들어요', '결혼 비용'), isTrue);
+        expect(GeminiClient.ungroundedAmount('1억 정도', '총비용'), isTrue);
+        expect(GeminiClient.ungroundedAmount('약 30% 아낄 수 있어요', '절약'), isTrue);
+        expect(GeminiClient.ungroundedAmount('7%', '절약'), isTrue);
+        expect(GeminiClient.ungroundedAmount('예산 300만원이면 소규모로 준비해 보세요', '예산 300만원이면 뭐부터?'), isFalse);
+        expect(GeminiClient.ungroundedAmount('업체 견적으로 확인해 보세요', '스드메 얼마?'), isFalse);
+        expect(GeminiClient.ungroundedAmount('3개월 전에 예약하세요', '언제 예약해?'), isFalse);
       });
 
       test('소비자원 데이터 질문은 앞 답을 다시 쓰지 않고 같은 표로 답한다', () async {
@@ -119,9 +181,13 @@ void main() {
     test('강남구는 서울(강남), 경남은 경상도 조사값', () {
       expect(ConsumerPrices.regionKey('서울', sigungu: '강남구'), '서울(강남)');
       expect(ConsumerPrices.regionKey('서울', sigungu: '마포구'), '서울(강남외)');
+      // 강남3구 (11-22 벤치마크 정의)
+      expect(ConsumerPrices.regionKey('서울', sigungu: '서초구'), '서울(강남)');
+      expect(ConsumerPrices.regionKey('서울', sigungu: '송파구'), '서울(강남)');
       expect(ConsumerPrices.regionKey('경남'), '경상도');
       expect(ConsumerPrices.regionKey('광주·전남'), '전남광주');
       expect(ConsumerPrices.regionKey(null), '전국');
+      expect(ConsumerPrices.regionKey('하와이'), isNull); // 조사에 없는 지역은 다른 값으로 채우지 않음
     });
   });
 

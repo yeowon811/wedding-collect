@@ -68,7 +68,7 @@ void main() {
     await tester.enterText(budget, '2500');
     await tester.pump();
     expect(find.textContaining('아래 버튼을 누르면 함께 저장돼요'), findsWidgets);
-    await tester.tap(find.text('이 정보로 상담 시작'));
+    await tester.tap(find.text('맞춤 상담 시작하기'));
     await tester.pump();
     expect(done, isTrue);
     expect(app.profile.guests, 180);
